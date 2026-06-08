@@ -3,6 +3,8 @@
     "pages/index/index",
     "pages/edit/index",
     "pages/preview/index",
+    
+    "pages/preview/index",
     "pages/visitors/index",
     "pages/agreement/index"
   ],
