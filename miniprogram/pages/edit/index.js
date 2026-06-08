@@ -76,11 +76,11 @@ Page({
       })
   },
 
-  chooseAvatar() {
+  chooseAvatar() { console.log("[edit] chooseAvatar called")
     this._openImagePicker()
   },
 
-  _openImagePicker() {
+  _openImagePicker() { console.log("[edit] _openImagePicker called")
     wx.showActionSheet({
       itemList: ['拍照', '从相册选择'],
       success: (res) => {
