@@ -9,6 +9,29 @@ App({
   onLaunch() {
     this.getSystemInfo()
     this.initCloud()
+    this.initPrivacy()
+  },
+
+  initPrivacy() {
+    if (wx.onNeedPrivacyAuthorization) {
+      wx.onNeedPrivacyAuthorization((resolve, event) => {
+        console.log('[App] onNeedPrivacyAuthorization', event)
+        wx.showModal({
+          title: 'Privacy',
+          content: 'Use this feature requires your agreement',
+          confirmText: 'Agree',
+          cancelText: 'Disagree',
+          success: (res) => {
+            if (res.confirm) {
+              resolve({ event: 'agree', button: 'agree' })
+            } else {
+              resolve({ event: 'disagree' })
+            }
+          },
+          fail: () => resolve({ event: 'disagree' })
+        })
+      })
+    }
   },
 
   getSystemInfo() {
