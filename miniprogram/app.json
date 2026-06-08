@@ -17,5 +17,16 @@
   "sitemapLocation": "sitemap.json",
   "cloud": true,
   "lazyCodeLoading": "requiredComponents",
-  "__usePrivacyCheck__": true
+  "__usePrivacyCheck__": true,
+  "permission": {
+    "scope.camera": {
+      "desc": "用于拍照上传头像和附件"
+    },
+    "scope.album": {
+      "desc": "用于从相册选择图片"
+    },
+    "scope.writePhotosAlbum": {
+      "desc": "用于保存图片到相册"
+    }
+  }
 }

@@ -1,7 +1,7 @@
 <view class="container">
   <view class="loading-state" wx:if="{{isLoading}}">
     <view class="loading-spinner"></view>
-    <text class="loading-text">加载�?..</text>
+    <text class="loading-text">加载中...</text>
   </view>
 
   <view wx:else class="page-content">
@@ -34,7 +34,7 @@
           </view>
           <input 
             class="form-input {{errors.name ? 'input-error' : ''}}" 
-            placeholder="请输入姓�? 
+            placeholder="请输入姓名" 
             value="{{name}}" 
             bindinput="onNameInput" 
             maxlength="20"
@@ -50,7 +50,7 @@
           <text class="form-label">职位</text>
           <input 
             class="form-input" 
-            placeholder="请输入职�? 
+            placeholder="请输入职位" 
             value="{{position}}" 
             bindinput="onPositionInput" 
             maxlength="30"
@@ -68,7 +68,7 @@
           </view>
           <input 
             class="form-input {{errors.company ? 'input-error' : ''}}" 
-            placeholder="请输入公司名�? 
+            placeholder="请输入公司名称" 
             value="{{company}}" 
             bindinput="onCompanyInput" 
             maxlength="50"
@@ -84,7 +84,7 @@
           <text class="form-label">电话</text>
           <input 
             class="form-input {{errors.phone ? 'input-error' : ''}}" 
-            placeholder="请输入手机号�? 
+            placeholder="请输入手机号码" 
             value="{{phone}}" 
             bindinput="onPhoneInput" 
             type="number"
@@ -149,7 +149,7 @@
           <text class="form-label">业务介绍</text>
           <textarea 
             class="form-textarea" 
-            placeholder="介绍您的业务范围和能�? 
+            placeholder="介绍您的业务范围和能力" 
             value="{{businessIntro}}" 
             bindinput="onBusinessIntroInput" 
             maxlength="1000"
@@ -174,7 +174,7 @@
               <input class="exp-input" placeholder="职位" value="{{item.position}}" bindinput="onExpInput" data-index="{{index}}" data-field="position" />
             </view>
             <view class="exp-row">
-              <input class="exp-input" placeholder="时间（如�?020-2023�? value="{{item.period}}" bindinput="onExpInput" data-index="{{index}}" data-field="period" />
+              <input class="exp-input" placeholder="时间（如：2020-2023）" value="{{item.period}}" bindinput="onExpInput" data-index="{{index}}" data-field="period" />
             </view>
             <view class="exp-row">
               <textarea class="exp-textarea" placeholder="工作描述" value="{{item.desc}}" bindinput="onExpInput" data-index="{{index}}" data-field="desc" />
@@ -188,18 +188,18 @@
 
       <view class="form-group">
         <view class="form-header">
-          <text class="form-title">公众号信�?/text>
+          <text class="form-title">公众号信息</text>
         </view>
         <view class="form-item">
-          <text class="form-label">公众号名�?/text>
-          <input class="form-input" placeholder="输入公众号名�? value="{{wechatOfficial.name}}" bindinput="onWechatInput" data-field="name" />
+          <text class="form-label">公众号名称</text>
+          <input class="form-input" placeholder="输入公众号名称" value="{{wechatOfficial.name}}" bindinput="onWechatInput" data-field="name" />
         </view>
         <view class="form-item">
-          <text class="form-label">公众号简�?/text>
-          <input class="form-input" placeholder="简短介�? value="{{wechatOfficial.desc}}" bindinput="onWechatInput" data-field="desc" />
+          <text class="form-label">公众号简介</text>
+          <input class="form-input" placeholder="简短介绍" value="{{wechatOfficial.desc}}" bindinput="onWechatInput" data-field="desc" />
         </view>
         <view class="form-item">
-          <text class="form-label">公众号链�?/text>
+          <text class="form-label">公众号链接</text>
           <input class="form-input" placeholder="https://mp.weixin.qq.com/..." value="{{wechatOfficial.url}}" bindinput="onWechatInput" data-field="url" />
         </view>
       </view>
@@ -220,7 +220,7 @@
         </view>
         <view class="form-item">
           <text class="form-label">网站描述</text>
-          <input class="form-input" placeholder="简短描�? value="{{companyWebsite.desc}}" bindinput="onWebsiteInput" data-field="desc" />
+          <input class="form-input" placeholder="简短描述" value="{{companyWebsite.desc}}" bindinput="onWebsiteInput" data-field="desc" />
         </view>
       </view>
 
@@ -239,7 +239,7 @@
             <text class="attach-name-small">{{item.name}}</text>
             <view class="attach-delete" bindtap="deleteAttachment" data-index="{{index}}">删除</view>
           </view>
-          <view class="empty-tip" wx:if="{{attachments.length === 0}}">暂无附件，点击上方添�?/view>
+          <view class="empty-tip" wx:if="{{attachments.length === 0}}">暂无附件，点击上方添加</view>
         </view>
       </view>
     </view>
