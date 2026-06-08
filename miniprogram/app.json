@@ -1,20 +1,27 @@
 {
-    "pages":  [
-                  "pages/index/index",
-                  "pages/edit/index",
-                  "pages/preview/index",
-                  "pages/visitors/index",
-                  "pages/agreement/index"
-              ],
-    "window":  {
-                   "backgroundTextStyle":  "light",
-                   "navigationBarBackgroundColor":  "#3B82F6",
-                   "navigationBarTitleText":  "科博名片",
-                   "navigationBarTextStyle":  "white",
-                   "backgroundColor":  "#F5F7FA"
-               },
-    "style":  "v2",
-    "sitemapLocation":  "sitemap.json",
-    "cloud":  true,
-    "__usePrivacyCheck__":  true
+  "pages": [
+    "pages/index/index",
+    "pages/edit/index",
+    "pages/preview/index",
+    "pages/visitors/index",
+    "pages/agreement/index"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#3B82F6",
+    "navigationBarTitleText": "科博名片",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#F5F7FA"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "cloud": true,
+  "permission": {
+    "scope.camera": {
+      "desc": "用于拍照、录制视频"
+    },
+    "scope.writePhotosAlbum": {
+      "desc": "用于保存图片到相册"
+    }
+  }
 }
