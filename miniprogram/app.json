@@ -1,6 +1,7 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/edit/index",
     "pages/preview/index",
     "pages/visitors/index",
     "pages/agreement/index"
@@ -13,5 +14,6 @@
   },
   "sitemapLocation": "sitemap.json",
   "cloud": true,
-  "__usePrivacyCheck__": true
+  "__usePrivacyCheck__": true,
+  "lazyCodeLoading": "requiredComponents"
 }
