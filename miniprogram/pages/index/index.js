@@ -3,8 +3,8 @@ const app = getApp()
 Page({
   data: {
     cards: [],
-    isLoading: true,
-    isEmpty: false,
+    isLoading: false,
+    isEmpty: true,
     isError: false
   },
 
@@ -13,9 +13,7 @@ Page({
   },
 
   onShow() {
-    if (app.getCache && app.getCache("lastCardUpdate") > (this.data.lastLoadTime || 0)) {
-      this.loadCards()
-    }
+    this.loadCards()
   },
 
   onPullDownRefresh() {
@@ -25,9 +23,7 @@ Page({
   loadCards() {
     this.setData({ isLoading: true, isError: false })
     return new Promise((resolve) => {
-      wx.cloud.database().collection("cards").where({
-        _openid: app.globalData.openid || ""
-      }).get()
+      wx.cloud.database().collection("cards").limit(50).get()
         .then(res => {
           const cards = res.data || []
           this.setData({
@@ -41,7 +37,7 @@ Page({
         })
         .catch(err => {
           console.error("[Index] load failed", err)
-          this.setData({ isLoading: false, isError: true })
+          this.setData({ isLoading: false, isError: true, isEmpty: true })
           resolve()
         })
     })
