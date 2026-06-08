@@ -25,10 +25,10 @@ Page({
     console.log("[Edit] onLoad", options)
     if (options.id) {
       this.setData({ mode: "edit", cardId: options.id })
-      wx.setNavigationBarTitle({ title: "编辑名片" })
+      wx.setNavigationBarTitle({ title: "缂傛牞绶崥宥囧" })
       this.loadCard(options.id)
     } else {
-      wx.setNavigationBarTitle({ title: "创建名片" })
+      wx.setNavigationBarTitle({ title: "閸掓稑缂撻崥宥囧" })
     }
   },
 
@@ -72,6 +72,31 @@ Page({
   onWebsiteInput(e) { this.setData({ "formData.website": e.detail.value }) },
   onWechatInput(e) { this.setData({ "formData.wechat": e.detail.value }) },
   onIntroInput(e) { this.setData({ "formData.intro": e.detail.value }) },
+
+  chooseAvatar() {
+    this._openImagePicker()
+  },
+
+  chooseAttachment() {
+    this.addAttachment()
+  },
+
+  saveCard() {
+    this.submit()
+  },
+
+  addExperience() {
+    wx.showToast({ title: "Coming soon", icon: "none" })
+  },
+
+  deleteExperience(e) {
+    wx.showToast({ title: "Coming soon", icon: "none" })
+  },
+
+  onExpInput(e) {
+    wx.showToast({ title: "Coming soon", icon: "none" })
+  },
+
 
   validate() {
     const { name, company, phone, email } = this.data.formData

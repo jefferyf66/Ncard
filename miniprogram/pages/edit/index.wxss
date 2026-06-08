@@ -8,7 +8,7 @@
   padding-bottom: 180rpx;
 }
 
-/* ===== 头像区 ===== */
+/* ===== 澶村儚鍖?===== */
 .avatar-section {
   display: flex;
   flex-direction: column;
@@ -37,6 +37,7 @@
 }
 
 .avatar-mask {
+  pointer-events: none;
   position: absolute;
   bottom: -8rpx;
   right: -8rpx;
@@ -98,7 +99,7 @@
   color: #94A3B8;
 }
 
-/* ===== 表单卡片 ===== */
+/* ===== 琛ㄥ崟鍗＄墖 ===== */
 .form-card {
   background: #FFFFFF;
   border-radius: 20rpx;
@@ -216,7 +217,7 @@
   margin: 8rpx 0;
 }
 
-/* ===== 经历编辑器 ===== */
+/* ===== 缁忓巻缂栬緫鍣?===== */
 .experience-editor {
   margin-top: 16rpx;
 }
@@ -280,7 +281,7 @@
   padding-top: 8rpx;
 }
 
-/* ===== 上传区 ===== */
+/* ===== 涓婁紶鍖?===== */
 .upload-area {
   flex: 1;
   display: flex;
@@ -346,7 +347,7 @@
   transform: translate(-50%, -50%);
 }
 
-/* ===== 附件编辑器 ===== */
+/* ===== 闄勪欢缂栬緫鍣?===== */
 .attachment-editor {
   margin-top: 16rpx;
   display: flex;
@@ -425,7 +426,7 @@
   padding: 32rpx;
 }
 
-/* ===== 底部操作栏 — 不透明 ===== */
+/* ===== 搴曢儴鎿嶄綔鏍?鈥?涓嶉€忔槑 ===== */
 .bottom-bar {
   position: fixed;
   bottom: 0;
@@ -438,7 +439,7 @@
   box-shadow: 0 -1rpx 8rpx rgba(0, 0, 0, 0.03);
 }
 
-/* 保存按钮 — 不透明纯色 */
+/* 淇濆瓨鎸夐挳 鈥?涓嶉€忔槑绾壊 */
 .save-btn {
   background: #3B82F6;
   padding: 32rpx;
@@ -459,7 +460,7 @@
   letter-spacing: 2rpx;
 }
 
-/* ===== 加载态 ===== */
+/* ===== 鍔犺浇鎬?===== */
 .loading-state {
   display: flex;
   flex-direction: column;
