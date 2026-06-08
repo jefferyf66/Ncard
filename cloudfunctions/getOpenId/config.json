@@ -1,0 +1,6 @@
+{
+  "permissions": {
+    "openapi": []
+  },
+  "desc": "获取用户openid云函数"
+}

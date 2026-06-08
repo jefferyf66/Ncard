@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "名片列表",
+  "navigationBarBackgroundColor": "#FFFFFF",
+  "navigationBarTextStyle": "black",
+  "enablePullDownRefresh": true,
+  "backgroundColor": "#F5F7FA"
+}

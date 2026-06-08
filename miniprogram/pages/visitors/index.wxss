@@ -1,0 +1,246 @@
+/* ==========================================
+   Ncard 访客页 · 品牌蓝设计系统
+   ========================================== */
+
+.container {
+  min-height: 100vh;
+  padding: 24rpx;
+  background: linear-gradient(175deg, #EFF6FF 0%, #F8FAFC 40%, #FEFCF7 100%);
+}
+
+/* ============ SECTION HEADER ============ */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 32rpx 0 24rpx;
+}
+
+.section-title {
+  font-family: Georgia, 'Times New Roman', 'PingFang SC', serif;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.section-title-row {
+  padding: 24rpx 0 16rpx;
+  margin-top: 16rpx;
+}
+
+.section-arrow {
+  font-size: 40rpx;
+  color: #94A3B8;
+}
+
+/* ============ STATS CARD ============ */
+.stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: linear-gradient(170deg, #FFFFFF 0%, #FEFCF7 100%);
+  border-radius: 8rpx;
+  padding: 40rpx 0;
+  margin-bottom: 28rpx;
+  box-shadow: 0 2rpx 12rpx rgba(29, 78, 216, 0.03), 0 1rpx 3rpx rgba(0, 0, 0, 0.03);
+  border: 2rpx solid #E2E8F0;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.stat-value {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 48rpx;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.stat-label {
+  font-size: 24rpx;
+  color: #64748B;
+}
+
+.stat-divider {
+  width: 2rpx;
+  height: 60rpx;
+  background: #E2E8F0;
+}
+
+/* ============ VISITOR LIST ============ */
+.visitor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.visitor-item {
+  display: flex;
+  gap: 20rpx;
+  background: #FFFFFF;
+  border-radius: 8rpx;
+  padding: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(29, 78, 216, 0.03), 0 1rpx 3rpx rgba(0, 0, 0, 0.03);
+  border: 2rpx solid #E2E8F0;
+  transition: all 0.2s ease;
+}
+
+.visitor-item:active {
+  transform: scale(0.985);
+  border-color: #CBD5E1;
+}
+
+/* 访客头像 — 品牌蓝渐变背景 */
+.visitor-avatar {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 4rpx;
+  background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon-user {
+  width: 44rpx;
+  height: 52rpx;
+  position: relative;
+}
+
+.icon-user::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28rpx;
+  height: 28rpx;
+  border: 2rpx solid #3B82F6;
+  border-radius: 50%;
+}
+
+.icon-user::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 28rpx;
+  border: 2rpx solid #3B82F6;
+  border-radius: 14rpx 14rpx 0 0;
+}
+
+.visitor-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  min-width: 0;
+}
+
+.visitor-header {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.visitor-name {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.visitor-phone {
+  font-size: 24rpx;
+  color: #64748B;
+}
+
+.visitor-position {
+  font-size: 26rpx;
+  color: #3B82F6;
+  font-weight: 500;
+}
+
+.visitor-company {
+  font-size: 26rpx;
+  color: #64748B;
+}
+
+.visitor-tags {
+  display: flex;
+  gap: 10rpx;
+  flex-wrap: wrap;
+}
+
+.tag {
+  font-size: 22rpx;
+  color: #64748B;
+  padding: 4rpx 14rpx;
+  background: #F1F5F9;
+  border-radius: 4rpx;
+}
+
+.visitor-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  margin-top: 8rpx;
+}
+
+.visitor-time {
+  font-size: 22rpx;
+  color: #94A3B8;
+}
+
+.visitor-desc {
+  font-size: 22rpx;
+  color: #94A3B8;
+}
+
+/* 操作按钮 — 品牌蓝 */
+.visitor-button {
+  padding: 16rpx 28rpx;
+  border-radius: 4rpx;
+  font-size: 26rpx;
+  font-weight: 500;
+  flex-shrink: 0;
+  align-self: center;
+  transition: all 0.2s;
+}
+
+.visitor-button:active {
+  transform: scale(0.95);
+}
+
+.visitor-button.primary {
+  background: #3B82F6;
+  color: #FFFFFF;
+  box-shadow: 0 4rpx 12rpx rgba(59, 130, 246, 0.16);
+}
+
+.visitor-button.primary:active {
+  background: #2563EB;
+  box-shadow: 0 2rpx 6rpx rgba(59, 130, 246, 0.1);
+}
+
+.visitor-button.secondary {
+  background: #F1F5F9;
+  color: #64748B;
+}
+
+.visitor-button.secondary:active {
+  background: #E2E8F0;
+}
+
+.view-all-btn {
+  text-align: center;
+  padding: 32rpx;
+  color: #94A3B8;
+  font-size: 28rpx;
+}

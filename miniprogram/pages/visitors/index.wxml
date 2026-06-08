@@ -1,0 +1,68 @@
+<view class="container">
+  <view class="section-header">
+    <view class="section-title">我的名片数据</view>
+    <view class="section-arrow" bindtap="goToViewAll">›</view>
+  </view>
+
+  <view class="stats-row">
+    <view class="stat-item">
+      <text class="stat-value">{{stats.visitors}}</text>
+      <text class="stat-label">我的访客</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item">
+      <text class="stat-value">{{stats.viewed}}</text>
+      <text class="stat-label">我看过的</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item">
+      <text class="stat-value">{{stats.newCards}}</text>
+      <text class="stat-label">好友新名片</text>
+    </view>
+  </view>
+
+  <view class="section-title-row">
+    <text class="section-title">最近访客</text>
+  </view>
+
+  <view class="visitor-list">
+    <view 
+      class="visitor-item" 
+      wx:for="{{visitors}}" 
+      wx:key="id"
+      bindtap="goToProfile"
+      data-item="{{item}}"
+    >
+      <view class="visitor-avatar">
+        <view class="icon-user"></view>
+      </view>
+      <view class="visitor-info">
+        <view class="visitor-header">
+          <text class="visitor-name">{{item.name}}</text>
+          <text class="visitor-phone" wx:if="{{item.phone}}">{{item.phone}}</text>
+        </view>
+        <text class="visitor-position" wx:if="{{item.position}}">{{item.position}}</text>
+        <text class="visitor-company" wx:if="{{item.company}}">{{item.company}}</text>
+        <view class="visitor-tags">
+          <text class="tag" wx:if="{{item.visitCount > 1}}">来访{{item.visitCount}}次</text>
+          <text class="tag" wx:for="{{item.actions}}" wx:key="index">{{item}}</text>
+        </view>
+        <view class="visitor-meta">
+          <text class="visitor-time">{{item.lastVisit}}</text>
+          <text class="visitor-desc">{{item.description}}</text>
+        </view>
+      </view>
+      <view 
+        class="visitor-button {{item.buttonType}}" 
+        bindtap="handleAction"
+        data-item="{{item}}"
+      >
+        {{item.buttonText}}
+      </view>
+    </view>
+  </view>
+
+  <view class="view-all-btn" bindtap="goToViewAll">
+    <text>查看全部</text>
+  </view>
+</view>

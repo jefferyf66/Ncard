@@ -1,0 +1,186 @@
+<view class="container">
+  <view class="loading-state" wx:if="{{isLoading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <view class="error-state" wx:elif="{{isError}}">
+    <view class="error-icon">
+      <view class="icon-alert"></view>
+    </view>
+    <text class="error-text">{{errorMsg}}</text>
+    <view class="retry-btn" bindtap="loadCard" data-id="{{id}}">点击重试</view>
+  </view>
+
+  <view wx:else>
+    <view class="card-preview" wx:if="{{card.name}}">
+      <view class="card-content">
+        <view class="card-top">
+          <image 
+            class="avatar" 
+            src="{{card.avatar || '../../images/avatar.png'}}" 
+            mode="aspectFill"
+          ></image>
+          <view class="name-area">
+            <text class="name">{{card.name}}</text>
+            <text class="position" wx:if="{{card.position}}">{{card.position}}</text>
+          </view>
+        </view>
+        
+        <view class="card-divider"></view>
+        
+        <text class="company" wx:if="{{card.company}}">{{card.company}}</text>
+        
+        <view class="contact-section">
+          <view class="contact-row" wx:if="{{card.phone}}" bindtap="handlePhone">
+            <text class="contact-text">{{card.phone}}</text>
+            <view class="contact-icon icon-phone"></view>
+          </view>
+          <view class="contact-row" wx:if="{{card.email}}" bindtap="handleEmail">
+            <text class="contact-text">{{card.email}}</text>
+            <view class="contact-icon icon-mail"></view>
+          </view>
+          <view class="contact-row" wx:if="{{card.address}}" bindtap="handleAddress">
+            <text class="contact-text">{{card.address}}</text>
+            <view class="contact-icon icon-map"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-card" wx:if="{{card.experiences && card.experiences.length > 0}}">
+      <view class="section-header">
+        <view class="section-icon">
+          <view class="icon-briefcase"></view>
+        </view>
+        <text class="section-title">过往经历</text>
+        <text class="section-count">{{card.experiences.length}}</text>
+      </view>
+      <view class="experience-list">
+        <view class="experience-item" wx:for="{{card.experiences}}" wx:key="index">
+          <view class="exp-header">
+            <text class="exp-company">{{item.company}}</text>
+            <text class="exp-period">{{item.period}}</text>
+          </view>
+          <text class="exp-position">{{item.position}}</text>
+          <text class="exp-desc">{{item.desc}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-card" wx:if="{{card.personalIntro}}">
+      <view class="section-header">
+        <view class="section-icon">
+          <view class="icon-user"></view>
+        </view>
+        <text class="section-title">个人介绍</text>
+      </view>
+      <text class="intro-content">{{card.personalIntro}}</text>
+    </view>
+
+    <view class="section-card" wx:if="{{card.businessIntro}}">
+      <view class="section-header">
+        <view class="section-icon">
+          <view class="icon-briefcase"></view>
+        </view>
+        <text class="section-title">业务介绍</text>
+      </view>
+      <text class="intro-content">{{card.businessIntro}}</text>
+    </view>
+
+    <view class="section-card" wx:if="{{card.attachments && card.attachments.length > 0}}">
+      <view class="section-header">
+        <view class="section-icon">
+          <view class="icon-paperclip"></view>
+        </view>
+        <text class="section-title">名片附件</text>
+      </view>
+      <view class="attachment-list">
+        <view class="attachment-item" wx:for="{{card.attachments}}" wx:key="index" bindtap="downloadAttachment" data-url="{{item.url}}" data-name="{{item.name}}">
+          <view class="attach-icon-wrap">
+            <view class="icon-file"></view>
+          </view>
+          <view class="attach-info">
+            <text class="attach-name">{{item.name}}</text>
+            <text class="attach-meta">{{item.size}} · {{item.time}}</text>
+          </view>
+          <view class="attach-action">
+            <view class="icon-download"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-card" wx:if="{{card.wechatOfficial && card.wechatOfficial.name && card.wechatOfficial.url}}">
+      <view class="link-card" bindtap="openWechatOfficial">
+        <view class="link-icon-wrap">
+          <view class="icon-wechat"></view>
+        </view>
+        <view class="link-info">
+          <text class="link-name">{{card.wechatOfficial.name}}</text>
+          <text class="link-desc">{{card.wechatOfficial.desc || '点击加关注'}}</text>
+        </view>
+        <view class="link-arrow">
+          <view class="icon-arrow-right"></view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-card" wx:if="{{card.companyWebsite && card.companyWebsite.url}}">
+      <view class="link-card" bindtap="openCompanyWebsite">
+        <view class="link-icon-wrap website">
+          <view class="icon-globe"></view>
+        </view>
+        <view class="link-info">
+          <text class="link-name">{{card.companyWebsite.name || '公司主页'}}</text>
+          <text class="link-desc">{{card.companyWebsite.desc || '访问公司官网'}}</text>
+        </view>
+        <view class="link-arrow">
+          <view class="icon-arrow-right"></view>
+        </view>
+      </view>
+    </view>
+
+    <view class="function-card">
+      <view class="function-item" bindtap="goToEdit">
+        <view class="func-icon-wrap">
+          <view class="icon-edit"></view>
+        </view>
+        <text class="func-text">编辑资料</text>
+      </view>
+      <view class="function-item" bindtap="saveToContact">
+        <view class="func-icon-wrap">
+          <view class="icon-save"></view>
+        </view>
+        <text class="func-text">保存通讯录</text>
+      </view>
+      <view class="function-item" bindtap="confirmDelete">
+        <view class="func-icon-wrap">
+          <view class="icon-trash"></view>
+        </view>
+        <text class="func-text">删除名片</text>
+      </view>
+    </view>
+
+    <button class="share-btn" open-type="share">
+      <view class="share-btn-content">
+        <view class="icon-share"></view>
+        <text class="share-text">发名片</text>
+      </view>
+    </button>
+  </view>
+</view>
+
+<view class="delete-modal" wx:if="{{showDeleteConfirm}}" catchtap="cancelDelete">
+  <view class="modal-content" catchtap="stopPropagation">
+    <view class="modal-icon">
+      <view class="icon-alert"></view>
+    </view>
+    <text class="modal-title">确认删除</text>
+    <text class="modal-desc">删除后无法恢复，确定要删除吗？</text>
+    <view class="modal-actions">
+      <view class="modal-btn cancel" bindtap="cancelDelete">取消</view>
+      <view class="modal-btn confirm" bindtap="deleteCard">删除</view>
+    </view>
+  </view>
+</view>

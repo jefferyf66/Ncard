@@ -1,0 +1,183 @@
+<view class="container">
+  <view class="user-card">
+    <view class="user-bg"></view>
+    <view class="user-content">
+      <image class="user-avatar" src="{{(userInfo && userInfo.avatarUrl) || '../../images/avatar.png'}}" mode="aspectFill"></image>
+      <view class="user-info">
+        <text class="user-name">{{(userInfo && userInfo.nickName) || '点击登录'}}</text>
+        <text class="user-desc">{{openid ? '已绑定账号' : '请登录以使用完整功能'}}</text>
+      </view>
+      <view class="login-btn" bindtap="getUserInfo" wx:if="{{!userInfo}}">
+        <text class="login-text">登录</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="stats-card">
+    <view class="stat-item" bindtap="goToCardList">
+      <view class="stat-icon-wrap">
+        <view class="icon-card"></view>
+      </view>
+      <view class="stat-info">
+        <text class="stat-value">{{cardCount}}</text>
+        <text class="stat-label">我的名片</text>
+      </view>
+    </view>
+    <view class="stat-item" bindtap="goToVisitors">
+      <view class="stat-icon-wrap">
+        <view class="icon-users"></view>
+      </view>
+      <view class="stat-info">
+        <text class="stat-value">{{visitorCount}}</text>
+        <text class="stat-label">访客</text>
+      </view>
+    </view>
+    <view class="stat-item" bindtap="goToScanHistory">
+      <view class="stat-icon-wrap">
+        <view class="icon-camera"></view>
+      </view>
+      <view class="stat-info">
+        <text class="stat-value">{{scanCount}}</text>
+        <text class="stat-label">识别</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="menu-group">
+    <view class="menu-header">
+      <text class="menu-title">名片管理</text>
+    </view>
+    <view class="menu-card">
+      <view class="menu-item" bindtap="goToCardList">
+        <view class="menu-icon-wrap">
+          <view class="icon-card"></view>
+        </view>
+        <text class="menu-text">我的名片夹</text>
+        <text class="menu-arrow">›</text>
+      </view>
+      <view class="menu-item" bindtap="goToScanHistory">
+        <view class="menu-icon-wrap">
+          <view class="icon-list"></view>
+        </view>
+        <text class="menu-text">识别历史</text>
+        <text class="menu-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="menu-group">
+    <view class="menu-header">
+      <text class="menu-title">设置</text>
+    </view>
+    <view class="menu-card">
+      <view class="menu-item" bindtap="showThemePicker">
+        <view class="menu-icon-wrap">
+          <view class="icon-palette"></view>
+        </view>
+        <text class="menu-text">主题颜色</text>
+        <view class="menu-right">
+          <view class="theme-dot" style="background: {{currentTheme}}"></view>
+          <text class="menu-arrow">›</text>
+        </view>
+      </view>
+      <view class="menu-item" bindtap="showDefaultCardPicker">
+        <view class="menu-icon-wrap">
+          <view class="icon-star"></view>
+        </view>
+        <text class="menu-text">默认名片</text>
+        <view class="menu-right">
+          <text class="menu-subtext">{{defaultCardName || '未设置'}}</text>
+          <text class="menu-arrow">›</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="menu-group">
+    <view class="menu-header">
+      <text class="menu-title">更多</text>
+    </view>
+    <view class="menu-card">
+      <view class="menu-item" bindtap="clearCache">
+        <view class="menu-icon-wrap">
+          <view class="icon-trash"></view>
+        </view>
+        <text class="menu-text">清空缓存</text>
+        <text class="menu-arrow">›</text>
+      </view>
+      <view class="menu-item" bindtap="showAbout">
+        <view class="menu-icon-wrap">
+          <view class="icon-info"></view>
+        </view>
+        <text class="menu-text">关于我们</text>
+        <text class="menu-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="version-info">
+    <text class="version-text">科博名片 v1.0.0</text>
+  </view>
+
+  <view class="modal-overlay" wx:if="{{showThemePicker}}" catchtap="closeThemePicker">
+    <view class="modal-content" catchtap="stopPropagation">
+      <view class="modal-header">
+        <text class="modal-title">选择主题颜色</text>
+        <view class="modal-close" bindtap="closeThemePicker">×</view>
+      </view>
+      <view class="theme-grid">
+        <view 
+          class="theme-option {{currentTheme === item.color ? 'active' : ''}}" 
+          wx:for="{{themeList}}" 
+          wx:key="id"
+          bindtap="selectTheme"
+          data-theme="{{item.color}}"
+        >
+          <view class="theme-color" style="background: {{item.color}}"></view>
+          <text class="theme-name">{{item.name}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="modal-overlay" wx:if="{{showCardPicker}}" catchtap="closeCardPicker">
+    <view class="modal-content card-modal" catchtap="stopPropagation">
+      <view class="modal-header">
+        <text class="modal-title">选择默认名片</text>
+        <view class="modal-close" bindtap="closeCardPicker">×</view>
+      </view>
+      <scroll-view scroll-y class="card-scroll">
+        <view class="picker-card-list">
+          <view 
+            class="picker-card-item {{selectedCardId === item._id ? 'selected' : ''}}" 
+            wx:for="{{cardList}}" 
+            wx:key="_id"
+            bindtap="selectDefaultCard"
+            data-id="{{item._id}}"
+            data-name="{{item.name}}"
+          >
+            <image class="picker-card-avatar" src="{{item.avatar || '../../images/avatar.png'}}" mode="aspectFill"></image>
+            <view class="picker-card-info">
+              <text class="picker-card-name">{{item.name}}</text>
+              <text class="picker-card-company">{{item.company || ''}}</text>
+            </view>
+            <view class="picker-card-check" wx:if="{{selectedCardId === item._id}}">
+              <view class="icon-check"></view>
+            </view>
+          </view>
+          <view class="picker-card-item {{!selectedCardId ? 'selected' : ''}}" bindtap="clearDefaultCard">
+            <view class="picker-card-avatar placeholder">
+              <view class="icon-user"></view>
+            </view>
+            <view class="picker-card-info">
+              <text class="picker-card-name">不设置默认</text>
+            </view>
+            <view class="picker-card-check" wx:if="{{!selectedCardId}}">
+              <view class="icon-check"></view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+</view>

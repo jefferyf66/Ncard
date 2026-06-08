@@ -1,0 +1,48 @@
+.agreement-container {
+  min-height: 100vh;
+  background: #FFFFFF;
+}
+
+/* Tab 切换栏 */
+.tab-bar {
+  display: flex;
+  border-bottom: 2rpx solid #F1F5F9;
+  background: #FFFFFF;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 28rpx 0;
+  font-size: 30rpx;
+  color: #64748B;
+  font-weight: 500;
+  position: relative;
+  transition: color 0.2s;
+}
+
+.tab-active {
+  color: #3B82F6;
+  font-weight: 600;
+}
+
+.tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 64rpx;
+  height: 6rpx;
+  background: #3B82F6;
+  border-radius: 3rpx;
+}
+
+/* 内容区 */
+.content-area {
+  padding: 32rpx;
+  padding-bottom: calc(60rpx + env(safe-area-inset-bottom));
+}

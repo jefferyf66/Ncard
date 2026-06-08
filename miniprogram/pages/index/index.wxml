@@ -1,0 +1,198 @@
+<view class="container">
+  <view class="header">
+    <view class="header-content">
+      <text class="title">我的名片</text>
+      <text class="subtitle" wx:if="{{!isLoading && !isError}}">{{cards.length}} 张名片</text>
+    </view>
+    <view class="header-actions">
+      <view class="header-btn" bindtap="addToDesktop">
+        <view class="header-icon-wrapper small">
+          <view class="icon-desktop"></view>
+        </view>
+      </view>
+      <view class="add-btn" bindtap="goToEdit">
+        <view class="add-icon-wrapper">
+          <text class="add-icon">+</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="loading-state" wx:if="{{isLoading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <view class="empty-state" wx:elif="{{isEmpty}}">
+    <view class="empty-content">
+      <view class="empty-icon">
+        <view class="icon-card"></view>
+      </view>
+      <text class="empty-title">暂无名片</text>
+      <text class="empty-desc">点击右上角创建您的第一张名片</text>
+      <view class="empty-btn" bindtap="goToEdit">创建名片</view>
+    </view>
+  </view>
+
+  <view class="card-list" wx:else>
+    <view 
+      wx:for="{{cards}}" 
+      wx:key="_id" 
+      class="card-item"
+      bindtap="goToPreview"
+      data-id="{{item._id}}"
+    >
+      <view class="card-left">
+        <image 
+          class="card-avatar" 
+          src="{{item.avatar || '../../images/avatar.png'}}" 
+          mode="aspectFill"
+          lazy-load
+        ></image>
+      </view>
+      <view class="card-center">
+        <view class="card-name-row">
+          <text class="card-name">{{item.name || '未命名'}}</text>
+          <text class="card-position" wx:if="{{item.position}}">{{item.position}}</text>
+        </view>
+        <text class="card-company">{{item.company || ''}}</text>
+        <view class="card-meta" wx:if="{{item.phone || item.email}}">
+          <view class="meta-item" wx:if="{{item.phone}}">
+            <view class="meta-icon icon-phone"></view>
+            <text>{{item.phone}}</text>
+          </view>
+          <view class="meta-item" wx:if="{{item.email}}">
+            <view class="meta-icon icon-mail"></view>
+            <text>{{item.email}}</text>
+          </view>
+        </view>
+      </view>
+      <view class="card-right">
+        <view class="card-arrow">›</view>
+      </view>
+    </view>
+
+    <view class="load-more" wx:if="{{hasMore && !isLoading}}">
+      <view class="load-more-content">
+        <view class="load-more-spinner"></view>
+        <text>加载更多...</text>
+      </view>
+    </view>
+    <view class="no-more" wx:elif="{{!hasMore && cards.length > 0}}">
+      <text>— 已加载全部 —</text>
+    </view>
+  </view>
+
+  <view class="visitors-section" wx:if="{{!isLoading && !isError && !isEmpty}}">
+    <view class="section-header">
+      <text class="section-title">名片数据</text>
+      <view class="section-arrow" bindtap="goToVisitors">
+        <text>查看更多 ›</text>
+      </view>
+    </view>
+
+    <view class="stats-card">
+      <view class="stat-item">
+        <view class="stat-icon">
+          <view class="icon-users"></view>
+        </view>
+        <view class="stat-info">
+          <text class="stat-value">{{visitorStats.visitors}}</text>
+          <text class="stat-label">访客</text>
+        </view>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item">
+        <view class="stat-icon">
+          <view class="icon-eye"></view>
+        </view>
+        <view class="stat-info">
+          <text class="stat-value">{{visitorStats.viewed}}</text>
+          <text class="stat-label">看过</text>
+        </view>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item">
+        <view class="stat-icon">
+          <view class="icon-add"></view>
+        </view>
+        <view class="stat-info">
+          <text class="stat-value">{{visitorStats.newCards}}</text>
+          <text class="stat-label">新名片</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-header">
+      <text class="section-title">最近访客</text>
+    </view>
+
+    <view class="visitor-list">
+      <view 
+        class="visitor-item" 
+        wx:for="{{recentVisitors}}" 
+        wx:key="id"
+        bindtap="goToVisitorDetail"
+        data-item="{{item}}"
+      >
+        <view class="visitor-avatar">
+          <view class="icon-user"></view>
+        </view>
+        <view class="visitor-content">
+          <view class="visitor-header">
+            <text class="visitor-name">{{item.name}}</text>
+            <text class="visitor-time">{{item.lastVisit}}</text>
+          </view>
+          <text class="visitor-position" wx:if="{{item.position}}">{{item.position}}</text>
+          <view class="visitor-tags">
+            <text class="tag" wx:for="{{item.actions}}" wx:key="index">{{item}}</text>
+          </view>
+        </view>
+        <view 
+          class="visitor-button {{item.buttonType}}" 
+          bindtap="handleVisitorAction"
+          data-item="{{item}}"
+        >
+          {{item.buttonText}}
+        </view>
+      </view>
+    </view>
+
+    <view class="view-all-btn" bindtap="goToVisitors">
+      <text>查看全部访客</text>
+    </view>
+  </view>
+
+  <!-- 隐私授权弹窗 -->
+  <view class="privacy-mask" wx:if="{{showPrivacyPopup}}" catchtouchmove="preventTouchMove">
+    <view class="privacy-popup" catchtouchmove="preventTouchMove">
+      <view class="privacy-popup-header">
+        <text class="privacy-popup-title">用户隐私保护提示</text>
+      </view>
+      <view class="privacy-popup-body">
+        <text class="privacy-popup-text">
+          为了更好地保障您的合法权益，请您阅读并同意
+          <text class="privacy-link" bindtap="openPrivacyPolicy">《隐私政策》</text>
+          和
+          <text class="privacy-link" bindtap="openServiceAgreement">《用户服务协议》</text>
+          。我们将按照协议内容收集、使用和存储您的信息，包括您创建名片时填写的姓名、公司、手机号、邮箱等信息。
+        </text>
+      </view>
+      <view class="privacy-popup-footer">
+        <view class="privacy-btn-decline" bindtap="handlePrivacyDecline">
+          <text>不同意</text>
+        </view>
+        <button class="privacy-btn-agree" id="agree-btn" open-type="agreePrivacyAuthorization" bindagreeprivacyauthorization="handlePrivacyAgree">
+          同意
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部协议入口 -->
+  <view class="agreement-footer" wx:if="{{!showPrivacyPopup}}">
+    <text class="agreement-link" bindtap="openPrivacyPolicy">隐私政策</text>
+    <text class="agreement-sep">|</text>
+    <text class="agreement-link" bindtap="openServiceAgreement">用户服务协议</text>
+  </view>
+</view>

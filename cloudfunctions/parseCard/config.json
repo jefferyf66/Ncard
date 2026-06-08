@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "openapi": [
+      "ocr.businessCard",
+      "ocr.printedText"
+    ]
+  },
+  "desc": "名片OCR识别云函数"
+}
