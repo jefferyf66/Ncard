@@ -82,6 +82,24 @@ Page({
 
   _openImagePicker() {
     console.log("[edit] _openImagePicker called")
+    // 先检查隐私设置
+    if (wx.requirePrivacyAuthorize) {
+      wx.requirePrivacyAuthorize({
+        success: () => {
+          console.log("[edit] privacy authorized, calling chooseMedia")
+          this.doChooseMedia()
+        },
+        fail: (err) => {
+          console.error("[edit] privacy authorize fail:", err)
+        }
+      })
+    } else {
+      this.doChooseMedia()
+    }
+  },
+
+  doChooseMedia() {
+    console.log("[edit] doChooseMedia called")
     wx.chooseMedia({
       count: 1,
       mediaType: ["image"],
