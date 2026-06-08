@@ -1,7 +1,6 @@
-﻿{
+{
   "pages": [
     "pages/index/index",
-    "pages/edit/index",
     "pages/preview/index",
     "pages/visitors/index",
     "pages/agreement/index"
@@ -10,23 +9,9 @@
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#3B82F6",
     "navigationBarTitleText": "科博名片",
-    "navigationBarTextStyle": "white",
-    "backgroundColor": "#F5F7FA"
+    "navigationBarTextStyle": "white"
   },
-  "style": "v2",
   "sitemapLocation": "sitemap.json",
   "cloud": true,
-  "lazyCodeLoading": "requiredComponents",
-  "__usePrivacyCheck__": true,
-  "permission": {
-    "scope.camera": {
-      "desc": "用于拍照上传头像和附件"
-    },
-    "scope.album": {
-      "desc": "用于从相册选择图片"
-    },
-    "scope.writePhotosAlbum": {
-      "desc": "用于保存图片到相册"
-    }
-  }
+  "__usePrivacyCheck__": true
 }

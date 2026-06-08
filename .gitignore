@@ -1,14 +1,32 @@
-# Windows
-[Dd]esktop.ini
-Thumbs.db
-$RECYCLE.BIN/
-
-# macOS
+﻿# 微信开发者工具生成的文件
+*.log
+*.bak
+*.swp
 .DS_Store
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
+Thumbs.db
 
-# Node.js
+# 微信云开发构建输出
+miniprogram/build/
+miniprogram/dist/
+
+# 云函数构建输出
+cloudfunctions/*/node_modules/
+cloudfunctions/*/package-lock.json
+cloudfunctions/*/dist/
+
+# 临时文件
+miniprogram/app.js.bak
+miniprogram/app.json.bak
+
+# IDE 配置
+.vscode/
+.idea/
+*.iml
+
+# npm 依赖
 node_modules/
+package-lock.json
+
+# 环境配置（可能包含敏感信息）
+project.private.config.json
+miniprogram/envList.js

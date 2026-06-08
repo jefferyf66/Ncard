@@ -22,13 +22,13 @@ App({
         ...appBaseInfo
       }
     } catch (e) {
-      console.error('[App] 获取系统信息失败:', e)
+      console.error("[App] 获取系统信息失败:", e)
     }
   },
 
   initCloud() {
     if (!wx.cloud) {
-      console.warn('[App] 微信版本过低，不支持云开发')
+      console.warn("[App] 微信版本过低，不支持云开发")
       return
     }
     try {
@@ -36,13 +36,13 @@ App({
         traceUser: true,
         env: wx.cloud.DYNAMIC_CURRENT_ENV
       })
-      console.log('[App] 云开发初始化成功')
+      console.log("[App] 云开发初始化成功")
     } catch (e) {
-      console.error('[App] 云开发初始化失败:', e)
+      console.error("[App] 云开发初始化失败:", e)
     }
   },
 
-  showLoading(title = '加载中...') {
+  showLoading(title = "加载中...") {
     wx.showLoading({ title, mask: true })
   },
 
@@ -50,12 +50,12 @@ App({
     wx.hideLoading()
   },
 
-  showError(title = '操作失败', duration = 2000) {
-    wx.showToast({ title, icon: 'none', duration })
+  showError(title = "操作失败", duration = 2000) {
+    wx.showToast({ title, icon: "none", duration })
   },
 
-  showSuccess(title = '操作成功', duration = 1500) {
-    wx.showToast({ title, icon: 'success', duration })
+  showSuccess(title = "操作成功", duration = 1500) {
+    wx.showToast({ title, icon: "success", duration })
   },
 
   showConfirm(title, content) {
@@ -86,7 +86,7 @@ App({
       }
       wx.setStorageSync(key, data)
     } catch (e) {
-      console.error('[App] 设置缓存失败:', e)
+      console.error("[App] 设置缓存失败:", e)
     }
   },
 
@@ -101,20 +101,20 @@ App({
   },
 
   isValidPhone(phone) {
-    return /^1[3-9]\d{9}$/.test(phone)
+    return /^1[3-9]\\d{9}$/.test(phone)
   },
 
   isValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)
   },
 
   formatTime(date) {
-    if (!date) return ''
+    if (!date) return ""
     const d = new Date(date)
     const year = d.getFullYear()
-    const month = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
+    const month = String(d.getMonth() + 1).padStart(2, "0")
+    const day = String(d.getDate()).padStart(2, "0")
+    return year + "-" + month + "-" + day
   },
 
   debounce(fn, delay = 500) {

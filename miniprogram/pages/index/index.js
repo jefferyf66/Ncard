@@ -10,7 +10,6 @@ Page({
     hasMore: true,
     pageSize: 10,
     currentPage: 0,
-    showPrivacyPopup: false,
     visitorStats: {
       visitors: 0,
       viewed: 0,
@@ -21,64 +20,13 @@ Page({
 
   onLoad() {
     console.log('[Index] onLoad')
-    this.checkPrivacySetting()
-  },
-
-  checkPrivacySetting() {
-    if (wx.getPrivacySetting) {
-      wx.getPrivacySetting({
-        success: (res) => {
-          console.log('[Index] 隐私授权状态:', res.needAuthorization)
-          if (res.needAuthorization) {
-            this.setData({ showPrivacyPopup: true })
-          } else {
-            this.loadCards(true)
-          }
-        },
-        fail: () => {
-          // 接口不可用时直接加载
-          this.loadCards(true)
-        }
-      })
-    } else {
-      this.loadCards(true)
-    }
-  },
-
-  handlePrivacyAgree() {
-    console.log('[Index] 用户同意隐私协议')
-    this.setData({ showPrivacyPopup: false })
     this.loadCards(true)
-  },
-
-  handlePrivacyDecline() {
-    console.log('[Index] 用户拒绝隐私协议')
-    this.setData({ showPrivacyPopup: false })
-    wx.showModal({
-      title: '提示',
-      content: '您需要同意隐私政策才能使用科博名片服务',
-      showCancel: false,
-      confirmText: '我知道了'
-    })
-  },
-
-  openPrivacyPolicy() {
-    wx.navigateTo({ url: '/pages/agreement/index?tab=privacy' })
-  },
-
-  openServiceAgreement() {
-    wx.navigateTo({ url: '/pages/agreement/index?tab=service' })
-  },
-
-  preventTouchMove() {
-    // 阻止弹窗背后的页面滚动
   },
 
   onShow() {
     console.log('[Index] onShow')
     const lastUpdate = app.getCache('lastCardUpdate')
     const now = Date.now()
-    
     if (!lastUpdate || now - lastUpdate > 300000) {
       this.loadCards(true)
     }
@@ -87,17 +35,13 @@ Page({
 
   loadVisitorData() {
     if (!wx.cloud) return
-
     const db = wx.cloud.database()
-
-    // 加载访客统计
     db.collection('visits').count()
       .then(res => {
         this.setData({ 'visitorStats.visitors': res.total || 0 })
       })
       .catch(() => {})
 
-    // 加载最近访客
     db.collection('visits')
       .orderBy('visitTime', 'desc')
       .limit(5)
@@ -110,7 +54,7 @@ Page({
           position: v.visitorPosition || '',
           actions: v.actions || [],
           lastVisit: app.formatTime(v.visitTime),
-          buttonText: v.visitorName ? '交换名片' : '请问是谁',
+          buttonText: v.visitorName ? '交换名片' : '询问是谁',
           buttonType: v.visitorName ? 'primary' : 'secondary'
         }))
         this.setData({ recentVisitors: visitors })
@@ -234,7 +178,7 @@ Page({
 
     console.log('[Index] 跳转到预览页, id:', id)
     wx.navigateTo({
-      url: `/pages/preview/index?id=${id}`,
+      url: '/pages/preview/index?id=' + id,
       fail: (err) => {
         console.error('[Index] 跳转失败:', err)
         app.showError('跳转失败')
@@ -256,7 +200,7 @@ Page({
   goToVisitorDetail(e) {
     const item = e.currentTarget.dataset.item
     console.log('[Index] 查看访客详情:', item.name)
-    wx.showToast({ title: `查看 ${item.name} 的信息`, icon: 'none' })
+    wx.showToast({ title: '查看 ' + item.name + ' 的信息', icon: 'none' })
   },
 
   handleVisitorAction(e) {
@@ -265,7 +209,7 @@ Page({
 
     if (buttonText === '交换名片') {
       wx.showToast({ title: '已发送交换请求', icon: 'success' })
-    } else if (buttonText === '请问是谁') {
+    } else if (buttonText === '询问是谁') {
       wx.showToast({ title: '已发送询问', icon: 'none' })
     }
   },
@@ -281,7 +225,7 @@ Page({
         fail: () => {
           wx.showModal({
             title: '添加到桌面',
-            content: '请点击右上角 "..." 按钮，选择"添加到桌面"即可将科博名片添加到手机桌面',
+            content: '请点右上角 "..." 按钮，选择"添加到我到桌面"即可将科博名片添加到手机桌面',
             showCancel: false,
             confirmText: '我知道了'
           })
@@ -290,7 +234,7 @@ Page({
     } else {
       wx.showModal({
         title: '添加到桌面',
-        content: '请点击右上角 "..." 按钮，选择"添加到桌面"即可将科博名片添加到手机桌面',
+        content: '请点右上角 "..." 按钮，选择"添加到我到桌面"即可将科博名片添加到手机桌面',
         showCancel: false,
         confirmText: '我知道了'
       })
