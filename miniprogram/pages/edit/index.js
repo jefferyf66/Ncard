@@ -1,4 +1,4 @@
-﻿const app = getApp()
+const app = getApp()
 
 Page({
   data: {
@@ -97,27 +97,12 @@ Page({
           fail: (err) => {
             const errMsg = err.errMsg || ''
             if (errMsg.indexOf('cancel') > -1) return
-            this._showPermissionGuide()
           }
         })
       }
     })
   },
 
-  _showPermissionGuide() {
-    wx.showModal({
-      title: '权限提示',
-      content: '使用相册和相机需要在微信设置中开启权限。请点击"去设置"开启相关权限。',
-      confirmText: '去设置',
-      confirmColor: '#3B82F6',
-      cancelText: '取消',
-      success: (res) => {
-        if (res.confirm) {
-          wx.openSetting({})
-        }
-      }
-    })
-  },
 
   compressAndUpload(filePath, type) {
     wx.getFileInfo({
@@ -212,7 +197,6 @@ Page({
       fail: (err) => {
         const errMsg = err.errMsg || ''
         if (errMsg.indexOf('cancel') > -1) return
-        this._showPermissionGuide()
       }
     })
   },
