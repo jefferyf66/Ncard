@@ -1,0 +1,61 @@
+<view class="container">
+  <view class="header">
+    <view class="header-content">
+      <text class="title">My Cards</text>
+      <text class="subtitle" wx:if="{{!isLoading && !isError}}">{{cards.length}} cards</text>
+    </view>
+    <view class="header-actions">
+      <view class="add-btn" bindtap="goToEdit">
+        <view class="add-icon-wrapper">
+          <text class="add-icon">+</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="loading-state" wx:if="{{isLoading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">Loading...</text>
+  </view>
+
+  <view class="empty-state" wx:elif="{{isEmpty}}">
+    <view class="empty-content">
+      <view class="empty-icon">
+        <view class="icon-card"></view>
+      </view>
+      <text class="empty-title">No Cards</text>
+      <text class="empty-desc">Click the top right to create your first card</text>
+      <view class="empty-btn" bindtap="goToEdit">Create Card</view>
+    </view>
+  </view>
+
+  <view class="card-list" wx:else>
+    <view
+      wx:for="{{cards}}"
+      wx:key="_id"
+      class="card-item"
+      bindtap="goToPreview"
+      data-id="{{item._id}}"
+    >
+      <view class="card-left">
+        <image class="card-avatar" src="{{item.avatar || '../../images/avatar.png'}}" mode="aspectFill" lazy-load></image>
+      </view>
+      <view class="card-center">
+        <view class="card-name-row">
+          <text class="card-name">{{item.name || 'Unnamed'}}</text>
+          <text class="card-position" wx:if="{{item.position}}">{{item.position}}</text>
+        </view>
+        <text class="card-company">{{item.company || ''}}</text>
+      </view>
+      <view class="card-right">
+        <view class="card-arrow">&gt;</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="agreement-footer">
+    <text class="agreement-link" bindtap="openPrivacyPolicy">Privacy Policy</text>
+    <text class="agreement-sep">|</text>
+    <text class="agreement-link" bindtap="openServiceAgreement">User Agreement</text>
+  </view>
+</view>
