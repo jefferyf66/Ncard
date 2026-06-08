@@ -85,12 +85,12 @@ Page({
       itemList: ['拍照', '从相册选择'],
       success: (res) => {
         const sourceType = res.tapIndex === 0 ? ['camera'] : ['album']
-        wx.chooseImage({
+        wx.chooseMedia({
           count: 1,
           sizeType: ['compressed'],
           sourceType,
           success: (res) => {
-            const tempFilePath = res.tempFilePaths[0]
+            const tempFilePath = res.tempFiles[0].tempFilePath
             if (!tempFilePath) return
             this.compressAndUpload(tempFilePath, 'avatar')
           },
@@ -164,12 +164,12 @@ Page({
   },
 
   chooseAttachment() {
-    wx.chooseImage({
+    wx.chooseMedia({
       count: 1,
       sizeType: ['compressed'],
       sourceType: ['album', 'camera'],
       success: (res) => {
-        const tempFilePath = res.tempFilePaths[0]
+        const tempFilePath = res.tempFiles[0].tempFilePath
         const fileName = 'attachment_' + Date.now() + '.jpg'
 
         app.showLoading('上传中')
