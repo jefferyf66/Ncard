@@ -85,8 +85,7 @@ Page({
       itemList: ['拍照', '从相册选择'],
       success: (res) => {
         const sourceType = res.tapIndex === 0 ? ['camera'] : ['album']
-      try {
-        wx.chooseMedia({
+wx.chooseMedia({
           count: 1,
           sizeType: ['compressed'],
           sourceType,
