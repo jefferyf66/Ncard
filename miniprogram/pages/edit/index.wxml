@@ -1,0 +1,136 @@
+<view class="container">
+  <view class="loading-state" wx:if="{{isLoading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">Loading...</text>
+  </view>
+
+  <view wx:else class="page-content">
+    <view class="avatar-section">
+      <view class="avatar-wrapper" catchtap="chooseAvatar" hover-class="avatar-wrapper-hover">
+        <image class="avatar" src="{{avatarUrl || '../../images/avatar.png'}}" mode="aspectFill"></image>
+        <view class="avatar-mask">
+          <view class="mask-icon">
+            <view class="icon-plus"></view>
+          </view>
+        </view>
+      </view>
+      <text class="avatar-tip">Click to change avatar</text>
+    </view>
+
+    <view class="form-card">
+      <view class="form-header">
+        <text class="form-title">Basic Info</text>
+      </view>
+
+      <view class="form-group">
+        <view class="form-item">
+          <view class="label-wrapper">
+            <text class="form-label">Name</text>
+            <text class="required">*</text>
+          </view>
+          <input class="form-input {{errors.name ? 'input-error' : ''}}" placeholder="Please input name" value="{{formData.name}}" bindinput="onNameInput" maxlength="20"></input>
+        </view>
+        <view class="form-error" wx:if="{{errors.name}}">{{errors.name}}</view>
+      </view>
+
+      <view class="form-divider"></view>
+
+      <view class="form-group">
+        <view class="form-item">
+          <text class="form-label">Position</text>
+          <input class="form-input" placeholder="Please input position" value="{{formData.position}}" bindinput="onPositionInput" maxlength="30"></input>
+        </view>
+      </view>
+
+      <view class="form-divider"></view>
+
+      <view class="form-group">
+        <view class="form-item">
+          <text class="form-label">Company</text>
+          <input class="form-input" placeholder="Please input company" value="{{formData.company}}" bindinput="onCompanyInput" maxlength="50"></input>
+        </view>
+      </view>
+
+      <view class="form-divider"></view>
+
+      <view class="form-group">
+        <view class="form-item">
+          <text class="form-label">Phone</text>
+          <input class="form-input {{errors.phone ? 'input-error' : ''}}" placeholder="Please input phone" value="{{formData.phone}}" bindinput="onPhoneInput" type="number" maxlength="20"></input>
+        </view>
+        <view class="form-error" wx:if="{{errors.phone}}">{{errors.phone}}</view>
+      </view>
+
+      <view class="form-divider"></view>
+
+      <view class="form-group">
+        <view class="form-item">
+          <text class="form-label">Email</text>
+          <input class="form-input {{errors.email ? 'input-error' : ''}}" placeholder="Please input email" value="{{formData.email}}" bindinput="onEmailInput" maxlength="50"></input>
+        </view>
+        <view class="form-error" wx:if="{{errors.email}}">{{errors.email}}</view>
+      </view>
+
+      <view class="form-divider"></view>
+
+      <view class="form-group">
+        <view class="form-item">
+          <text class="form-label">Address</text>
+          <input class="form-input" placeholder="Please input address" value="{{formData.address}}" bindinput="onAddressInput" maxlength="100"></input>
+        </view>
+      </view>
+
+      <view class="form-divider"></view>
+
+      <view class="form-group">
+        <view class="form-item">
+          <text class="form-label">Website</text>
+          <input class="form-input" placeholder="https://..." value="{{formData.website}}" bindinput="onWebsiteInput" maxlength="100"></input>
+        </view>
+      </view>
+
+      <view class="form-divider"></view>
+
+      <view class="form-group">
+        <view class="form-item">
+          <text class="form-label">WeChat</text>
+          <input class="form-input" placeholder="Please input WeChat" value="{{formData.wechat}}" bindinput="onWechatInput" maxlength="30"></input>
+        </view>
+      </view>
+
+      <view class="form-divider"></view>
+
+      <view class="form-group">
+        <view class="form-item">
+          <text class="form-label">Intro</text>
+          <textarea class="form-textarea" placeholder="Brief introduction" value="{{formData.intro}}" bindinput="onIntroInput" maxlength="200"></textarea>
+        </view>
+      </view>
+
+      <view class="form-divider"></view>
+
+      <view class="form-group">
+        <view class="form-header">
+          <text class="form-title">Attachments</text>
+          <text class="add-btn" bindtap="chooseAttachment">+ Add</text>
+        </view>
+        <view class="attachment-editor">
+          <view class="attach-item" wx:for="{{attachments}}" wx:key="index">
+            <view class="attach-icon-small">
+              <view class="icon-file"></view>
+            </view>
+            <text class="attach-name-small">{{item.name}}</text>
+            <view class="attach-delete" bindtap="deleteAttachment" data-index="{{index}}">Delete</view>
+          </view>
+          <view class="empty-tip" wx:if="{{attachments.length === 0}}">No attachments, click above to add</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="bottom-bar">
+    <view class="save-btn" bindtap="saveCard">
+      <text class="btn-text">{{mode === 'edit' ? 'Save Changes' : 'Save Card'}}</text>
+    </view>
+  </view>
+</view>
