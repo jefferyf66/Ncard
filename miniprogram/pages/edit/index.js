@@ -80,25 +80,23 @@ Page({
     this._openImagePicker()
   },
 
-  _openImagePicker() { console.log("[edit] _openImagePicker called")
-    wx.showActionSheet({
-      itemList: ['拍照', '从相册选择'],
+  _openImagePicker() {
+    console.log("[edit] _openImagePicker called")
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ["image"],
+      sourceType: ["camera", "album"],
+      sizeType: ["compressed"],
       success: (res) => {
-        const sourceType = res.tapIndex === 0 ? ['camera'] : ['album']
-wx.chooseMedia({
-          count: 1,
-          sizeType: ['compressed'],
-          sourceType,
-          success: (res) => {
-            const tempFilePath = res.tempFiles[0].tempFilePath
-            if (!tempFilePath) return
-            this.compressAndUpload(tempFilePath, 'avatar')
-          },
-          fail: (err) => {
-            const errMsg = err.errMsg || ''
-            if (errMsg.indexOf('cancel') > -1) return
-          }
-        })
+        console.log("[edit] chooseMedia success", res)
+        const tempFilePath = res.tempFiles && res.tempFiles[0] && res.tempFiles[0].tempFilePath
+        if (!tempFilePath) return
+        this.compressAndUpload(tempFilePath, "avatar")
+      },
+      fail: (err) => {
+        console.error("[edit] chooseMedia fail:", err)
+        const errMsg = (err && err.errMsg) || ""
+        if (errMsg.indexOf("cancel") > -1) return
       }
     })
   },
