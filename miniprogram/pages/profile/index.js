@@ -5,7 +5,6 @@ Page({
     userInfo: null,
     openid: '',
     cardCount: 0,
-    scanCount: 0,
     currentTheme: '#3B82F6',
     defaultCardName: '',
     showThemePicker: false,
@@ -13,7 +12,6 @@ Page({
     selectedCardId: '',
     cardList: [],
     visitorCount: 0,
-    scanCount: 0,
     themeList: [
       { id: 1, name: '品牌蓝', color: '#3B82F6' },
       { id: 2, name: '活力橙', color: '#FF6A00' },
@@ -44,11 +42,7 @@ Page({
   },
 
   goToCardList() {
-    wx.switchTab({ url: '/pages/index/index' })
-  },
-
-  goToScanHistory() {
-    wx.switchTab({ url: '/pages/scan/index' })
+    wx.navigateTo({ url: '/pages/list/index' })
   },
 
   clearCache() {
@@ -78,7 +72,7 @@ Page({
   },
 
   getUserInfo() {
-    wx.getUserProfile({
+    wx.getUserInfo({
       desc: '用于展示用户信息',
       success: (res) => {
         app.globalData.userInfo = res.userInfo
@@ -91,7 +85,7 @@ Page({
   },
 
   goToVisitors() {
-    wx.switchTab({ url: '/pages/index/index' })
+    wx.navigateTo({ url: '/pages/visitors/index' })
   },
 
   showThemePicker() {

@@ -1,7 +1,13 @@
 <view class="container">
+  <!-- 加载态 -->
+  <view class="loading-state" wx:if="{{isLoading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <block wx:else>
   <view class="section-header">
-    <view class="section-title">我的名片数据</view>
-    <view class="section-arrow" bindtap="goToViewAll">›</view>
+    <text class="section-title">名片数据</text>
   </view>
 
   <view class="stats-row">
@@ -12,12 +18,12 @@
     <view class="stat-divider"></view>
     <view class="stat-item">
       <text class="stat-value">{{stats.viewed}}</text>
-      <text class="stat-label">我看过的</text>
+      <text class="stat-label">多次来访</text>
     </view>
     <view class="stat-divider"></view>
     <view class="stat-item">
       <text class="stat-value">{{stats.newCards}}</text>
-      <text class="stat-label">好友新名片</text>
+      <text class="stat-label">名片数</text>
     </view>
   </view>
 
@@ -25,7 +31,17 @@
     <text class="section-title">最近访客</text>
   </view>
 
-  <view class="visitor-list">
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{isEmpty}}">
+    <view class="empty-icon">
+      <view class="icon-users-empty"></view>
+    </view>
+    <text class="empty-title">暂无访客数据</text>
+    <text class="empty-desc">分享您的名片后，访客数据将会出现在这里</text>
+  </view>
+
+  <!-- 访客列表 -->
+  <view class="visitor-list" wx:else>
     <view 
       class="visitor-item" 
       wx:for="{{visitors}}" 
@@ -54,7 +70,7 @@
       </view>
       <view 
         class="visitor-button {{item.buttonType}}" 
-        bindtap="handleAction"
+        catchtap="handleAction"
         data-item="{{item}}"
       >
         {{item.buttonText}}
@@ -62,7 +78,5 @@
     </view>
   </view>
 
-  <view class="view-all-btn" bindtap="goToViewAll">
-    <text>查看全部</text>
-  </view>
+  </block>
 </view>

@@ -32,15 +32,6 @@
         <text class="stat-label">访客</text>
       </view>
     </view>
-    <view class="stat-item" bindtap="goToScanHistory">
-      <view class="stat-icon-wrap">
-        <view class="icon-camera"></view>
-      </view>
-      <view class="stat-info">
-        <text class="stat-value">{{scanCount}}</text>
-        <text class="stat-label">识别</text>
-      </view>
-    </view>
   </view>
 
   <view class="menu-group">
@@ -55,11 +46,11 @@
         <text class="menu-text">我的名片夹</text>
         <text class="menu-arrow">›</text>
       </view>
-      <view class="menu-item" bindtap="goToScanHistory">
+      <view class="menu-item" bindtap="goToVisitors">
         <view class="menu-icon-wrap">
-          <view class="icon-list"></view>
+          <view class="icon-users"></view>
         </view>
-        <text class="menu-text">识别历史</text>
+        <text class="menu-text">访客记录</text>
         <text class="menu-arrow">›</text>
       </view>
     </view>

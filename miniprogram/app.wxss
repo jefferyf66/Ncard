@@ -110,7 +110,6 @@ button:focus {
   font-size: 32rpx;
   font-weight: 500;
   box-shadow: 0 6rpx 16rpx rgba(59, 130, 246, 0.25);
-  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .btn-primary:active {
@@ -126,7 +125,6 @@ button:focus {
   padding: 28rpx 64rpx;
   font-size: 32rpx;
   font-weight: 500;
-  transition: background 0.2s;
 }
 
 .btn-secondary:active {

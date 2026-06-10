@@ -17,10 +17,10 @@ App({
       wx.onNeedPrivacyAuthorization((resolve, event) => {
         console.log('[App] onNeedPrivacyAuthorization', event)
         wx.showModal({
-          title: 'Privacy',
-          content: 'Use this feature requires your agreement',
-          confirmText: 'Agree',
-          cancelText: 'Disagree',
+          title: '隐私授权',
+          content: '使用此功能需要您同意隐私政策',
+          confirmText: '同意',
+          cancelText: '不同意',
           success: (res) => {
             if (res.confirm) {
               resolve({ event: 'agree', button: 'agree' })

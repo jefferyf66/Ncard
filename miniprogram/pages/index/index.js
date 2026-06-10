@@ -88,16 +88,65 @@ Page({
   loadVisitorData() {
     if (!wx.cloud) return
 
-    const db = wx.cloud.database()
-
-    // 加载访客统计
-    db.collection('visits').count()
+    // 1. 名片总数（cards 集合 — 始终存在）
+    wx.cloud.database().collection('cards').count()
       .then(res => {
-        this.setData({ 'visitorStats.visitors': res.total || 0 })
+        this.setData({ 'visitorStats.newCards': res.total || 0 })
       })
       .catch(() => {})
 
-    // 加载最近访客
+    // 2. 访客统计 — 优先用云函数，失败则静默
+    this._loadVisitorStats()
+  },
+
+  _loadVisitorStats() {
+    // 尝试云函数方式获取访客统计
+    wx.cloud.callFunction({
+      name: 'initVisits',
+      data: { action: 'getMyVisitorStats', data: { cardOwnerId: '' } }
+    }).then(res => {
+      if (res.result && res.result.ok) {
+        this.setData({
+          'visitorStats.visitors': res.result.visitors || 0,
+          'visitorStats.viewed': res.result.viewed || 0
+        })
+        // 加载最近访客
+        this._loadRecentVisitors()
+      }
+    }).catch(() => {
+      // 云函数未部署 → 尝试直接查 visits 集合
+      this._loadVisitorStatsDirect()
+    })
+  },
+
+  _loadVisitorStatsDirect() {
+    const db = wx.cloud.database()
+    const _ = db.command
+
+    // visits 集合可能不存在
+    const handleError = () => {
+      this.setData({
+        'visitorStats.visitors': 0,
+        'visitorStats.viewed': 0
+      })
+    }
+
+    db.collection('visits').count()
+      .then(res => {
+        this.setData({ 'visitorStats.visitors': res.total || 0 })
+        return db.collection('visits')
+          .where({ visitCount: _.gt(1) })
+          .count()
+      })
+      .then(res => {
+        this.setData({ 'visitorStats.viewed': res.total || 0 })
+        this._loadRecentVisitors()
+      })
+      .catch(handleError)
+  },
+
+  _loadRecentVisitors() {
+    const db = wx.cloud.database()
     db.collection('visits')
       .orderBy('visitTime', 'desc')
       .limit(5)
@@ -246,6 +295,17 @@ Page({
     console.log('[Index] 跳转到访客页')
     wx.navigateTo({
       url: '/pages/visitors/index',
+      fail: (err) => {
+        console.error('[Index] 跳转失败:', err)
+        app.showError('跳转失败')
+      }
+    })
+  },
+
+  goToCardList() {
+    console.log('[Index] 跳转到名片列表')
+    wx.navigateTo({
+      url: '/pages/list/index',
       fail: (err) => {
         console.error('[Index] 跳转失败:', err)
         app.showError('跳转失败')

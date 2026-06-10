@@ -1,0 +1,6 @@
+{
+  "name": "initVisits",
+  "version": "1.0.0",
+  "description": "初始化 visits 集合并提供访客记录能力",
+  "main": "index.js"
+}

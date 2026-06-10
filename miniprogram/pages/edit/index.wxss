@@ -436,6 +436,8 @@
   background: #FFFFFF;
   border-top: 2rpx solid #F1F5F9;
   box-shadow: 0 -1rpx 8rpx rgba(0, 0, 0, 0.03);
+  z-index: 999;
+  pointer-events: auto;
 }
 
 /* 保存按钮 — 不透明纯色 */
@@ -445,11 +447,126 @@
   text-align: center;
   border-radius: 4rpx;
   transition: background 0.2s, transform 0.2s;
+  pointer-events: auto;
 }
 
 .save-btn:active {
   background: #2563EB;
   transform: scale(0.99);
+}
+
+/* ===== 开关组件 ===== */
+.switch-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.switch {
+  width: 80rpx;
+  height: 44rpx;
+  background: #E2E8F0;
+  border-radius: 22rpx;
+  position: relative;
+  transition: background 0.2s;
+}
+
+.switch-on {
+  background: #3B82F6;
+}
+
+.switch-thumb {
+  position: absolute;
+  top: 4rpx;
+  left: 4rpx;
+  width: 36rpx;
+  height: 36rpx;
+  background: #FFFFFF;
+  border-radius: 50%;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s;
+}
+
+.switch-on .switch-thumb {
+  transform: translateX(36rpx);
+}
+
+.switch-text {
+  font-size: 24rpx;
+  color: #64748B;
+}
+
+/* ===== 头部右侧区域 ===== */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+/* ===== 拖拽手柄 ===== */
+.exp-item {
+  display: flex;
+  gap: 16rpx;
+  background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+  border-radius: 8rpx;
+  padding: 20rpx;
+  margin-bottom: 16rpx;
+  border-left: 4rpx solid transparent;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.exp-item:active {
+  border-left-color: #3B82F6;
+  transform: scale(0.995);
+}
+
+.exp-drag-handle {
+  width: 48rpx;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+}
+
+.exp-drag-handle:active {
+  cursor: grabbing;
+}
+
+.drag-icon {
+  width: 24rpx;
+  height: 36rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+}
+
+.drag-icon::before,
+.drag-icon::after {
+  content: '';
+  display: block;
+  width: 20rpx;
+  height: 4rpx;
+  background: #94A3B8;
+  border-radius: 2rpx;
+}
+
+.drag-icon::after {
+  margin-top: 6rpx;
+}
+
+.exp-content {
+  flex: 1;
+}
+
+/* ===== 拖拽排序时的样式 ===== */
+.exp-item.dragging {
+  opacity: 0.5;
+  background: #E0E7FF;
+}
+
+.exp-item.drag-over {
+  border-top: 4rpx dashed #3B82F6;
 }
 
 .btn-text {

@@ -92,13 +92,13 @@
     </view>
 
     <view class="stats-card">
-      <view class="stat-item">
+      <view class="stat-item" bindtap="goToVisitors">
         <view class="stat-icon">
           <view class="icon-users"></view>
         </view>
         <view class="stat-info">
           <text class="stat-value">{{visitorStats.visitors}}</text>
-          <text class="stat-label">访客</text>
+          <text class="stat-label">我的访客</text>
         </view>
       </view>
       <view class="stat-divider"></view>
@@ -108,17 +108,17 @@
         </view>
         <view class="stat-info">
           <text class="stat-value">{{visitorStats.viewed}}</text>
-          <text class="stat-label">看过</text>
+          <text class="stat-label">多次来访</text>
         </view>
       </view>
       <view class="stat-divider"></view>
-      <view class="stat-item">
+      <view class="stat-item" bindtap="goToCardList">
         <view class="stat-icon">
           <view class="icon-add"></view>
         </view>
         <view class="stat-info">
           <text class="stat-value">{{visitorStats.newCards}}</text>
-          <text class="stat-label">新名片</text>
+          <text class="stat-label">名片数</text>
         </view>
       </view>
     </view>
@@ -150,7 +150,7 @@
         </view>
         <view 
           class="visitor-button {{item.buttonType}}" 
-          bindtap="handleVisitorAction"
+          catchtap="handleVisitorAction"
           data-item="{{item}}"
         >
           {{item.buttonText}}

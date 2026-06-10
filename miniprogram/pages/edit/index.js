@@ -19,7 +19,17 @@ Page({
     attachments: [],
     wechatOfficial: { name: '', desc: '', url: '' },
     companyWebsite: { name: '', url: '', desc: '' },
-    errors: {}
+    publicSettings: {
+      showPersonalIntro: true,
+      showBusinessIntro: true,
+      showExperiences: true,
+      showWechatOfficial: true,
+      showCompanyWebsite: true,
+      showAttachments: true
+    },
+    errors: {},
+    dragStartIndex: -1,
+    dragY: 0
   },
 
   onLoad(options) {
@@ -61,6 +71,14 @@ Page({
             attachments: data.attachments || [],
             wechatOfficial: data.wechatOfficial || { name: '', desc: '', url: '' },
             companyWebsite: data.companyWebsite || { name: '', url: '', desc: '' },
+            publicSettings: data.publicSettings || {
+              showPersonalIntro: true,
+              showBusinessIntro: true,
+              showExperiences: true,
+              showWechatOfficial: true,
+              showCompanyWebsite: true,
+              showAttachments: true
+            },
             isLoading: false
           })
         } else {
@@ -76,116 +94,118 @@ Page({
       })
   },
 
-  chooseAvatar() { console.log("[edit] chooseAvatar called")
-    this._openImagePicker()
-  },
-
-  _openImagePicker() {
-    console.log("[edit] _openImagePicker called")
-    // 先检查隐私设置
-    if (wx.requirePrivacyAuthorize) {
-      wx.requirePrivacyAuthorize({
-        success: () => {
-          console.log("[edit] privacy authorized, calling chooseMedia")
-          this.doChooseMedia()
-        },
-        fail: (err) => {
-          console.error("[edit] privacy authorize fail:", err)
-        }
-      })
-    } else {
-      this.doChooseMedia()
-    }
-  },
-
-  doChooseMedia() {
-    console.log("[edit] doChooseMedia called")
-    wx.chooseMedia({
-      count: 1,
-      mediaType: ["image"],
-      sourceType: ["camera", "album"],
-      sizeType: ["compressed"],
-      success: (res) => {
-        console.log("[edit] chooseMedia success", res)
-        const tempFilePath = res.tempFiles && res.tempFiles[0] && res.tempFiles[0].tempFilePath
-        if (!tempFilePath) return
-        this.compressAndUpload(tempFilePath, "avatar")
+  chooseAvatar() {
+    // 策略：先通过 wx.authorize 触发原生授权弹窗
+    wx.authorize({
+      scope: 'scope.camera',
+      success: () => {
+        this._pickAndCrop()
       },
-      fail: (err) => {
-        console.error("[edit] chooseMedia fail:", err)
-        const errMsg = (err && err.errMsg) || ""
-        if (errMsg.indexOf("cancel") > -1) return
+      fail: () => {
+        // 用户拒绝原生授权或 scope.camera 未声明
+        // 仍然尝试 chooseImage，它会自动弹出自己的授权界面
+        this._pickAndCrop()
       }
     })
   },
 
-
-  compressAndUpload(filePath, type) {
-    wx.getFileInfo({
-      filePath,
+  // 选图 → 跳裁切页
+  _pickAndCrop() {
+    wx.chooseImage({
+      count: 1,
+      sizeType: ['original', 'compressed'],
+      sourceType: ['album', 'camera'],
       success: (res) => {
-        let compressQuality = 80
-        if (res.size > 5 * 1024 * 1024) {
-          app.showError('图片过大，请选择小于5MB的图片')
-          return
-        }
-        if (res.size > 2 * 1024 * 1024) compressQuality = 60
-        else if (res.size > 1 * 1024 * 1024) compressQuality = 70
-
-        wx.compressImage({
-          src: filePath,
-          quality: compressQuality,
-          success: (compressRes) => {
-            this.uploadFile(compressRes.tempFilePath, type)
-          },
-          fail: () => {
-            this.uploadFile(filePath, type)
-          }
+        const tempFilePath = res.tempFilePaths && res.tempFilePaths[0]
+        if (!tempFilePath) return
+        // 跳转裁切页（通过 globalData 传路径，避免 URL 编码问题）
+        app.globalData.cropImageSrc = tempFilePath
+        wx.navigateTo({
+          url: '/pages/crop/index'
         })
       },
-      fail: () => {
-        this.uploadFile(filePath, type)
+      fail: (err) => {
+        const errMsg = (err && err.errMsg) || ''
+        if (errMsg.indexOf('cancel') > -1) return
+
+        console.warn('[Edit] chooseImage 失败:', errMsg)
+        this._tryChooseMediaForCrop()
       }
     })
   },
 
-  uploadFile(filePath, type) {
+  _tryChooseMediaForCrop() {
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sourceType: ['camera', 'album'],
+      success: (res) => {
+        const tempFile = res.tempFiles && res.tempFiles[0]
+        if (!tempFile || !tempFile.tempFilePath) return
+        app.globalData.cropImageSrc = tempFile.tempFilePath
+        wx.navigateTo({
+          url: '/pages/crop/index'
+        })
+      },
+      fail: (err) => {
+        const errMsg = (err && err.errMsg) || ''
+        if (errMsg.indexOf('cancel') > -1) return
+
+        if (errMsg.indexOf('api scope is not declared') > -1) {
+          console.error('[Edit] chooseMedia scope 未声明:', errMsg)
+          wx.showModal({
+            title: '隐私配置未生效',
+            content: '请在微信公众平台 → 设置 → 服务内容声明 → 用户隐私保护指引中，勾选「收集你选中的照片或视频文件」并重新提交审核发布。',
+            showCancel: false,
+            confirmText: '知道了'
+          })
+          return
+        }
+
+        console.error('[Edit] chooseMedia 失败:', errMsg)
+        wx.showModal({
+          title: '无法打开相册',
+          content: '请在手机设置 → 微信中开启「相机」和「照片」权限后重试。',
+          showCancel: false,
+          confirmText: '知道了'
+        })
+      }
+    })
+  },
+
+  // 裁切页返回的结果回调
+  onCropResult(tempFilePath) {
+    if (!tempFilePath) return
+    this._uploadAvatar(tempFilePath)
+  },
+
+  _uploadAvatar(tempFilePath) {
     app.showLoading('上传中')
-
-    const timestamp = Date.now()
-    const cloudPath = type + '/' + timestamp + '.jpg'
-
+    const cloudPath = 'avatars/' + Date.now() + '.jpg'
     wx.cloud.uploadFile({
       cloudPath,
-      filePath,
-      success: (res) => {
-        if (type === 'avatar') {
-          this.setData({ avatar: res.fileID })
-        } else if (type === 'wechatQR') {
-          this.setData({
-            wechatOfficial: {
-              ...this.data.wechatOfficial,
-              qrUrl: res.fileID
-            }
-          })
-        }
+      filePath: tempFilePath,
+      success: (uploadRes) => {
         app.hideLoading()
-        app.showSuccess('上传成功')
+        this.setData({ avatar: uploadRes.fileID })
+        app.showSuccess('头像更新成功')
       },
-      fail: () => {
+      fail: (err) => {
         app.hideLoading()
-        app.showError('上传失败，请重试')
+        console.error('[Edit] 头像上传失败:', JSON.stringify(err))
+        app.showError('头像上传失败，请重试')
       }
     })
   },
 
   chooseAttachment() {
-    wx.chooseMedia({
+    wx.chooseImage({
       count: 1,
       sizeType: ['compressed'],
       sourceType: ['album', 'camera'],
       success: (res) => {
-        const tempFilePath = res.tempFiles[0].tempFilePath
+        const tempFilePath = res.tempFilePaths && res.tempFilePaths[0]
+        if (!tempFilePath) return
         const fileName = 'attachment_' + Date.now() + '.jpg'
 
         app.showLoading('上传中')
@@ -193,12 +213,12 @@ Page({
         wx.cloud.uploadFile({
           cloudPath: 'attachments/' + fileName,
           filePath: tempFilePath,
-          success: (res) => {
+          success: (uploadRes) => {
             app.hideLoading()
             const attachments = [...this.data.attachments, {
               name: fileName,
-              url: res.fileID,
-              size: this.formatSize(res.statusCode === 200 ? 1024 : 0),
+              url: uploadRes.fileID,
+              size: '',
               time: this.formatTime(new Date())
             }]
             this.setData({ attachments })
@@ -215,6 +235,12 @@ Page({
         if (errMsg.indexOf('cancel') > -1) return
       }
     })
+  },
+
+  deleteAttachment(e) {
+    const index = parseInt(e.currentTarget.dataset.index)
+    const attachments = this.data.attachments.filter((_, i) => i !== index)
+    this.setData({ attachments })
   },
 
   formatSize(bytes) {
@@ -290,6 +316,36 @@ Page({
     this.setData({ experiences })
   },
 
+  onExpTouchStart(e) {
+    if (e.touches.length !== 1) return
+    const index = parseInt(e.currentTarget.dataset.index)
+    this.setData({
+      dragStartIndex: index,
+      dragY: e.touches[0].clientY
+    })
+  },
+
+  onExpTouchMove(e) {
+    if (this.data.dragStartIndex === -1) return
+    if (e.touches.length !== 1) return
+
+    const deltaY = e.touches[0].clientY - this.data.dragY
+    const experiences = [...this.data.experiences]
+    const startIndex = this.data.dragStartIndex
+    const itemHeight = 200
+    const moveIndex = Math.max(0, Math.min(experiences.length - 1, startIndex + Math.round(deltaY / itemHeight)))
+
+    if (moveIndex !== startIndex) {
+      const [removed] = experiences.splice(startIndex, 1)
+      experiences.splice(moveIndex, 0, removed)
+      this.setData({ experiences, dragStartIndex: moveIndex, dragY: e.touches[0].clientY })
+    }
+  },
+
+  onExpTouchEnd() {
+    this.setData({ dragStartIndex: -1 })
+  },
+
   onWechatInput(e) {
     const field = e.currentTarget.dataset.field
     const value = e.detail.value.trim()
@@ -312,72 +368,75 @@ Page({
     })
   },
 
-  deleteAttachment(e) {
-    const index = parseInt(e.currentTarget.dataset.index)
-    const attachments = this.data.attachments.filter((_, i) => i !== index)
-    this.setData({ attachments })
+  togglePublic(e) {
+    const field = e.currentTarget.dataset.field
+    if (!field) return
+    this.setData({
+      publicSettings: {
+        ...this.data.publicSettings,
+        [field]: !this.data.publicSettings[field]
+      }
+    })
   },
 
   clearError(field) {
-    const errors = this.data.errors
-    if (errors[field]) {
-      delete errors[field]
-      this.setData({ errors: { ...errors } })
-    }
+    const errors = { ...this.data.errors }
+    delete errors[field]
+    this.setData({ errors })
   },
 
-  validateForm() {
+  validate() {
     const errors = {}
-    const { name, company, phone, email } = this.data
-
-    if (!name) errors.name = '请输入姓名'
-    if (!company) errors.company = '请输入公司名称'
-    if (phone && !app.isValidPhone(phone)) errors.phone = '请输入正确的手机号'
-    if (email && !app.isValidEmail(email)) errors.email = '请输入正确的邮箱地址'
-
-    if (Object.keys(errors).length > 0) {
-      this.setData({ errors })
-      app.showError(Object.values(errors)[0])
-      return false
-    }
-    return true
+    if (!this.data.name.trim()) errors.name = '请输入姓名'
+    if (!this.data.company.trim()) errors.company = '请输入公司名称'
+    if (this.data.phone && !/^1[3-9]\d{9}$/.test(this.data.phone)) errors.phone = '请输入正确的手机号码'
+    if (this.data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.data.email)) errors.email = '请输入正确的邮箱地址'
+    this.setData({ errors })
+    return Object.keys(errors).length === 0
   },
 
   saveCard() {
+    if (!this.validate()) return
     if (this.data.isSaving) return
-    if (!this.validateForm()) return
 
     this.setData({ isSaving: true })
 
     const data = {
-      name: this.data.name,
-      position: this.data.position,
-      company: this.data.company,
-      phone: this.data.phone,
-      email: this.data.email,
-      address: this.data.address,
+      name: this.data.name.trim(),
+      position: this.data.position.trim(),
+      company: this.data.company.trim(),
+      phone: this.data.phone.trim(),
+      email: this.data.email.trim(),
+      address: this.data.address.trim(),
       avatar: this.data.avatar,
-      personalIntro: this.data.personalIntro,
-      businessIntro: this.data.businessIntro,
+      personalIntro: this.data.personalIntro.trim(),
+      businessIntro: this.data.businessIntro.trim(),
       experiences: this.data.experiences.filter(e => e.company || e.position),
       attachments: this.data.attachments,
       wechatOfficial: this.data.wechatOfficial,
       companyWebsite: this.data.companyWebsite,
+      publicSettings: this.data.publicSettings,
       updateTime: new Date()
     }
 
-    const db = wx.cloud.database().collection('cards')
-    const action = this.data.isEdit ? db.doc(this.data.id).update({ data }) : db.add({ data: { ...data, createTime: new Date() } })
+    if (!this.data.id) {
+      data.createTime = new Date()
+    }
 
-    action.then(() => {
-      app.hideLoading()
-      this.setData({ isSaving: false })
-      app.showSuccess('保存成功')
-      setTimeout(() => wx.navigateBack(), 1500)
-    }).catch(() => {
-      app.hideLoading()
-      this.setData({ isSaving: false })
-      app.showError('保存失败，请重试')
-    })
+    const db = wx.cloud.database()
+    const promise = this.data.id
+      ? db.collection('cards').doc(this.data.id).update({ data })
+      : db.collection('cards').add({ data })
+
+    promise
+      .then(() => {
+        this.setData({ isSaving: false })
+        app.showSuccess(this.data.isEdit ? '修改成功' : '创建成功')
+        setTimeout(() => wx.navigateBack(), 1500)
+      })
+      .catch(() => {
+        this.setData({ isSaving: false })
+        app.showError('保存失败，请重试')
+      })
   }
 })

@@ -9,7 +9,7 @@
       <view class="icon-alert"></view>
     </view>
     <text class="error-text">{{errorMsg}}</text>
-    <view class="retry-btn" bindtap="loadCard" data-id="{{id}}">点击重试</view>
+    <view class="retry-btn" bindtap="retryLoad">点击重试</view>
   </view>
 
   <view wx:else>
@@ -48,7 +48,7 @@
       </view>
     </view>
 
-    <view class="section-card" wx:if="{{card.experiences && card.experiences.length > 0}}">
+    <view class="section-card" wx:if="{{card.experiences && card.experiences.length > 0 && (!card.publicSettings || card.publicSettings.showExperiences !== false)}}">
       <view class="section-header">
         <view class="section-icon">
           <view class="icon-briefcase"></view>
@@ -68,7 +68,7 @@
       </view>
     </view>
 
-    <view class="section-card" wx:if="{{card.personalIntro}}">
+    <view class="section-card" wx:if="{{card.personalIntro && (!card.publicSettings || card.publicSettings.showPersonalIntro !== false)}}">
       <view class="section-header">
         <view class="section-icon">
           <view class="icon-user"></view>
@@ -78,7 +78,7 @@
       <text class="intro-content">{{card.personalIntro}}</text>
     </view>
 
-    <view class="section-card" wx:if="{{card.businessIntro}}">
+    <view class="section-card" wx:if="{{card.businessIntro && (!card.publicSettings || card.publicSettings.showBusinessIntro !== false)}}">
       <view class="section-header">
         <view class="section-icon">
           <view class="icon-briefcase"></view>
@@ -88,7 +88,7 @@
       <text class="intro-content">{{card.businessIntro}}</text>
     </view>
 
-    <view class="section-card" wx:if="{{card.attachments && card.attachments.length > 0}}">
+    <view class="section-card" wx:if="{{card.attachments && card.attachments.length > 0 && (!card.publicSettings || card.publicSettings.showAttachments !== false)}}">
       <view class="section-header">
         <view class="section-icon">
           <view class="icon-paperclip"></view>
@@ -111,7 +111,7 @@
       </view>
     </view>
 
-    <view class="section-card" wx:if="{{card.wechatOfficial && card.wechatOfficial.name && card.wechatOfficial.url}}">
+    <view class="section-card" wx:if="{{card.wechatOfficial && card.wechatOfficial.name && card.wechatOfficial.url && (!card.publicSettings || card.publicSettings.showWechatOfficial !== false)}}">
       <view class="link-card" bindtap="openWechatOfficial">
         <view class="link-icon-wrap">
           <view class="icon-wechat"></view>
@@ -126,7 +126,7 @@
       </view>
     </view>
 
-    <view class="section-card" wx:if="{{card.companyWebsite && card.companyWebsite.url}}">
+    <view class="section-card" wx:if="{{card.companyWebsite && card.companyWebsite.url && (!card.publicSettings || card.publicSettings.showCompanyWebsite !== false)}}">
       <view class="link-card" bindtap="openCompanyWebsite">
         <view class="link-icon-wrap website">
           <view class="icon-globe"></view>

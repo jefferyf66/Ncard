@@ -9,14 +9,38 @@
 
 ## 技术栈
 - 微信小程序原生 + 微信云开发（DYNAMIC_CURRENT_ENV）
-- 云数据库集合：cards（名片）、visits（访客记录）、scans（扫描记录）
-- 云函数：getOpenId、getQrCode、parseCard
+- 云数据库集合：cards（名片）、visits（访客记录）
+- 云函数：getOpenId、getQrCode
+- 已移除：scan 页面、crop 页面、parseCard 云函数（无扫描名片需求）
+
+## 页面结构
+- `pages/index/index` — 首页（名片列表 + 访客统计 + 隐私弹窗）
+- `pages/edit/index` — 名片编辑/创建
+- `pages/preview/index` — 名片详情预览
+- `pages/visitors/index` — 访客记录
+- `pages/agreement/index` — 隐私政策 / 服务协议
+- `pages/list/index` — 名片夹列表
+- `pages/profile/index` — 个人中心
 
 ## 关键配置
-- `app.json`: `"navigationBarBackgroundColor": "#3B82F6"`, `"__usePrivacyCheck__": true`
-- 头像上传需先过 `_ensurePrivacyAuth()` 隐私授权
+- `app.json`: `"navigationBarBackgroundColor": "#3B82F6"`
+- **开发环境**：`__usePrivacyCheck__` 已移除，使用老式权限系统（wx.authorize + 原生弹窗）
+- **发布前**：恢复 `"__usePrivacyCheck__": true` + MP 后台配置隐私指引 + 提交审核
+- 头像上传：`wx.authorize('scope.camera')` → `wx.chooseImage` → `wx.chooseMedia`（三级降级）
+
+## 已知修复记录
+- 2026-06-10：删除扫描名片功能（scan/crop/parseCard，11 文件）
+- 2026-06-10：全面修复 43 个审计问题（Critical 3/Major 4/Minor 4）
+  - app.json 注册 list + profile 页面、删除 orphan detail
+  - edit 页 6 个 togglePublic 开关传参修复（data-field）
+  - edit 页头像隐私授权完整流程（_ensurePrivacyAuth → _openImagePicker）
+  - profile 页 wx.getUserProfile → wx.getUserInfo
+  - app.wxss 移除 transition 属性
+  - 访客统计 viewed/newCards 真实查询 / 按钮冒泡修复（catchtap）
+  - project.config.json 清理模板残留
 
 ## 发布前待办
-- [ ] MP 后台配置隐私保护指引（相册 + 摄像头权限）
+- [ ] 在 `app.json` 中恢复 `"__usePrivacyCheck__": true`
+- [ ] MP 后台配置隐私保护指引（勾选「收集你选中的照片或视频文件」+「获取你的相机权限」）
+- [ ] 提交微信审核 → 审核通过后发布（隐私指引随版本一同生效）
 - [ ] 云函数部署到生产环境
-- [ ] 提交微信审核

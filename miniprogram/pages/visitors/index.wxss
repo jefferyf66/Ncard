@@ -71,6 +71,99 @@
   background: #E2E8F0;
 }
 
+/* ============ 空状态 ============ */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 48rpx;
+  text-align: center;
+}
+
+.empty-icon {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32rpx;
+}
+
+.icon-users-empty {
+  width: 70rpx;
+  height: 70rpx;
+  position: relative;
+  opacity: 0.4;
+}
+
+.icon-users-empty::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36rpx;
+  height: 36rpx;
+  border: 2rpx solid #94A3B8;
+  border-radius: 50%;
+}
+
+.icon-users-empty::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 34rpx;
+  border: 2rpx solid #94A3B8;
+  border-radius: 17rpx 17rpx 0 0;
+}
+
+.empty-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 12rpx;
+}
+
+.empty-desc {
+  font-size: 26rpx;
+  color: #94A3B8;
+  line-height: 1.6;
+  max-width: 400rpx;
+}
+
+/* ============ 加载态 ============ */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 200rpx 0;
+}
+
+.loading-spinner {
+  width: 64rpx;
+  height: 64rpx;
+  border: 6rpx solid #E2E8F0;
+  border-top-color: #3B82F6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 24rpx;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 28rpx;
+  color: #94A3B8;
+}
+
 /* ============ VISITOR LIST ============ */
 .visitor-list {
   display: flex;

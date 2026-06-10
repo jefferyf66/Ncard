@@ -19,7 +19,46 @@ Page({
     if (id) {
       this.loadCard(id)
       this.initShareMenu()
+      this.recordVisit(id, options)
     }
+  },
+
+  // 记录访问（用于访客统计）
+  recordVisit(cardId, options) {
+    if (!wx.cloud) return
+
+    // 获取当前用户 openId
+    wx.cloud.callFunction({
+      name: 'getOpenId',
+      data: {},
+      success: (res) => {
+        const visitorOpenId = res.result?.openid || ''
+        if (!visitorOpenId) return
+
+        // 调用 initVisits 云函数记录访问
+        wx.cloud.callFunction({
+          name: 'initVisits',
+          data: {
+            action: 'recordVisit',
+            data: {
+              cardId,
+              visitorOpenId,
+              source: options?.source || 'direct'
+            }
+          },
+          success: (result) => {
+            console.log('[Preview] 访问记录成功:', result)
+          },
+          fail: (err) => {
+            // 云函数未部署时静默忽略
+            console.warn('[Preview] 访问记录失败（云函数未部署）:', err)
+          }
+        })
+      },
+      fail: (err) => {
+        console.warn('[Preview] 获取 openId 失败:', err)
+      }
+    })
   },
 
   onShow() {
@@ -87,7 +126,8 @@ Page({
               personalIntro: res.data.personalIntro || '',
               businessIntro: res.data.businessIntro || '',
               wechatOfficial: res.data.wechatOfficial || {},
-              companyWebsite: res.data.companyWebsite || {}
+              companyWebsite: res.data.companyWebsite || {},
+              publicSettings: res.data.publicSettings || {}
             },
             isLoading: false,
             isError: false
@@ -324,5 +364,14 @@ Page({
         console.error('[Preview] 删除失败:', err)
         app.showError('删除失败，请重试')
       })
-  }
+  },
+
+  retryLoad() {
+    const id = this.data.id
+    if (!id) return
+    this.setData({ isError: false, isLoading: true })
+    this.loadCard(id)
+  },
+
+  stopPropagation() {}
 })

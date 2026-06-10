@@ -129,8 +129,16 @@
       <view class="form-divider"></view>
 
       <view class="form-group">
+        <view class="form-header">
+          <text class="form-title">个人介绍</text>
+          <view class="switch-wrapper" bindtap="togglePublic" data-field="showPersonalIntro">
+            <view class="switch {{publicSettings.showPersonalIntro ? 'switch-on' : ''}}">
+              <view class="switch-thumb"></view>
+            </view>
+            <text class="switch-text">{{publicSettings.showPersonalIntro ? '公开' : '隐藏'}}</text>
+          </view>
+        </view>
         <view class="form-item">
-          <text class="form-label">个人介绍</text>
           <textarea 
             class="form-textarea" 
             placeholder="介绍一下您自己" 
@@ -145,8 +153,16 @@
       <view class="form-divider"></view>
 
       <view class="form-group">
+        <view class="form-header">
+          <text class="form-title">业务介绍</text>
+          <view class="switch-wrapper" bindtap="togglePublic" data-field="showBusinessIntro">
+            <view class="switch {{publicSettings.showBusinessIntro ? 'switch-on' : ''}}">
+              <view class="switch-thumb"></view>
+            </view>
+            <text class="switch-text">{{publicSettings.showBusinessIntro ? '公开' : '隐藏'}}</text>
+          </view>
+        </view>
         <view class="form-item">
-          <text class="form-label">业务介绍</text>
           <textarea 
             class="form-textarea" 
             placeholder="介绍您的业务范围和能力" 
@@ -163,24 +179,48 @@
       <view class="form-group">
         <view class="form-header">
           <text class="form-title">过往经历</text>
-          <text class="add-btn" bindtap="addExperience">+ 添加</text>
+          <view class="header-right">
+            <view class="switch-wrapper" bindtap="togglePublic" data-field="showExperiences">
+              <view class="switch {{publicSettings.showExperiences ? 'switch-on' : ''}}">
+                <view class="switch-thumb"></view>
+              </view>
+              <text class="switch-text">{{publicSettings.showExperiences ? '公开' : '隐藏'}}</text>
+            </view>
+            <text class="add-btn" bindtap="addExperience">+ 添加</text>
+          </view>
         </view>
         <view class="experience-editor">
-          <view class="exp-item" wx:for="{{experiences}}" wx:key="index">
-            <view class="exp-row">
-              <input class="exp-input" placeholder="公司名称" value="{{item.company}}" bindinput="onExpInput" data-index="{{index}}" data-field="company" />
+          <view 
+            class="exp-item" 
+            wx:for="{{experiences}}" 
+            wx:key="index"
+          >
+            <view 
+              class="exp-drag-handle"
+              bindtouchstart="onExpTouchStart"
+              bindtouchmove="onExpTouchMove"
+              bindtouchend="onExpTouchEnd"
+              data-index="{{index}}"
+            >
+              <view class="drag-icon"></view>
             </view>
-            <view class="exp-row">
-              <input class="exp-input" placeholder="职位" value="{{item.position}}" bindinput="onExpInput" data-index="{{index}}" data-field="position" />
+            <view class="exp-content">
+              <view class="exp-row">
+                <input class="exp-input" placeholder="公司名称" value="{{item.company}}" bindinput="onExpInput" data-index="{{index}}" data-field="company" />
+              </view>
+              <view class="exp-row">
+                <input class="exp-input" placeholder="职位" value="{{item.position}}" bindinput="onExpInput" data-index="{{index}}" data-field="position" />
+              </view>
+              <view class="exp-row">
+                <input class="exp-input" placeholder="时间（如：2020-2023）" value="{{item.period}}" bindinput="onExpInput" data-index="{{index}}" data-field="period" />
+              </view>
+              <view class="exp-row">
+                <textarea class="exp-textarea" placeholder="工作描述" value="{{item.desc}}" bindinput="onExpInput" data-index="{{index}}" data-field="desc" />
+              </view>
+              <view class="exp-delete" bindtap="deleteExperience" data-index="{{index}}">删除</view>
             </view>
-            <view class="exp-row">
-              <input class="exp-input" placeholder="时间（如：2020-2023）" value="{{item.period}}" bindinput="onExpInput" data-index="{{index}}" data-field="period" />
-            </view>
-            <view class="exp-row">
-              <textarea class="exp-textarea" placeholder="工作描述" value="{{item.desc}}" bindinput="onExpInput" data-index="{{index}}" data-field="desc" />
-            </view>
-            <view class="exp-delete" bindtap="deleteExperience" data-index="{{index}}">删除</view>
           </view>
+          <view class="empty-tip" wx:if="{{experiences.length === 0}}">暂无经历，点击上方添加</view>
         </view>
       </view>
 
@@ -189,6 +229,12 @@
       <view class="form-group">
         <view class="form-header">
           <text class="form-title">公众号信息</text>
+          <view class="switch-wrapper" bindtap="togglePublic" data-field="showWechatOfficial">
+            <view class="switch {{publicSettings.showWechatOfficial ? 'switch-on' : ''}}">
+              <view class="switch-thumb"></view>
+            </view>
+            <text class="switch-text">{{publicSettings.showWechatOfficial ? '公开' : '隐藏'}}</text>
+          </view>
         </view>
         <view class="form-item">
           <text class="form-label">公众号名称</text>
@@ -209,6 +255,12 @@
       <view class="form-group">
         <view class="form-header">
           <text class="form-title">公司主页</text>
+          <view class="switch-wrapper" bindtap="togglePublic" data-field="showCompanyWebsite">
+            <view class="switch {{publicSettings.showCompanyWebsite ? 'switch-on' : ''}}">
+              <view class="switch-thumb"></view>
+            </view>
+            <text class="switch-text">{{publicSettings.showCompanyWebsite ? '公开' : '隐藏'}}</text>
+          </view>
         </view>
         <view class="form-item">
           <text class="form-label">网站名称</text>
@@ -229,7 +281,15 @@
       <view class="form-group">
         <view class="form-header">
           <text class="form-title">名片附件</text>
-          <text class="add-btn" bindtap="chooseAttachment">+ 添加</text>
+          <view class="header-right">
+            <view class="switch-wrapper" bindtap="togglePublic" data-field="showAttachments">
+              <view class="switch {{publicSettings.showAttachments ? 'switch-on' : ''}}">
+                <view class="switch-thumb"></view>
+              </view>
+              <text class="switch-text">{{publicSettings.showAttachments ? '公开' : '隐藏'}}</text>
+            </view>
+            <text class="add-btn" bindtap="chooseAttachment">+ 添加</text>
+          </view>
         </view>
         <view class="attachment-editor">
           <view class="attach-item" wx:for="{{attachments}}" wx:key="index">
