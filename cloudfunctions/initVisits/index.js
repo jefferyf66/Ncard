@@ -24,7 +24,7 @@ exports.main = async (event, context) => {
         }
         return { ok: true, message: 'visits 集合已存在，无需创建' }
       }
-    },
+    }
 
     // 记录一次访问（含匿名访客身份识别）
     case 'recordVisit': {
@@ -73,7 +73,7 @@ exports.main = async (event, context) => {
       if (visitorLevel < 3) {
         try {
           const profileRes = await db.collection('visitor_profiles')
-            .where({ _openid: visitorOpenId })
+            .where({ openid: visitorOpenId })
             .limit(1)
             .get()
 
@@ -142,11 +142,16 @@ exports.main = async (event, context) => {
       })
 
       return { ok: true, created: true, visitorLevel: visitorLevel }
-    },
+    }
 
     // 获取我的访客统计
     case 'getMyVisitorStats': {
       const { cardOwnerId } = data
+
+      // 参数校验：防止权限绕过
+      if (!cardOwnerId) {
+        return { ok: false, message: '缺少 cardOwnerId 参数' }
+      }
 
       // 访客总数
       const totalResult = await db.collection('visits')
@@ -166,11 +171,17 @@ exports.main = async (event, context) => {
         visitors: totalResult.total || 0,
         viewed: repeatResult.total || 0
       }
-    },
+    }
 
     // 获取最近访客列表
     case 'getRecentVisitors': {
       const { cardOwnerId, limit = 10 } = data
+
+      // 参数校验：防止权限绕过
+      if (!cardOwnerId) {
+        return { ok: false, message: '缺少 cardOwnerId 参数' }
+      }
+
       const result = await db.collection('visits')
         .where({ cardOwnerId })
         .orderBy('visitTime', 'desc')
@@ -181,7 +192,7 @@ exports.main = async (event, context) => {
         ok: true,
         list: result.data || []
       }
-    },
+    }
 
     default:
       return { ok: false, message: '未知操作: ' + action }

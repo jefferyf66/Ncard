@@ -222,11 +222,6 @@ Page({
     }
   },
 
-  deleteAttachment(e) {
-    const pad = (n) => n.toString().padStart(2, '0')
-    return date.getFullYear() + '/' + pad(date.getMonth() + 1) + '/' + pad(date.getDate()) + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes())
-  },
-
   onNameInput(e) {
     const value = e.detail.value.trim()
     this.setData({ name: value })

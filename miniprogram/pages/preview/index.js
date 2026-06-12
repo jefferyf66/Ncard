@@ -700,32 +700,36 @@ Page({
         // 写入 visitor_profiles 集合
         if (wx.cloud) {
           var db = wx.cloud.database()
-          // 先查是否有已有记录
-          db.collection('visitor_profiles').limit(1).get()
-            .then(function (profileRes) {
-              if (profileRes.data && profileRes.data.length > 0) {
-                // 更新已有记录
-                return db.collection('visitor_profiles')
-                  .doc(profileRes.data[0]._id)
-                  .update({
+          // 先获取 openid
+          app.getOpenId().then(function (myOpenId) {
+            // 查询是否有已有记录（使用 openid 字段）
+            return db.collection('visitor_profiles').where({ openid: myOpenId }).limit(1).get()
+              .then(function (profileRes) {
+                if (profileRes.data && profileRes.data.length > 0) {
+                  // 更新已有记录
+                  return db.collection('visitor_profiles')
+                    .doc(profileRes.data[0]._id)
+                    .update({
+                      data: {
+                        nickname: nickname,
+                        avatarUrl: avatarUrl,
+                        updatedAt: new Date()
+                      }
+                    })
+                } else {
+                  // 新建记录（包含 openid 字段）
+                  return db.collection('visitor_profiles').add({
                     data: {
+                      openid: myOpenId,
                       nickname: nickname,
                       avatarUrl: avatarUrl,
+                      createdAt: new Date(),
                       updatedAt: new Date()
                     }
                   })
-              } else {
-                // 新建记录
-                return db.collection('visitor_profiles').add({
-                  data: {
-                    nickname: nickname,
-                    avatarUrl: avatarUrl,
-                    createdAt: new Date(),
-                    updatedAt: new Date()
-                  }
-                })
-              }
-            })
+                }
+              })
+          })
             .then(function () {
               wx.showToast({ title: '身份已更新，感谢授权', icon: 'success' })
               // 授权成功后，后续访问会自动使用 L2 身份
