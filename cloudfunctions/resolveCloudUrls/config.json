@@ -1,0 +1,3 @@
+{
+  "desc": "安全代理：将 cloud:// fileID 转为临时 HTTPS URL（绕过存储权限限制）"
+}

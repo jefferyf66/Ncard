@@ -48,6 +48,8 @@
           src="{{item.avatar || '../../images/avatar.png'}}" 
           mode="aspectFill"
           lazy-load
+          binderror="onAvatarError"
+          data-index="{{index}}"
         ></image>
       </view>
       <view class="card-center">
@@ -136,15 +138,27 @@
         data-item="{{item}}"
       >
         <view class="visitor-avatar">
-          <view class="icon-user"></view>
+          <image 
+            wx:if="{{item.avatar}}"
+            class="visitor-avatar-img" 
+            src="{{item.avatar}}" 
+            mode="aspectFill"
+            binderror="onVisitorAvatarError"
+            data-index="{{index}}"
+          ></image>
+          <view class="icon-user" wx:else></view>
         </view>
         <view class="visitor-content">
           <view class="visitor-header">
             <text class="visitor-name">{{item.name}}</text>
+            <view class="visitor-level-badge level-{{item.visitorLevel}}" wx:if="{{item.isAnonymous}}">
+              <text>匿名</text>
+            </view>
             <text class="visitor-time">{{item.lastVisit}}</text>
           </view>
           <text class="visitor-position" wx:if="{{item.position}}">{{item.position}}</text>
           <view class="visitor-tags">
+            <text class="tag visit-count-tag" wx:if="{{item.visitCount > 1}}">访问 {{item.visitCount}} 次</text>
             <text class="tag" wx:for="{{item.actions}}" wx:key="index">{{item}}</text>
           </view>
         </view>

@@ -1,9 +1,7 @@
 App({
   globalData: {
     userInfo: null,
-    systemInfo: null,
-    cardsCache: [],
-    lastUpdateTime: 0
+    systemInfo: null
   },
 
   onLaunch() {
@@ -81,18 +79,6 @@ App({
     wx.showToast({ title, icon: 'success', duration })
   },
 
-  showConfirm(title, content) {
-    return new Promise((resolve) => {
-      wx.showModal({
-        title,
-        content,
-        success: (res) => {
-          resolve(res.confirm)
-        }
-      })
-    })
-  },
-
   getCache(key) {
     try {
       return wx.getStorageSync(key)
@@ -113,24 +99,6 @@ App({
     }
   },
 
-  isCacheValid(key) {
-    try {
-      const data = wx.getStorageSync(key)
-      if (!data) return false
-      return Date.now() < data.timestamp
-    } catch (e) {
-      return false
-    }
-  },
-
-  isValidPhone(phone) {
-    return /^1[3-9]\d{9}$/.test(phone)
-  },
-
-  isValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  },
-
   formatTime(date) {
     if (!date) return ''
     const d = new Date(date)
@@ -140,11 +108,71 @@ App({
     return `${year}-${month}-${day}`
   },
 
-  debounce(fn, delay = 500) {
-    let timer = null
-    return function (...args) {
-      if (timer) clearTimeout(timer)
-      timer = setTimeout(() => fn.apply(this, args), delay)
-    }
+  /**
+   * 获取当前用户的 openId（带缓存）
+   * @returns {Promise<string>}
+   */
+  getOpenId() {
+    return new Promise((resolve) => {
+      if (this.globalData._openId) {
+        resolve(this.globalData._openId)
+        return
+      }
+      if (!wx.cloud) {
+        resolve('')
+        return
+      }
+      wx.cloud.callFunction({
+        name: 'getOpenId',
+        data: {},
+        success: (res) => {
+          var openId = (res.result && res.result.data && res.result.data.openid) || ''
+          this.globalData._openId = openId
+          resolve(openId)
+        },
+        fail: () => {
+          console.warn('[App] getOpenId 云函数调用失败')
+          resolve('')
+        }
+      })
+    })
+  },
+
+  /**
+   * 批量将云文件 cloud:// ID 转换为临时 HTTPS URL
+   * 通过云函数代理调用 getTempFileURL，以管理员身份绕过存储权限限制
+   * 云存储可设为「仅创建者可读写」，无需担心被分享者无法查看头像
+   * @param {string[]} fileIDs - cloud:// 格式的文件 ID 列表
+   * @returns {Promise<Object>} { originalID: 'https://...' } 的映射
+   */
+  resolveCloudFileIDs(fileIDs) {
+    return new Promise((resolve) => {
+      if (!fileIDs || fileIDs.length === 0 || !wx.cloud) {
+        resolve({})
+        return
+      }
+
+      // 过滤出 cloud:// 格式的 ID
+      var cloudIDs = fileIDs.filter(function (id) {
+        return id && typeof id === 'string' && id.indexOf('cloud://') === 0
+      })
+
+      if (cloudIDs.length === 0) {
+        resolve({})
+        return
+      }
+
+      wx.cloud.callFunction({
+        name: 'resolveCloudUrls',
+        data: { fileIDs: cloudIDs },
+        success: function (res) {
+          resolve((res.result && res.result.urls) || {})
+        },
+        fail: function (err) {
+          console.error('[App] resolveCloudUrls 云函数调用失败:', err)
+          resolve({})
+        }
+      })
+    })
   }
 })

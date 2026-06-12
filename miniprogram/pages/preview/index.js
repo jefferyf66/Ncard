@@ -1,5 +1,8 @@
 const app = getApp()
 
+// 【优化】导入分享卡片生成工具模块
+var shareCard = require('../../utils/shareCard')
+
 Page({
   data: {
     card: {},
@@ -7,57 +10,72 @@ Page({
     isLoading: true,
     isError: false,
     errorMsg: '',
-    showDeleteConfirm: false
+    showDeleteConfirm: false,
+    isOwner: false,
+    isSaved: false,
+    showAuthBanner: false
   },
 
   onLoad(options) {
     console.log('[Preview] onLoad, options:', options)
     
     const id = options?.id || ''
+    this._shareOptions = options  // 保存分享参数供 loadCard 回调使用
+    this._shareImagePath = ''     // 【优化】分享卡片图片缓存路径
+    this._isGeneratingShare = false
     this.setData({ id, isLoading: !!id })
     
     if (id) {
       this.loadCard(id)
       this.initShareMenu()
-      this.recordVisit(id, options)
     }
   },
 
-  // 记录访问（用于访客统计）
+  // 记录访问（用于访客统计）+ 匿名访客身份识别
   recordVisit(cardId, options) {
     if (!wx.cloud) return
 
-    // 获取当前用户 openId
-    wx.cloud.callFunction({
-      name: 'getOpenId',
-      data: {},
-      success: (res) => {
-        const visitorOpenId = res.result?.openid || ''
-        if (!visitorOpenId) return
+    var cardData = this.data.card
+    var that = this
 
-        // 调用 initVisits 云函数记录访问
-        wx.cloud.callFunction({
-          name: 'initVisits',
-          data: {
-            action: 'recordVisit',
-            data: {
-              cardId,
-              visitorOpenId,
-              source: options?.source || 'direct'
-            }
-          },
-          success: (result) => {
-            console.log('[Preview] 访问记录成功:', result)
-          },
-          fail: (err) => {
-            // 云函数未部署时静默忽略
-            console.warn('[Preview] 访问记录失败（云函数未部署）:', err)
-          }
-        })
-      },
-      fail: (err) => {
-        console.warn('[Preview] 获取 openId 失败:', err)
+    // 使用 app.getOpenId()（带缓存，解析路径正确）
+    app.getOpenId().then(function (visitorOpenId) {
+      if (!visitorOpenId) return
+
+      // 不记录自己访问自己的名片
+      var cardOwnerId = cardData._openid || ''
+      if (visitorOpenId === cardOwnerId) {
+        console.log('[Preview] 跳过自有名片访问记录')
+        return
       }
+
+      // 调用 initVisits 云函数记录访问（云函数端会做三级身份 enrichment）
+      wx.cloud.callFunction({
+        name: 'initVisits',
+        data: {
+          action: 'recordVisit',
+          data: {
+            cardId: cardId,
+            visitorOpenId: visitorOpenId,
+            cardOwnerId: cardOwnerId,
+            source: options && options.source || 'direct'
+          }
+        },
+        success: function (result) {
+          console.log('[Preview] 访问记录成功:', result)
+          // 云函数返回 visitorLevel，用于决定是否展示授权引导
+          var res = result.result || {}
+          if (res.visitorLevel && res.visitorLevel < 2) {
+            that._checkAuthBanner()
+          }
+        },
+        fail: function (err) {
+          // 云函数未部署时静默忽略
+          console.warn('[Preview] 访问记录失败（云函数未部署）:', err)
+        }
+      })
+    }).catch(function (err) {
+      console.warn('[Preview] 获取 openId 失败:', err)
     })
   },
 
@@ -78,20 +96,44 @@ Page({
   },
 
   onShareAppMessage() {
-    const { card } = this.data
+    var card = this.data.card
+    var path = '/pages/preview/index?id=' + this.data.id + '&source=share'
+
+    // 【P0修复】imageUrl 优先级:
+    //   1. Canvas 生成的分享卡片 (wxfile:// 本地路径，微信可识别)
+    //   2. 已解析的 HTTPS 头像 (resolveCloudUrls 转换后)
+    //   3. 空值 (让微信生成默认灰色卡片)
+    //   ❌ cloud:// 格式绝不能传入——微信分享 API 无法识别
+    var imageUrl = this._shareImagePath || ''
+    if (!imageUrl) {
+      var avatar = card.avatar || ''
+      // 只使用 HTTPS 头像，过滤掉 cloud:// 和本地路径
+      if (avatar.indexOf('https://') === 0) {
+        imageUrl = avatar
+      }
+    }
+
     return {
-      title: `${card.name || '名片'} - ${card.company || ''}`,
-      path: `/pages/preview/index?id=${this.data.id}`,
-      imageUrl: card.avatar || ''
+      title: (card.name || '名片') + ' - ' + (card.company || ''),
+      path: path,
+      imageUrl: imageUrl
     }
   },
 
   onShareTimeline() {
-    const { card } = this.data
+    var card = this.data.card
+    var imageUrl = this._shareImagePath || ''
+    if (!imageUrl) {
+      var avatar = card.avatar || ''
+      if (avatar.indexOf('https://') === 0) {
+        imageUrl = avatar
+      }
+    }
+
     return {
-      title: `${card.name || '名片'} - ${card.company || ''}`,
-      query: `id=${this.data.id}`,
-      imageUrl: card.avatar || ''
+      title: (card.name || '名片') + ' - ' + (card.company || ''),
+      query: 'id=' + this.data.id,
+      imageUrl: imageUrl
     }
   },
 
@@ -118,20 +160,36 @@ Page({
       .then(res => {
         clearTimeout(timer)
         if (res.data) {
+          var card = {
+            ...res.data,
+            experiences: res.data.experiences || [],
+            attachments: res.data.attachments || [],
+            personalIntro: res.data.personalIntro || '',
+            businessIntro: res.data.businessIntro || '',
+            wechatOfficial: res.data.wechatOfficial || {},
+            companyWebsite: res.data.companyWebsite || {},
+            publicSettings: res.data.publicSettings || {}
+          }
+
           this.setData({
-            card: {
-              ...res.data,
-              experiences: res.data.experiences || [],
-              attachments: res.data.attachments || [],
-              personalIntro: res.data.personalIntro || '',
-              businessIntro: res.data.businessIntro || '',
-              wechatOfficial: res.data.wechatOfficial || {},
-              companyWebsite: res.data.companyWebsite || {},
-              publicSettings: res.data.publicSettings || {}
-            },
+            card: card,
             isLoading: false,
             isError: false
           })
+
+          // 记录访问（在卡片数据就绪后调用，确保 cardOwnerId 正确）
+          this.recordVisit(id, this._shareOptions || {})
+
+          // 转换云文件 cloud:// ID 为临时 HTTPS URL（跨设备名片分享时头像可见性修复）
+          this._resolveCardAvatar(card)
+
+          // 【P2修复】并行启动分享卡片 Canvas 生成
+          // shareCard.js 内部已独立处理 cloud:// → HTTPS 转换，
+          // 无需等待 _resolveCardAvatar 完成，缩短分享按钮空窗期
+          this._generateShareCard()
+
+          // 判断名片所有权和保存状态
+          this._checkCardOwnership(id)
         } else {
           this.setData({
             isLoading: false,
@@ -148,6 +206,161 @@ Page({
           isError: true,
           errorMsg: '加载失败，请重试'
         })
+      })
+  },
+
+  /**
+   * 将名片中的 cloud:// 头像 ID 转换为 HTTPS URL
+   * 修复跨设备分享时头像不可见的问题
+   * 【P2修复】_generateShareCard 已移至 loadCard 并行触发，此处仅负责页面头像解析
+   */
+  _resolveCardAvatar(card) {
+    var avatar = card.avatar
+    if (!avatar || avatar.indexOf('cloud://') !== 0) {
+      // 非 cloud:// 头像，无需解析
+      return
+    }
+
+    app.resolveCloudFileIDs([avatar]).then(function (urlMap) {
+      var resolvedUrl = urlMap[avatar]
+      if (resolvedUrl) {
+        this.setData({ 'card.avatar': resolvedUrl })
+      }
+    }.bind(this))
+  },
+
+  /**
+   * 检查名片所有权和保存状态
+   */
+  _checkCardOwnership(cardId) {
+    app.getOpenId().then((myOpenId) => {
+      var cardOwnerId = this.data.card._openid || ''
+      var isOwner = cardOwnerId === myOpenId
+
+      if (isOwner) {
+        this.setData({ isOwner: true, isSaved: false })
+        return
+      }
+
+      // 不是自己的名片 → 检查是否已保存过
+      this._checkSaveStatus(cardId)
+    }).catch(() => {
+      // 无法获取 openId 时默认为非自有名片，未保存
+      this.setData({ isOwner: false, isSaved: false })
+      this._checkSaveStatus(cardId)
+    })
+  },
+
+  /**
+   * 检查 user_save_cards 中是否存在保存记录
+   */
+  _checkSaveStatus(cardId) {
+    if (!wx.cloud) {
+      this.setData({ isOwner: false, isSaved: false })
+      return
+    }
+
+    var db = wx.cloud.database()
+    db.collection('user_save_cards')
+      .where({ cardId: cardId })
+      .limit(1)
+      .get()
+      .then((res) => {
+        this.setData({ isSaved: res.data && res.data.length > 0 })
+      })
+      .catch(() => {
+        this.setData({ isSaved: false })
+      })
+  },
+
+  /**
+   * 保存他人名片到自己的名片夹
+   */
+  saveCard() {
+    var card = this.data.card
+    var cardId = this.data.id
+    if (!cardId || !wx.cloud) return
+    if (this.data.isSaved) return
+
+    app.showLoading('保存中...')
+
+    var db = wx.cloud.database()
+
+    // 防重复：先检查是否已保存过
+    db.collection('user_save_cards').where({ cardId: cardId }).count()
+      .then(function (res) {
+        if (res.total > 0) {
+          app.hideLoading()
+          this.setData({ isSaved: true })
+          app.showSuccess('已保存过此名片')
+          return Promise.reject('duplicate')
+        }
+        // 获取 openId 后写入
+        return wx.cloud.callFunction({ name: 'getOpenId', data: {} })
+      }.bind(this))
+      .then((res) => {
+        var myOpenId = (res.result && res.result.data && res.result.data.openid) || ''
+        if (!myOpenId) {
+          app.hideLoading()
+          app.showError('保存失败，请重试')
+          return Promise.reject('no_openid')
+        }
+        return db.collection('user_save_cards').add({
+          data: {
+            cardId: cardId,
+            cardOwnerOpenId: card._openid || '',
+            savedAt: new Date()
+          }
+        })
+      })
+      .then(() => {
+        app.hideLoading()
+        this.setData({ isSaved: true })
+        app.showSuccess('已保存到名片夹')
+      })
+      .catch((err) => {
+        app.hideLoading()
+        if (err === 'duplicate') return
+        console.error('[Preview] 保存名片失败:', err)
+        app.showError('保存失败，请重试')
+      })
+  },
+
+  /**
+   * 从名片夹中移除已保存的名片
+   */
+  unsaveCard() {
+    var cardId = this.data.id
+    if (!cardId || !wx.cloud) return
+
+    app.showLoading('移除中...')
+
+    var db = wx.cloud.database()
+    db.collection('user_save_cards')
+      .where({ cardId: cardId })
+      .get()
+      .then((res) => {
+        if (!res.data || res.data.length === 0) {
+          app.hideLoading()
+          this.setData({ isSaved: false })
+          return Promise.reject('not_found')
+        }
+        // 删除所有匹配的记录（理论上只有一条）
+        var deletePromises = res.data.map((doc) => {
+          return db.collection('user_save_cards').doc(doc._id).remove()
+        })
+        return Promise.all(deletePromises)
+      })
+      .then(() => {
+        app.hideLoading()
+        this.setData({ isSaved: false })
+        app.showSuccess('已从名片夹移除')
+      })
+      .catch((err) => {
+        app.hideLoading()
+        if (err === 'not_found') return
+        console.error('[Preview] 移除名片失败:', err)
+        app.showError('移除失败，请重试')
       })
   },
 
@@ -263,13 +476,6 @@ Page({
     })
   },
 
-  shareCard() {
-    wx.showShareMenu({
-      withShareTicket: true,
-      menus: ['shareAppMessage']
-    })
-  },
-
   saveToContact() {
     const { card } = this.data
     
@@ -347,23 +553,47 @@ Page({
     this.setData({ showDeleteConfirm: false })
   },
 
+  /**
+   * 级联删除名片：通过云函数清理 cards + user_save_cards + visits + 云存储文件
+   */
   deleteCard() {
     if (!this.data.id) return
 
     this.setData({ showDeleteConfirm: false })
     app.showLoading('删除中...')
 
-    wx.cloud.database().collection('cards').doc(this.data.id).remove()
-      .then(() => {
-        app.hideLoading()
+    wx.cloud.callFunction({
+      name: 'deleteCard',
+      data: { cardId: this.data.id }
+    }).then((res) => {
+      app.hideLoading()
+      var result = res.result || {}
+      if (result.ok) {
         app.showSuccess('删除成功')
-        setTimeout(() => wx.navigateBack(), 1500)
-      })
-      .catch(err => {
-        app.hideLoading()
-        console.error('[Preview] 删除失败:', err)
-        app.showError('删除失败，请重试')
-      })
+      } else if (result.allSettled && result.failedCount > 0) {
+        // 部分失败 → 仍算基本成功（数据库记录已删）
+        app.showSuccess('名片已删除')
+        console.warn('[Preview] 部分关联数据清理失败:', result.results)
+      } else {
+        app.showError(result.message || '删除失败，请重试')
+        return
+      }
+      setTimeout(() => wx.navigateBack(), 1500)
+    }).catch((err) => {
+      app.hideLoading()
+      console.error('[Preview] deleteCard 云函数调用失败:', err)
+
+      // 降级：云函数未部署时直接删 cards 文档
+      wx.cloud.database().collection('cards').doc(this.data.id).remove()
+        .then(() => {
+          app.showSuccess('删除成功（云函数未部署，关联数据未清理）')
+          setTimeout(() => wx.navigateBack(), 1500)
+        })
+        .catch((fallbackErr) => {
+          console.error('[Preview] 降级删除也失败:', fallbackErr)
+          app.showError('删除失败，请重试')
+        })
+    })
   },
 
   retryLoad() {
@@ -373,5 +603,159 @@ Page({
     this.loadCard(id)
   },
 
-  stopPropagation() {}
+  /**
+   * 头像加载失败时的降级处理：替换为默认头像
+   * 【P1修复】防护异步竞争: 如果 _resolveCardAvatar 已将 cloud://
+   * 成功解析为 HTTPS URL，则 onAvatarError 不应覆盖它。
+   * <image> 在 src 切换后旧请求可能延迟触发 error 回调。
+   */
+  onAvatarError() {
+    var currentAvatar = this.data.card.avatar || ''
+    // _resolveCardAvatar 已成功解析 → 不做降级（当前 HTTPS URL 有效，旧 cloud:// 失败是预期的）
+    if (currentAvatar.indexOf('https://') === 0) {
+      console.log('[Preview] 头像 URL 已解析为 HTTPS，忽略旧 cloud:// 的 error 回调')
+      return
+    }
+    this.setData({ 'card.avatar': '/images/avatar.png' })
+  },
+
+  stopPropagation() {},
+
+  // =========================================================================
+  // 【新增】分享卡片生成
+  // =========================================================================
+
+  /**
+   * 在 Canvas 上生成方案A「经典商务风」分享卡片图片
+   * 【优化】异步非阻塞——生成过程中不影响正常交互
+   * 生成结果缓存到 this._shareImagePath，供分享回调使用
+   */
+  _generateShareCard() {
+    if (this._isGeneratingShare) return
+    this._isGeneratingShare = true
+
+    var that = this
+    var card = this.data.card
+
+    shareCard.generate('#shareCanvas', card, {
+      cardKey: card._id || ('share_' + this.data.id)
+    }).then(function (res) {
+      that._shareImagePath = res.tempFilePath
+      that._isGeneratingShare = false
+      console.log('[Preview] 分享卡片已生成:', res.tempFilePath)
+    }).catch(function (err) {
+      that._isGeneratingShare = false
+      console.warn('[Preview] 分享卡片生成失败（降级使用头像）:', err && err.message)
+      // 失败不阻断，分享回调会自动回退到空（微信生成默认卡片）
+    })
+  },
+
+  /**
+   * 检查是否需要展示匿名访客授权引导条
+   * 非阻断式底部通知条，引导用户授权微信昵称/头像
+   * 拒绝后 7 天内不再显示（冷却期）
+   */
+  _checkAuthBanner() {
+    var that = this
+    // 检查是否在冷却期内
+    try {
+      var dismissed = wx.getStorageSync('auth_banner_dismissed_at')
+      if (dismissed) {
+        var now = Date.now()
+        var cooldownMs = 7 * 24 * 60 * 60 * 1000  // 7天冷却期
+        if (now - dismissed < cooldownMs) {
+          console.log('[Preview] 授权引导条处于冷却期，跳过')
+          return
+        }
+        // 冷却期已过，清除记录
+        wx.removeStorageSync('auth_banner_dismissed_at')
+      }
+    } catch (e) {}
+
+    // 弹授权引导条前等待 3 秒，避免与页面渲染争抢
+    setTimeout(function () {
+      that.setData({ showAuthBanner: true })
+    }, 3000)
+  },
+
+  /**
+   * 用户点击「授权」→ 获取微信用户信息并写入 visitor_profiles 集合
+   */
+  onAuthUserInfo() {
+    var that = this
+    this.setData({ showAuthBanner: false })
+
+    wx.getUserProfile({
+      desc: '用于在您查看名片时展示您的微信昵称',
+      success: function (res) {
+        var userInfo = res.userInfo || {}
+        var nickname = userInfo.nickName || ''
+        var avatarUrl = userInfo.avatarUrl || ''
+
+        if (!nickname) {
+          wx.showToast({ title: '授权成功', icon: 'success' })
+          return
+        }
+
+        // 写入 visitor_profiles 集合
+        if (wx.cloud) {
+          var db = wx.cloud.database()
+          // 先查是否有已有记录
+          db.collection('visitor_profiles').limit(1).get()
+            .then(function (profileRes) {
+              if (profileRes.data && profileRes.data.length > 0) {
+                // 更新已有记录
+                return db.collection('visitor_profiles')
+                  .doc(profileRes.data[0]._id)
+                  .update({
+                    data: {
+                      nickname: nickname,
+                      avatarUrl: avatarUrl,
+                      updatedAt: new Date()
+                    }
+                  })
+              } else {
+                // 新建记录
+                return db.collection('visitor_profiles').add({
+                  data: {
+                    nickname: nickname,
+                    avatarUrl: avatarUrl,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                  }
+                })
+              }
+            })
+            .then(function () {
+              wx.showToast({ title: '身份已更新，感谢授权', icon: 'success' })
+              // 授权成功后，后续访问会自动使用 L2 身份
+              console.log('[Preview] visitor_profiles 已更新')
+            })
+            .catch(function (err) {
+              console.warn('[Preview] visitor_profiles 写入失败:', err)
+              wx.showToast({ title: '授权成功', icon: 'success' })
+            })
+        }
+      },
+      fail: function (err) {
+        console.log('[Preview] 用户拒绝授权:', err)
+        // 拒绝授权也记录冷却期
+        try {
+          wx.setStorageSync('auth_banner_dismissed_at', Date.now())
+        } catch (e) {}
+        wx.showToast({ title: '已跳过', icon: 'none' })
+      }
+    })
+  },
+
+  /**
+   * 关闭授权引导条（暂不授权）
+   * 记录冷却期时间戳，7 天内不重复展示
+   */
+  dismissAuthBanner() {
+    this.setData({ showAuthBanner: false })
+    try {
+      wx.setStorageSync('auth_banner_dismissed_at', Date.now())
+    } catch (e) {}
+  }
 })

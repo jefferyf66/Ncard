@@ -56,8 +56,11 @@ Page({
 
     // 裁切区为正方形，边长取屏幕宽度的 75%
     var cropSize = Math.floor(screenWidth * 0.75)
-    var areaW = screenWidth
-    var areaH = screenWidth
+
+    // 【方案一】movable-area 扩大为 3× 屏幕宽度（WXSS: 300%），
+    // 拖拽范围从 [screenWidth - viewSize, 0] 扩大至 [3×screenWidth - viewSize, 0]
+    var areaW = screenWidth * 3
+    var areaH = screenWidth * 3
 
     // 约束图片显示尺寸上限（避免 movable-view 像素过大）
     var MAX_DISPLAY = 2000
@@ -150,8 +153,9 @@ Page({
     var currentScale = this._realScale || data.currentScale
 
     // 裁切正方形在 canvas 区域坐标中的位置
-    var maskLeft = (screenWidth - cropSize) / 2
-    var maskTop = (screenWidth - cropSize) / 2
+    // 【方案一】movable-area top/left = -100%，mask 坐标需补偿 screenWidth
+    var maskLeft = (screenWidth - cropSize) / 2 + screenWidth
+    var maskTop = (screenWidth - cropSize) / 2 + screenWidth
 
     // 转换为原始图像坐标
     var srcX = (maskLeft - this._realX) / currentScale

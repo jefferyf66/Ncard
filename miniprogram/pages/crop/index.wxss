@@ -57,13 +57,17 @@ page {
   background: #111111;
 }
 
-/* movable-area */
+/* movable-area
+   【方案一】扩大为 3× 屏幕宽度，居中偏移 -100%。
+   拖拽范围从 [area-viewSize, 0] 扩大 9 倍，解决照片几乎拖不动的问题。
+   .crop-canvas-area 的 overflow:hidden + crop-square-mask 的 box-shadow
+   会自动遮蔽超出遮罩的部分。 */
 .crop-movable-area {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: -100%;
+  left: -100%;
+  width: 300%;
+  height: 300%;
   z-index: 1;
 }
 

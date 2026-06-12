@@ -50,17 +50,27 @@
       data-item="{{item}}"
     >
       <view class="visitor-avatar">
-        <view class="icon-user"></view>
+        <image 
+          wx:if="{{item.avatar}}"
+          class="visitor-avatar-img" 
+          src="{{item.avatar}}" 
+          mode="aspectFill"
+        ></image>
+        <view class="icon-user" wx:else></view>
       </view>
       <view class="visitor-info">
         <view class="visitor-header">
           <text class="visitor-name">{{item.name}}</text>
+          <view class="visitor-level-badge level-{{item.visitorLevel}}" wx:if="{{item.visitorLevel < 3}}">
+            <text wx:if="{{item.visitorLevel === 2}}">已授权</text>
+            <text wx:else>匿名</text>
+          </view>
           <text class="visitor-phone" wx:if="{{item.phone}}">{{item.phone}}</text>
         </view>
         <text class="visitor-position" wx:if="{{item.position}}">{{item.position}}</text>
         <text class="visitor-company" wx:if="{{item.company}}">{{item.company}}</text>
         <view class="visitor-tags">
-          <text class="tag" wx:if="{{item.visitCount > 1}}">来访{{item.visitCount}}次</text>
+          <text class="tag visit-count-tag" wx:if="{{item.visitCount > 1}}">来访{{item.visitCount}}次</text>
           <text class="tag" wx:for="{{item.actions}}" wx:key="index">{{item}}</text>
         </view>
         <view class="visitor-meta">

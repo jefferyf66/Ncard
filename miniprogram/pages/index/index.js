@@ -88,83 +88,215 @@ Page({
   loadVisitorData() {
     if (!wx.cloud) return
 
-    // 1. 名片总数（cards 集合 — 始终存在）
-    wx.cloud.database().collection('cards').count()
-      .then(res => {
-        this.setData({ 'visitorStats.newCards': res.total || 0 })
-      })
-      .catch(() => {})
+    var that = this
+    // 先获取 openId，确保名片数和访客统计都按当前用户过滤
+    app.getOpenId().then(function (myOpenId) {
+      that._myOpenId = that._myOpenId || myOpenId
 
-    // 2. 访客统计 — 优先用云函数，失败则静默
-    this._loadVisitorStats()
+      // 1. 名片数（统计 user_save_cards，与名片夹数据源一致；_openid 由云权限自动过滤）
+      wx.cloud.database().collection('user_save_cards').count()
+        .then(function (res) {
+          that.setData({ 'visitorStats.newCards': res.total || 0 })
+        })
+        .catch(function () {})
+
+      // 2. 访客统计 — 优先用云函数，失败则静默
+      that._loadVisitorStats()
+    }).catch(function () {
+      // 无法获取 openId → 降级：user_save_cards 云权限自动过滤
+      wx.cloud.database().collection('user_save_cards').count()
+        .then(function (res) {
+          that.setData({ 'visitorStats.newCards': res.total || 0 })
+        })
+        .catch(function () {})
+      that._loadVisitorStats()
+    })
   },
 
   _loadVisitorStats() {
-    // 尝试云函数方式获取访客统计
-    wx.cloud.callFunction({
-      name: 'initVisits',
-      data: { action: 'getMyVisitorStats', data: { cardOwnerId: '' } }
-    }).then(res => {
-      if (res.result && res.result.ok) {
-        this.setData({
-          'visitorStats.visitors': res.result.visitors || 0,
-          'visitorStats.viewed': res.result.viewed || 0
-        })
-        // 加载最近访客
-        this._loadRecentVisitors()
+    // 获取当前用户 openId 以按名片所有者过滤访客统计
+    app.getOpenId().then((myOpenId) => {
+      if (!myOpenId) {
+        // 无法获取 openId → 降级为不过滤
+        this._loadVisitorStatsDirect()
+        return
       }
+      this._myOpenId = this._myOpenId || myOpenId
+
+      // 尝试云函数方式获取访客统计（传入 cardOwnerId）
+      wx.cloud.callFunction({
+        name: 'initVisits',
+        data: { action: 'getMyVisitorStats', data: { cardOwnerId: myOpenId } }
+      }).then(res => {
+        if (res.result && res.result.ok) {
+          this.setData({
+            'visitorStats.visitors': res.result.visitors || 0,
+            'visitorStats.viewed': res.result.viewed || 0
+          })
+          // 加载最近访客（也按 cardOwnerId 过滤）
+          this._loadRecentVisitors(myOpenId)
+        }
+      }).catch(() => {
+        // 云函数未部署 → 尝试直接查 visits 集合
+        this._loadVisitorStatsDirect()
+      })
     }).catch(() => {
-      // 云函数未部署 → 尝试直接查 visits 集合
       this._loadVisitorStatsDirect()
     })
   },
 
   _loadVisitorStatsDirect() {
-    const db = wx.cloud.database()
-    const _ = db.command
+    var db = wx.cloud.database()
+    var _ = db.command
+    var myOpenId = this._myOpenId || ''
+    var that = this
 
     // visits 集合可能不存在
-    const handleError = () => {
-      this.setData({
+    var handleError = function () {
+      that.setData({
         'visitorStats.visitors': 0,
         'visitorStats.viewed': 0
       })
     }
 
-    db.collection('visits').count()
-      .then(res => {
-        this.setData({ 'visitorStats.visitors': res.total || 0 })
-        return db.collection('visits')
-          .where({ visitCount: _.gt(1) })
-          .count()
+    // 构建过滤条件：按 cardOwnerId 过滤（修复 P1：之前全量 count 无过滤）
+    var baseWhere = myOpenId ? { cardOwnerId: myOpenId } : {}
+    var query = db.collection('visits')
+    if (myOpenId) query = query.where(baseWhere)
+
+    query.count()
+      .then(function (res) {
+        that.setData({ 'visitorStats.visitors': res.total || 0 })
+        // 多次来访（回访访客数）
+        var repeatWhere = myOpenId
+          ? { cardOwnerId: myOpenId, visitCount: _.gt(1) }
+          : { visitCount: _.gt(1) }
+        return db.collection('visits').where(repeatWhere).count()
       })
-      .then(res => {
-        this.setData({ 'visitorStats.viewed': res.total || 0 })
-        this._loadRecentVisitors()
+      .then(function (res) {
+        that.setData({ 'visitorStats.viewed': res.total || 0 })
+        that._loadRecentVisitors(myOpenId || undefined)
       })
       .catch(handleError)
   },
 
-  _loadRecentVisitors() {
-    const db = wx.cloud.database()
-    db.collection('visits')
+  /**
+   * 加载最近访客并聚合去重（客户端聚合：按 visitorOpenId 归并）
+   * 展示结构：L3 卡片用户 → 真名+头像 / L2 已授权 → 昵称+头像 / L1 匿名 → "访客 #XXXX"
+   */
+  _loadRecentVisitors(cardOwnerId) {
+    var db = wx.cloud.database()
+    var that = this
+    var query = db.collection('visits')
+    if (cardOwnerId) {
+      query = query.where({ cardOwnerId: cardOwnerId })
+    }
+    // 取 20 条用于客户端聚合（云开发基础版无 aggregate 管道）
+    query
       .orderBy('visitTime', 'desc')
-      .limit(5)
+      .limit(20)
       .get()
-      .then(res => {
+      .then(function (res) {
         if (!res.data || res.data.length === 0) return
-        const visitors = res.data.map(v => ({
-          id: v._id,
-          name: v.visitorName || '微信用户',
-          position: v.visitorPosition || '',
-          actions: v.actions || [],
-          lastVisit: app.formatTime(v.visitTime),
-          buttonText: v.visitorName ? '交换名片' : '请问是谁',
-          buttonType: v.visitorName ? 'primary' : 'secondary'
-        }))
-        this.setData({ recentVisitors: visitors })
+
+        var rawVisits = res.data
+        // 客户端聚合：同一 visitorOpenId 合并为一条，保留最近访问时间
+        var merged = that._aggregateVisitors(rawVisits)
+
+        // 取前 5 展示在首页
+        var top5 = merged.slice(0, 5)
+
+        // 转换为展示数据（三层匿名级别）
+        var visitors = top5.map(function (v) {
+          return that._formatVisitorItem(v)
+        })
+
+        that.setData({ recentVisitors: visitors })
       })
-      .catch(() => {})
+      .catch(function () {})
+  },
+
+  /**
+   * 客户端聚合：按 visitorOpenId 去重合并
+   * @param {Array} visits - 原始 visits 记录
+   * @returns {Array} 去重后的访客列表，按最近访问时间排序
+   */
+  _aggregateVisitors(visits) {
+    var map = {}
+    visits.forEach(function (v) {
+      var key = v.visitorOpenId || ('anon_' + v._id)
+      if (map[key]) {
+        // 合并：取最新时间、累加访问次数
+        if (new Date(v.visitTime) > new Date(map[key].visitTime)) {
+          map[key].visitTime = v.visitTime
+        }
+        map[key].visitCount = (map[key].visitCount || 1) + (v.visitCount || 1)
+      } else {
+        map[key] = {
+          _id: v._id,
+          visitorOpenId: v.visitorOpenId,
+          visitorName: v.visitorName || '',
+          visitorAvatar: v.visitorAvatar || '',
+          visitorPosition: v.visitorPosition || '',
+          visitorCompany: v.visitorCompany || '',
+          visitorLevel: v.visitorLevel || (v.visitorName ? 2 : 1),
+          visitTime: v.visitTime,
+          visitCount: v.visitCount || 1,
+          actions: v.actions || [],
+          source: v.source || 'direct'
+        }
+      }
+    })
+
+    // 按最近访问时间降序排列
+    var list = Object.values(map)
+    list.sort(function (a, b) {
+      return new Date(b.visitTime) - new Date(a.visitTime)
+    })
+    return list
+  },
+
+  /**
+   * 格式化单个访客项为展示数据
+   * L3（卡片用户）：真名 + 头像
+   * L2（已授权）：微信昵称 + 头像
+   * L1（匿名）："访客 #XXXX" + 默认图标
+   */
+  _formatVisitorItem(v) {
+    var level = v.visitorLevel || 1
+    var displayName = v.visitorName || ''
+    var displayAvatar = v.visitorAvatar || ''
+    var isAnonymous = false
+
+    if (level >= 3) {
+      // L3: 卡片用户 — 已有真名和头像
+      displayName = v.visitorName
+      displayAvatar = v.visitorAvatar
+    } else if (level === 2 && v.visitorName) {
+      // L2: 已授权微信昵称
+      displayName = v.visitorName
+      displayAvatar = v.visitorAvatar
+    } else {
+      // L1: 匿名访客 — 生成匿名标识
+      var openId = v.visitorOpenId || ''
+      displayName = '访客 #' + openId.slice(-4).toUpperCase()
+      displayAvatar = ''  // 使用默认图标
+      isAnonymous = true
+    }
+
+    return {
+      id: v._id,
+      name: displayName,
+      avatar: displayAvatar,
+      position: v.visitorPosition || '',
+      visitCount: v.visitCount || 1,
+      visitorLevel: level,
+      isAnonymous: isAnonymous,
+      actions: v.actions || [],
+      lastVisit: app.formatTime(v.visitTime),
+      buttonText: level >= 2 ? '交换名片' : '请问是谁',
+      buttonType: level >= 2 ? 'primary' : 'secondary'
+    }
   },
 
   onPullDownRefresh() {
@@ -197,12 +329,34 @@ Page({
 
     this.setData({ isLoading: true, isError: false })
 
+    // 先获取用户 openId，用于过滤只显示自己的名片
+    app.getOpenId().then((myOpenId) => {
+      if (!myOpenId) {
+        // 无法获取 openId 时降级为不过滤
+        console.warn('[Index] 未获取到 openId，不进行过滤')
+        this._doLoadCards(isRefresh, callback, null)
+        return
+      }
+      this._myOpenId = myOpenId
+      this._doLoadCards(isRefresh, callback, myOpenId)
+    }).catch(() => {
+      console.warn('[Index] getOpenId 失败，降级加载')
+      this._doLoadCards(isRefresh, callback, null)
+    })
+  },
+
+  _doLoadCards(isRefresh, callback, myOpenId) {
     const currentPage = isRefresh ? 0 : this.data.currentPage
     const collection = wx.cloud.database().collection('cards')
-    const query = collection
+    var query = collection
       .orderBy('createTime', 'desc')
       .skip(currentPage * this.data.pageSize)
       .limit(this.data.pageSize)
+
+    // 仅显示当前用户自己创建的名片
+    if (myOpenId) {
+      query = query.where({ _openid: myOpenId })
+    }
 
     const timer = setTimeout(() => {
       console.warn('[Index] 加载超时，尝试使用缓存')
@@ -355,5 +509,29 @@ Page({
         confirmText: '我知道了'
       })
     }
+  },
+
+  /**
+   * 头像加载失败降级：替换为默认头像
+   */
+  onAvatarError(e) {
+    var index = e.currentTarget.dataset.index
+    if (index === undefined || index === null) return
+    var key = 'cards[' + index + '].avatar'
+    var data = {}
+    data[key] = '/images/avatar.png'
+    this.setData(data)
+  },
+
+  /**
+   * 访客头像加载失败降级：清空 avatar 让 WXML 走 else 分支显示默认图标
+   */
+  onVisitorAvatarError(e) {
+    var index = e.currentTarget.dataset.index
+    if (index === undefined || index === null) return
+    var key = 'recentVisitors[' + index + '].avatar'
+    var data = {}
+    data[key] = ''
+    this.setData(data)
   }
 })

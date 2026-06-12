@@ -94,81 +94,33 @@ Page({
       })
   },
 
+  // 直接打开系统相册选择图片 → 跳裁切页
   chooseAvatar() {
-    // 策略：先通过 wx.authorize 触发原生授权弹窗
-    wx.authorize({
-      scope: 'scope.camera',
-      success: () => {
-        this._pickAndCrop()
-      },
-      fail: () => {
-        // 用户拒绝原生授权或 scope.camera 未声明
-        // 仍然尝试 chooseImage，它会自动弹出自己的授权界面
-        this._pickAndCrop()
-      }
-    })
-  },
-
-  // 选图 → 跳裁切页
-  _pickAndCrop() {
     wx.chooseImage({
       count: 1,
       sizeType: ['original', 'compressed'],
-      sourceType: ['album', 'camera'],
+      sourceType: ['album'],
       success: (res) => {
-        const tempFilePath = res.tempFilePaths && res.tempFilePaths[0]
+        var tempFilePath = res.tempFilePaths && res.tempFilePaths[0]
         if (!tempFilePath) return
-        // 跳转裁切页（通过 globalData 传路径，避免 URL 编码问题）
         app.globalData.cropImageSrc = tempFilePath
         wx.navigateTo({
           url: '/pages/crop/index'
         })
       },
-      fail: (err) => {
-        const errMsg = (err && err.errMsg) || ''
+      fail: function(err) {
+        var errMsg = (err && err.errMsg) || ''
         if (errMsg.indexOf('cancel') > -1) return
-
-        console.warn('[Edit] chooseImage 失败:', errMsg)
-        this._tryChooseMediaForCrop()
-      }
-    })
-  },
-
-  _tryChooseMediaForCrop() {
-    wx.chooseMedia({
-      count: 1,
-      mediaType: ['image'],
-      sourceType: ['camera', 'album'],
-      success: (res) => {
-        const tempFile = res.tempFiles && res.tempFiles[0]
-        if (!tempFile || !tempFile.tempFilePath) return
-        app.globalData.cropImageSrc = tempFile.tempFilePath
-        wx.navigateTo({
-          url: '/pages/crop/index'
-        })
-      },
-      fail: (err) => {
-        const errMsg = (err && err.errMsg) || ''
-        if (errMsg.indexOf('cancel') > -1) return
-
-        if (errMsg.indexOf('api scope is not declared') > -1) {
-          console.error('[Edit] chooseMedia scope 未声明:', errMsg)
+        if (errMsg.indexOf('auth deny') > -1 || errMsg.indexOf('auth denied') > -1) {
           wx.showModal({
-            title: '隐私配置未生效',
-            content: '请在微信公众平台 → 设置 → 服务内容声明 → 用户隐私保护指引中，勾选「收集你选中的照片或视频文件」并重新提交审核发布。',
+            title: '相册权限未开启',
+            content: '请在手机设置 → 微信中开启「照片」权限后重试。',
             showCancel: false,
             confirmText: '知道了'
           })
           return
         }
-
-        console.error('[Edit] chooseMedia 失败:', errMsg)
-        wx.showModal({
-          title: '无法打开相册',
-          content: '请在手机设置 → 微信中开启「相机」和「照片」权限后重试。',
-          showCancel: false,
-          confirmText: '知道了'
-        })
+        app.showError('打开相册失败，请重试')
       }
     })
   },
@@ -181,6 +133,7 @@ Page({
 
   _uploadAvatar(tempFilePath) {
     app.showLoading('上传中')
+    var oldAvatarFileID = this.data.avatar
     const cloudPath = 'avatars/' + Date.now() + '.jpg'
     wx.cloud.uploadFile({
       cloudPath,
@@ -188,6 +141,16 @@ Page({
       success: (uploadRes) => {
         app.hideLoading()
         this.setData({ avatar: uploadRes.fileID })
+        // 删除旧头像文件，避免云存储冗余
+        if (oldAvatarFileID && oldAvatarFileID.indexOf('cloud://') === 0) {
+          wx.cloud.deleteFile({ fileList: [oldAvatarFileID] })
+            .then(function () {
+              console.log('[Edit] 旧头像文件已清理')
+            })
+            .catch(function () {
+              // 静默失败，不影响主流程
+            })
+        }
         app.showSuccess('头像更新成功')
       },
       fail: (err) => {
@@ -202,7 +165,7 @@ Page({
     wx.chooseImage({
       count: 1,
       sizeType: ['compressed'],
-      sourceType: ['album', 'camera'],
+      sourceType: ['album'],
       success: (res) => {
         const tempFilePath = res.tempFilePaths && res.tempFilePaths[0]
         if (!tempFilePath) return
@@ -237,19 +200,29 @@ Page({
     })
   },
 
+  formatTime(date) {
+    const pad = (n) => n.toString().padStart(2, '0')
+    return date.getFullYear() + '/' + pad(date.getMonth() + 1) + '/' + pad(date.getDate()) + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes())
+  },
+
   deleteAttachment(e) {
     const index = parseInt(e.currentTarget.dataset.index)
-    const attachments = this.data.attachments.filter((_, i) => i !== index)
+    const attachments = [...this.data.attachments]
+    var removed = attachments.splice(index, 1)[0]
     this.setData({ attachments })
+    // 删除云存储中的附件文件，避免冗余
+    if (removed && removed.url && removed.url.indexOf('cloud://') === 0) {
+      wx.cloud.deleteFile({ fileList: [removed.url] })
+        .then(function () {
+          console.log('[Edit] 附件文件已清理')
+        })
+        .catch(function () {
+          // 静默失败，不影响主流程
+        })
+    }
   },
 
-  formatSize(bytes) {
-    if (bytes < 1024) return bytes + 'B'
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB'
-    return (bytes / (1024 * 1024)).toFixed(1) + 'MB'
-  },
-
-  formatTime(date) {
+  deleteAttachment(e) {
     const pad = (n) => n.toString().padStart(2, '0')
     return date.getFullYear() + '/' + pad(date.getMonth() + 1) + '/' + pad(date.getDate()) + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes())
   },

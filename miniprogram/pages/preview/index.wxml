@@ -20,6 +20,7 @@
             class="avatar" 
             src="{{card.avatar || '../../images/avatar.png'}}" 
             mode="aspectFill"
+            binderror="onAvatarError"
           ></image>
           <view class="name-area">
             <text class="name">{{card.name}}</text>
@@ -142,19 +143,25 @@
     </view>
 
     <view class="function-card">
-      <view class="function-item" bindtap="goToEdit">
+      <view class="function-item" bindtap="goToEdit" wx:if="{{isOwner}}">
         <view class="func-icon-wrap">
           <view class="icon-edit"></view>
         </view>
         <text class="func-text">编辑资料</text>
       </view>
-      <view class="function-item" bindtap="saveToContact">
+      <view class="function-item" bindtap="saveCard" wx:if="{{!isOwner && !isSaved}}">
         <view class="func-icon-wrap">
           <view class="icon-save"></view>
         </view>
-        <text class="func-text">保存通讯录</text>
+        <text class="func-text">保存名片</text>
       </view>
-      <view class="function-item" bindtap="confirmDelete">
+      <view class="function-item saved" bindtap="unsaveCard" wx:if="{{!isOwner && isSaved}}">
+        <view class="func-icon-wrap">
+          <view class="icon-save"></view>
+        </view>
+        <text class="func-text">已保存</text>
+      </view>
+      <view class="function-item" bindtap="confirmDelete" wx:if="{{isOwner}}">
         <view class="func-icon-wrap">
           <view class="icon-trash"></view>
         </view>
@@ -168,8 +175,13 @@
         <text class="share-text">发名片</text>
       </view>
     </button>
+
   </view>
 </view>
+
+<!-- 隐藏 Canvas 用于生成分享卡片 (2:1 居中布局) -->
+<canvas type="2d" id="shareCanvas" class="share-canvas-hidden"
+  style="width: 800px; height: 400px;"></canvas>
 
 <view class="delete-modal" wx:if="{{showDeleteConfirm}}" catchtap="cancelDelete">
   <view class="modal-content" catchtap="stopPropagation">
@@ -182,5 +194,23 @@
       <view class="modal-btn cancel" bindtap="cancelDelete">取消</view>
       <view class="modal-btn confirm" bindtap="deleteCard">删除</view>
     </view>
+  </view>
+</view>
+
+<!-- 匿名访客授权引导条（非阻断式底部通知） -->
+<view class="auth-banner" wx:if="{{showAuthBanner}}">
+  <view class="auth-banner-bar"></view>
+  <view class="auth-banner-body">
+    <view class="auth-banner-icon">
+      <view class="icon-user"></view>
+    </view>
+    <view class="auth-banner-text">
+      <text class="auth-banner-title">访问记录为匿名状态</text>
+      <text class="auth-banner-desc">授权微信昵称后，名片主人可以看到您的身份</text>
+    </view>
+  </view>
+  <view class="auth-banner-actions">
+    <view class="auth-btn-dismiss" bindtap="dismissAuthBanner">暂不</view>
+    <view class="auth-btn-agree" bindtap="onAuthUserInfo">授权</view>
   </view>
 </view>

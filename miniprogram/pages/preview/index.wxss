@@ -769,6 +769,16 @@
   font-weight: 600;
 }
 
+/* ============================================
+   【新增】隐藏 Canvas (用于生成分享卡片)
+   复用 crop 页方案: position:fixed 移出视口
+   ============================================ */
+.share-canvas-hidden {
+  position: fixed;
+  left: -9999rpx;
+  top: -9999rpx;
+}
+
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -927,4 +937,134 @@
   background: #EF4444;
   color: #FFFFFF;
   box-shadow: 0 2rpx 8rpx rgba(239, 68, 68, 0.15);
+}
+
+/* ============ AUTH BANNER（非阻断式底部授权引导条） ============ */
+.auth-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #FFFFFF;
+  border-top: 2rpx solid #F1F5F9;
+  padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom));
+  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.06);
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  animation: bannerSlideUp 0.3s ease-out;
+}
+
+@keyframes bannerSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.auth-banner-bar {
+  width: 48rpx;
+  height: 6rpx;
+  background: #3B82F6;
+  border-radius: 3rpx;
+  align-self: flex-start;
+}
+
+.auth-banner-body {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.auth-banner-icon {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 4rpx;
+  background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.auth-banner-icon .icon-user {
+  width: 36rpx;
+  height: 44rpx;
+  position: relative;
+}
+
+.auth-banner-icon .icon-user::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 22rpx;
+  height: 22rpx;
+  border: 2rpx solid #3B82F6;
+  border-radius: 50%;
+}
+
+.auth-banner-icon .icon-user::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 22rpx;
+  border: 2rpx solid #3B82F6;
+  border-radius: 11rpx 11rpx 0 0;
+}
+
+.auth-banner-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.auth-banner-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.auth-banner-desc {
+  font-size: 24rpx;
+  color: #64748B;
+  line-height: 1.5;
+}
+
+.auth-banner-actions {
+  display: flex;
+  gap: 16rpx;
+  justify-content: flex-end;
+}
+
+.auth-btn-dismiss {
+  padding: 20rpx 40rpx;
+  border-radius: 4rpx;
+  font-size: 28rpx;
+  color: #64748B;
+  background: #F1F5F9;
+  transition: all 0.2s;
+}
+
+.auth-btn-dismiss:active {
+  background: #E2E8F0;
+}
+
+.auth-btn-agree {
+  padding: 20rpx 40rpx;
+  border-radius: 4rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: linear-gradient(160deg, #3B82F6 0%, #2563EB 100%);
+  box-shadow: 0 4rpx 16rpx rgba(59, 130, 246, 0.18);
+  transition: all 0.2s;
+}
+
+.auth-btn-agree:active {
+  transform: scale(0.97);
+  box-shadow: 0 2rpx 8rpx rgba(59, 130, 246, 0.12);
 }

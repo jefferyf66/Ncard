@@ -1,0 +1,6 @@
+{
+  "name": "deleteCard",
+  "version": "1.0.0",
+  "description": "级联删除名片 — 数据库记录 + 云存储文件 + 关联数据",
+  "main": "index.js"
+}

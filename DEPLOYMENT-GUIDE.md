@@ -76,12 +76,12 @@ wx.cloud.init({
 
 1. 进入云开发控制台 → **存储**
 2. 创建以下存储目录：
-   - `avatars/` — 用户头像
-   - `cards/` — 名片相关图片
+   - `avatars/` — 用户头像（由代码自动创建，无需手动操作）
+   - `attachments/` — 名片附件文件
    - `qrcodes/` — 小程序码
-   - `scans/` — OCR 扫描图片
 
-3. 设置存储权限：建议为「所有用户可读，仅创建者可读写」
+3. 设置存储权限：推荐「仅创建者可读写」
+   > 头像分享通过云函数 `resolveCloudUrls` 代理读取，无需开放公开读权限
 
 ---
 
@@ -92,9 +92,10 @@ wx.cloud.init({
 | 云函数 | 用途 | 需要部署 |
 |--------|------|----------|
 | `getOpenId` | 获取用户 OpenID | ✅ |
-| `parseCard` | 名片 OCR 识别与解析 | ✅ |
 | `getQrCode` | 生成小程序码 | ✅ |
-| `quickstartFunctions` | 快速启动示例（可删除） | ❌ |
+| `initVisits` | 访客记录读写 + 身份识别 | ✅ |
+| `deleteCard` | 级联删除名片（数据库 + 存储） | ✅ |
+| `resolveCloudUrls` | 安全代理：cloud:// → HTTPS URL | ✅ |
 
 ### 3.2 部署方式
 

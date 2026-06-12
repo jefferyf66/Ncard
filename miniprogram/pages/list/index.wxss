@@ -23,46 +23,6 @@
   color: #8F959E;
 }
 
-.add-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
-  color: #FFFFFF;
-  border-radius: 16rpx;
-  padding: 28rpx;
-  margin-bottom: 32rpx;
-  box-shadow: 0 8rpx 24rpx rgba(59, 130, 246, 0.3);
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.add-btn:active {
-  transform: scale(0.98);
-  box-shadow: 0 4rpx 12rpx rgba(59, 130, 246, 0.3);
-}
-
-.add-icon-wrapper {
-  width: 56rpx;
-  height: 56rpx;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 16rpx;
-}
-
-.add-icon {
-  font-size: 40rpx;
-  font-weight: 300;
-  line-height: 1;
-}
-
-.add-text {
-  font-size: 32rpx;
-  font-weight: 500;
-}
-
 .card-list {
   display: flex;
   flex-direction: column;

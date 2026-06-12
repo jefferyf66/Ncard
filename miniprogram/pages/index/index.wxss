@@ -654,6 +654,13 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.visitor-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 4rpx;
 }
 
 /* 访客默认头像图标 — 品牌蓝 */
@@ -702,6 +709,21 @@
   align-items: center;
 }
 
+/* 访客等级徽章 */
+.visitor-level-badge {
+  padding: 2rpx 10rpx;
+  border-radius: 4rpx;
+  font-size: 20rpx;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.visitor-level-badge.level-1 {
+  background: #F1F5F9;
+  color: #94A3B8;
+  border: 1rpx solid #E2E8F0;
+}
+
 /* 访客名称 — 衬线 */
 .visitor-name {
   font-family: Georgia, 'Times New Roman', serif;
@@ -732,6 +754,12 @@
   padding: 4rpx 14rpx;
   background: #F1F5F9;
   border-radius: 4rpx;
+}
+
+.visit-count-tag {
+  color: #3B82F6;
+  background: rgba(59, 130, 246, 0.06);
+  font-weight: 500;
 }
 
 /* 操作按钮 — D方向：锐角 */
