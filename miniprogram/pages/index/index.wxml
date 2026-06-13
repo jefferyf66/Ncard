@@ -1,4 +1,12 @@
 <view class="container">
+  <!-- 隐藏的 Canvas 用于渲染卡片预览 -->
+  <canvas 
+    type="2d" 
+    id="indexCardCanvas" 
+    class="hidden-canvas"
+    style="width: 800px; height: 400px;"
+  ></canvas>
+  
   <view class="header">
     <view class="header-content">
       <text class="title">我的名片</text>
@@ -42,35 +50,47 @@
       bindtap="goToPreview"
       data-id="{{item._id}}"
     >
-      <view class="card-left">
-        <image 
-          class="card-avatar" 
-          src="{{item.avatar || '../../images/avatar.png'}}" 
-          mode="aspectFill"
-          lazy-load
-          binderror="onAvatarError"
-          data-index="{{index}}"
-        ></image>
-      </view>
-      <view class="card-center">
-        <view class="card-name-row">
-          <text class="card-name">{{item.name || '未命名'}}</text>
-          <text class="card-position" wx:if="{{item.position}}">{{item.position}}</text>
+      <!-- Canvas 渲染的卡片预览 -->
+      <image 
+        class="card-preview"
+        src="{{cardPreviews[item._id] || ''}}"
+        mode="widthFix"
+        wx:if="{{cardPreviews[item._id]}}"
+        lazy-load
+      />
+      
+      <!-- 传统卡片布局（作为降级方案） -->
+      <view class="card-content" wx:else>
+        <view class="card-left">
+          <image 
+            class="card-avatar" 
+            src="{{item.avatar || '../../images/avatar.png'}}" 
+            mode="aspectFill"
+            lazy-load
+            binderror="onAvatarError"
+            data-index="{{index}}"
+          ></image>
         </view>
-        <text class="card-company">{{item.company || ''}}</text>
-        <view class="card-meta" wx:if="{{item.phone || item.email}}">
-          <view class="meta-item" wx:if="{{item.phone}}">
-            <view class="meta-icon icon-phone"></view>
-            <text>{{item.phone}}</text>
+        <view class="card-center">
+          <view class="card-name-row">
+            <text class="card-name">{{item.name || '未命名'}}</text>
+            <text class="card-position" wx:if="{{item.position}}">{{item.position}}</text>
           </view>
-          <view class="meta-item" wx:if="{{item.email}}">
-            <view class="meta-icon icon-mail"></view>
-            <text>{{item.email}}</text>
+          <text class="card-company">{{item.company || ''}}</text>
+          <view class="card-meta" wx:if="{{item.phone || item.email}}">
+            <view class="meta-item" wx:if="{{item.phone}}">
+              <view class="meta-icon icon-phone"></view>
+              <text>{{item.phone}}</text>
+            </view>
+            <view class="meta-item" wx:if="{{item.email}}">
+              <view class="meta-icon icon-mail"></view>
+              <text>{{item.email}}</text>
+            </view>
           </view>
         </view>
-      </view>
-      <view class="card-right">
-        <view class="card-arrow">›</view>
+        <view class="card-right">
+          <view class="card-arrow">›</view>
+        </view>
       </view>
     </view>
 

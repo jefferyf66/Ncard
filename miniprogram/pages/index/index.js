@@ -1,8 +1,10 @@
 const app = getApp()
+var shareCard = require('../../utils/shareCard')
 
 Page({
   data: {
     cards: [],
+    cardPreviews: {},
     isLoading: true,
     isEmpty: false,
     isError: false,
@@ -386,6 +388,11 @@ Page({
         app.setCache('cardsCache', cards, 600000)
         app.setCache('lastCardUpdate', Date.now())
 
+        // 渲染卡片预览（仅首屏前3张）
+        if (isRefresh && cards.length > 0) {
+          this._renderCardPreviews(cards.slice(0, 3))
+        }
+
         if (callback) callback()
       })
       .catch(err => {
@@ -533,5 +540,37 @@ Page({
     var data = {}
     data[key] = ''
     this.setData(data)
+  },
+
+  /**
+   * 渲染卡片预览图片（使用 Canvas）
+   * @param {Array} cards - 名片数据数组
+   */
+  _renderCardPreviews(cards) {
+    console.log('[Index] 开始渲染卡片预览:', cards.length)
+    
+    var cardPreviews = { ...this.data.cardPreviews }
+    var promises = []
+    
+    cards.forEach((card) => {
+      if (!card._id) return
+      
+      promises.push(
+        shareCard.generate('#indexCardCanvas', card, {
+          cardKey: 'index_' + card._id,
+          scale: 0.5
+        }).then((result) => {
+          cardPreviews[card._id] = result.tempFilePath
+        }).catch((err) => {
+          console.warn('[Index] 卡片渲染失败:', card._id, err)
+          // 渲染失败不影响，保持原有布局
+        })
+      )
+    })
+    
+    Promise.all(promises).then(() => {
+      console.log('[Index] 卡片预览渲染完成')
+      this.setData({ cardPreviews })
+    })
   }
 })

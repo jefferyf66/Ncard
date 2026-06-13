@@ -913,3 +913,32 @@
   font-size: 24rpx;
   color: #CBD5E1;
 }
+
+/* ============ CANVAS 卡片预览样式 ============ */
+
+/* 隐藏的 Canvas 用于渲染 */
+.hidden-canvas {
+  position: fixed;
+  top: -9999rpx;
+  left: -9999rpx;
+  width: 800rpx;
+  height: 400rpx;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Canvas 渲染的卡片预览 */
+.card-preview {
+  width: 100%;
+  height: auto;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+/* 传统卡片内容（降级方案） */
+.card-content {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  width: 100%;
+}
