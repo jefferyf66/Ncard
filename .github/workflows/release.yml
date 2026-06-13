@@ -19,15 +19,25 @@ jobs:
         uses: mikepenz/release-changelog-builder-action@v5
         with:
           configuration: ".github/changelog-config.json"
+          ignorePreReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           release_name: ${{ github.ref_name }}
-          body: ${{ steps.changelog.outputs.changelog }}
+          body: |
+            ## 更新内容
+            
+            {{ steps.changelog.outputs.changelog || 'No changelog generated.' }}
+            
+            ---
+            
+            **版本**: ${{ github.ref_name }}
+            **提交**: https://github.com/jefferyf66/Ncard/commit/${{ github.sha }}
           draft: false
           prerelease: false
         env:
