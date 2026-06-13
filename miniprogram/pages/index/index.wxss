@@ -219,11 +219,13 @@
 }
 
 .card-company {
-  font-size: 26rpx;
-  color: #64748B;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1E293B;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: left;
 }
 
 .card-meta {
@@ -244,6 +246,118 @@
   width: 36rpx;
   height: 36rpx;
   position: relative;
+}
+
+/* 联系方式区域 */
+.card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+/* 单个联系信息项 - 右对齐 */
+.info-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8rpx;
+  font-size: 24rpx;
+  color: #64748B;
+}
+
+.info-icon {
+  width: 32rpx;
+  height: 32rpx;
+  position: relative;
+}
+
+/* 电话图标 */
+.info-item .icon-phone {
+  width: 32rpx;
+  height: 32rpx;
+  border: 2rpx solid #3B82F6;
+  border-radius: 50%;
+  position: relative;
+  opacity: 0.6;
+}
+
+.info-item .icon-phone::before {
+  content: '';
+  position: absolute;
+  top: 6rpx;
+  left: 6rpx;
+  right: 6rpx;
+  height: 2rpx;
+  background: #3B82F6;
+}
+
+.info-item .icon-phone::after {
+  content: '';
+  position: absolute;
+  bottom: 6rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12rpx;
+  height: 8rpx;
+  border: 2rpx solid #3B82F6;
+  border-radius: 0 0 6rpx 6rpx;
+  border-top: none;
+}
+
+/* 邮件图标 */
+.info-item .icon-mail {
+  width: 32rpx;
+  height: 24rpx;
+  border: 2rpx solid #3B82F6;
+  border-radius: 3rpx;
+  position: relative;
+  opacity: 0.6;
+}
+
+.info-item .icon-mail::before {
+  content: '';
+  position: absolute;
+  top: -5rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8rpx solid transparent;
+  border-right: 8rpx solid transparent;
+  border-bottom: 8rpx solid #3B82F6;
+}
+
+/* 地址图标 */
+.info-item .icon-address {
+  width: 32rpx;
+  height: 32rpx;
+  position: relative;
+}
+
+.info-item .icon-address::before {
+  content: '';
+  position: absolute;
+  top: 4rpx;
+  left: 4rpx;
+  right: 4rpx;
+  bottom: 4rpx;
+  border: 2rpx solid #3B82F6;
+  border-radius: 4rpx;
+  opacity: 0.6;
+}
+
+.info-item .icon-address::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 0;
+  height: 0;
+  border-left: 6rpx solid transparent;
+  border-right: 6rpx solid transparent;
+  border-top: 8rpx solid #3B82F6;
+  opacity: 0.6;
 }
 
 /* 电话图标 — 品牌色 */

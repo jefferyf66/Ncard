@@ -430,6 +430,7 @@ function _drawContactInfo(ctx, card, cx, y) {
   var items = []
   if (card.phone) items.push({ icon: 'phone', text: card.phone })
   if (card.email) items.push({ icon: 'email', text: card.email })
+  if (card.address) items.push({ icon: 'address', text: card.address })
 
   if (items.length === 0) return
 
@@ -488,6 +489,17 @@ function _drawContactIcon(ctx, type, x, y, size) {
     ctx.lineTo(cx, cy - 1)
     ctx.lineTo(x + size - 2, y + 2)
     ctx.stroke()
+  } else if (type === 'address') {
+    // 地址图标: 地图标记
+    _drawRoundRect(ctx, x + 2, y + 4, size - 4, size - 8, 3)
+    ctx.stroke()
+    // 三角形箭头
+    ctx.beginPath()
+    ctx.moveTo(cx, y + size)
+    ctx.lineTo(cx - 5, y + size - 8)
+    ctx.lineTo(cx + 5, y + size - 8)
+    ctx.closePath()
+    ctx.fill()
   }
 
   ctx.restore()

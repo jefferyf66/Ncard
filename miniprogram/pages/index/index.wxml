@@ -82,14 +82,18 @@
             <text class="card-position" wx:if="{{item.position}}">{{item.position}}</text>
           </view>
           <text class="card-company">{{item.company || ''}}</text>
-          <view class="card-meta" wx:if="{{item.phone || item.email}}">
-            <view class="meta-item" wx:if="{{item.phone}}">
-              <view class="meta-icon icon-phone"></view>
+          <view class="card-info">
+            <view class="info-item" wx:if="{{item.phone}}">
+              <view class="info-icon icon-phone"></view>
               <text>{{item.phone}}</text>
             </view>
-            <view class="meta-item" wx:if="{{item.email}}">
-              <view class="meta-icon icon-mail"></view>
+            <view class="info-item" wx:if="{{item.email}}">
+              <view class="info-icon icon-mail"></view>
               <text>{{item.email}}</text>
+            </view>
+            <view class="info-item" wx:if="{{item.address}}">
+              <view class="info-icon icon-address"></view>
+              <text>{{item.address}}</text>
             </view>
           </view>
         </view>
