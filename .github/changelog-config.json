@@ -1,0 +1,33 @@
+{
+  "categories": [
+    {
+      "title": "🚀 Features",
+      "labels": ["feature", "enhancement", "feat"]
+    },
+    {
+      "title": "🐛 Bug Fixes",
+      "labels": ["bug", "fix", "bugfix"]
+    },
+    {
+      "title": "🔧 Maintenance",
+      "labels": ["chore", "maintenance", "refactor"]
+    },
+    {
+      "title": "📝 Documentation",
+      "labels": ["docs", "documentation"]
+    },
+    {
+      "title": "🔒 Security",
+      "labels": ["security"]
+    },
+    {
+      "title": "✅ Tests",
+      "labels": ["test", "tests"]
+    }
+  ],
+  "ignore_labels": [
+    "dependencies",
+    "skip-changelog"
+  ],
+  "template": "# {{CHANGELOG}}\n\n## Commits\n{{COMMITS}}"
+}
