@@ -42,40 +42,43 @@
       bindtap="goToPreview"
       data-id="{{item._id}}"
     >
-      <!-- 优化后卡片布局：左侧头像 + 右对齐联系方式 -->
-      <view class="card-content">
-        <view class="card-left">
-          <image 
-            class="card-avatar" 
-            src="{{item.avatar || '../../images/avatar.png'}}" 
-            mode="aspectFill"
-            lazy-load
-            binderror="onAvatarError"
-            data-index="{{index}}"
-          ></image>
-        </view>
-        <view class="card-center">
-          <view class="card-name-row">
+      <!-- 优化后卡片布局：参考设计稿 -->
+      <view class="card-wrapper">
+        <view class="card-top">
+          <view class="card-avatar-wrapper">
+            <image 
+              class="card-avatar" 
+              src="{{item.avatar || '../../images/avatar.png'}}" 
+              mode="aspectFill"
+              lazy-load
+              binderror="onAvatarError"
+              data-index="{{index}}"
+            ></image>
+          </view>
+          <view class="card-header-info">
             <text class="card-name">{{item.name || '未命名'}}</text>
             <text class="card-position" wx:if="{{item.position}}">{{item.position}}</text>
           </view>
+        </view>
+        <view class="card-divider"></view>
+        <view class="card-body">
           <text class="card-company">{{item.company || ''}}</text>
-          <view class="card-info">
-            <view class="info-item" wx:if="{{item.phone}}">
-              <view class="info-icon icon-phone"></view>
+          <view class="card-contact">
+            <view class="contact-item" wx:if="{{item.phone}}">
               <text>{{item.phone}}</text>
+              <view class="contact-icon icon-phone"></view>
             </view>
-            <view class="info-item" wx:if="{{item.email}}">
-              <view class="info-icon icon-mail"></view>
+            <view class="contact-item" wx:if="{{item.email}}">
               <text>{{item.email}}</text>
+              <view class="contact-icon icon-mail"></view>
             </view>
-            <view class="info-item" wx:if="{{item.address}}">
-              <view class="info-icon icon-address"></view>
+            <view class="contact-item" wx:if="{{item.address}}">
               <text>{{item.address}}</text>
+              <view class="contact-icon icon-address"></view>
             </view>
           </view>
         </view>
-        <view class="card-right">
+        <view class="card-arrow-wrapper">
           <view class="card-arrow">›</view>
         </view>
       </view>
