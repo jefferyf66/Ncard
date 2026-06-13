@@ -59,6 +59,11 @@
         lazy-load
       />
       
+      <!-- 渲染中加载状态 -->
+      <view class="card-loading" wx:elif="{{isRendering && !cardPreviews[item._id]}}">
+        <view class="loading-spinner"></view>
+      </view>
+      
       <!-- 传统卡片布局（作为降级方案） -->
       <view class="card-content" wx:else>
         <view class="card-left">

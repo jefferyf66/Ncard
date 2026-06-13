@@ -18,7 +18,8 @@ Page({
       viewed: 0,
       newCards: 0
     },
-    recentVisitors: []
+    recentVisitors: [],
+    isRendering: false  // 新增：Canvas 渲染状态
   },
 
   onLoad() {
@@ -543,34 +544,87 @@ Page({
   },
 
   /**
+   * 页面卸载时清理资源
+   */
+  onUnload() {
+    console.log('[Index] onUnload')
+    // 清理本地生成的临时图片文件
+    Object.values(this.data.cardPreviews).forEach(tempFilePath => {
+      if (tempFilePath) {
+        wx.removeSavedFile({
+          filePath: tempFilePath,
+          fail: () => {}
+        })
+      }
+    })
+  },
+
+  /**
    * 渲染卡片预览图片（使用 Canvas）
    * @param {Array} cards - 名片数据数组
+   * @param {number} retryCount - 重试次数（内部使用）
    */
-  _renderCardPreviews(cards) {
+  _renderCardPreviews(cards, retryCount = 0) {
+    var that = this
+    
+    // 检测 Canvas 节点是否就绪
+    wx.createSelectorQuery()
+      .select('#indexCardCanvas')
+      .fields({ node: true, size: true })
+      .exec(function (canvasRes) {
+        if (!canvasRes || !canvasRes[0] || !canvasRes[0].node) {
+          // Canvas 节点尚未就绪，最多重试3次
+          if (retryCount < 3) {
+            setTimeout(() => {
+              that._renderCardPreviews(cards, retryCount + 1)
+            }, 200)
+          } else {
+            console.warn('[Index] Canvas 节点获取失败，使用降级方案')
+          }
+          return
+        }
+        
+        // Canvas 就绪，开始串行渲染
+        that._doRenderCardPreviews(cards)
+      })
+  },
+
+  /**
+   * 实际执行卡片渲染（串行渲染避免 Canvas 冲突）
+   */
+  async _doRenderCardPreviews(cards) {
     console.log('[Index] 开始渲染卡片预览:', cards.length)
     
-    var cardPreviews = { ...this.data.cardPreviews }
-    var promises = []
+    // 从本地缓存读取已有的预览图
+    var cachedPreviews = app.getCache('cardPreviews') || {}
+    var cardPreviews = { ...this.data.cardPreviews, ...cachedPreviews }
     
-    cards.forEach((card) => {
-      if (!card._id) return
+    this.setData({ isRendering: true })
+    
+    for (const card of cards) {
+      if (!card._id) continue
       
-      promises.push(
-        shareCard.generate('#indexCardCanvas', card, {
+      // 如果已有缓存，跳过渲染
+      if (cardPreviews[card._id]) continue
+      
+      try {
+        const result = await shareCard.generate('#indexCardCanvas', card, {
           cardKey: 'index_' + card._id,
           scale: 0.5
-        }).then((result) => {
-          cardPreviews[card._id] = result.tempFilePath
-        }).catch((err) => {
-          console.warn('[Index] 卡片渲染失败:', card._id, err)
-          // 渲染失败不影响，保持原有布局
         })
-      )
-    })
+        cardPreviews[card._id] = result.tempFilePath
+        
+        // 实时更新 UI
+        this.setData({ cardPreviews })
+      } catch (err) {
+        console.warn('[Index] 卡片渲染失败:', card._id, err)
+      }
+    }
     
-    Promise.all(promises).then(() => {
-      console.log('[Index] 卡片预览渲染完成')
-      this.setData({ cardPreviews })
-    })
+    // 保存到本地缓存，有效期1小时
+    app.setCache('cardPreviews', cardPreviews, 3600000)
+    
+    this.setData({ isRendering: false })
+    console.log('[Index] 卡片预览渲染完成')
   }
 })

@@ -942,3 +942,28 @@
   gap: 20rpx;
   width: 100%;
 }
+
+/* 卡片渲染中加载状态 */
+.card-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 375rpx;
+  background: #f8fafc;
+  border-radius: 8rpx;
+}
+
+.loading-spinner {
+  width: 48rpx;
+  height: 48rpx;
+  border: 4rpx solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
