@@ -188,11 +188,12 @@ page {
 
 .card-wrapper {
   position: relative;
-  background: linear-gradient(135deg, #F0F9FF 0%, #FDF6E3 100%);
+  background: #FFFFFF;
   border-radius: 24rpx;
   padding: 32rpx;
-  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.06);
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.08);
   overflow: hidden;
+  border: 1rpx solid rgba(0, 0, 0, 0.06);
 }
 
 .card-top {
@@ -266,24 +267,26 @@ page {
   color: #475569;
 }
 
-/* 卡片底部 */
+/* 卡片底部 - 使用深色背景形成对比 */
 .card-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 20rpx;
-  padding-top: 20rpx;
-  border-top: 2rpx solid rgba(0, 0, 0, 0.06);
+  margin: 20rpx -32rpx -32rpx -32rpx;
+  padding: 24rpx 32rpx;
+  background: linear-gradient(135deg, #1E3A5F 0%, #2D4A6F 100%);
+  border-radius: 0 0 24rpx 24rpx;
 }
 
-/* 发名片按钮 */
+/* 发名片按钮 - 使用暖色调与冷色底部形成对比 */
 .send-card-btn {
   display: flex;
   align-items: center;
   gap: 8rpx;
-  padding: 12rpx 24rpx;
-  background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+  padding: 14rpx 28rpx;
+  background: linear-gradient(135deg, #F59E0B 0%, #EF4444 100%);
   border-radius: 24rpx;
+  box-shadow: 0 4rpx 12rpx rgba(245, 158, 11, 0.3);
 }
 
 .send-icon {
@@ -294,14 +297,14 @@ page {
 }
 
 .send-text {
-  font-size: 24rpx;
-  font-weight: 500;
+  font-size: 26rpx;
+  font-weight: 600;
   color: #fff;
 }
 
 .card-arrow {
   font-size: 44rpx;
-  color: #94A3B8;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .load-more {
