@@ -428,6 +428,10 @@ Page({
     })
   },
 
+  stopPropagation() {
+    // 阻止事件冒泡
+  },
+
   goToPreview(e) {
     const id = e.currentTarget.dataset.id
     if (!id) {

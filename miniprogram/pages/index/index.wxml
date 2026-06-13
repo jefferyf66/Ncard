@@ -30,12 +30,6 @@
   </view>
 
   <view class="card-list" wx:else>
-    <!-- 悬浮发名片按钮 -->
-    <view class="float-add-btn" bindtap="goToEdit">
-      <text class="float-add-icon">+</text>
-      <text class="float-add-text">发名片</text>
-    </view>
-    
     <view 
       wx:for="{{cards}}" 
       wx:key="_id" 
@@ -76,7 +70,11 @@
             </view>
           </view>
         </view>
-        <view class="card-arrow-wrapper">
+        <view class="card-footer">
+          <view class="send-card-btn" bindtap="goToEdit" catchtap="stopPropagation">
+            <text class="send-icon">↑</text>
+            <text class="send-text">发名片</text>
+          </view>
           <view class="card-arrow">›</view>
         </view>
       </view>

@@ -180,37 +180,6 @@ page {
 .card-list {
   display: flex;
   flex-direction: column;
-  align-items: center;
-}
-
-/* 悬浮发名片按钮 */
-.float-add-btn {
-  position: sticky;
-  top: calc(var(--status-bar-height) + 140rpx);
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8rpx;
-  width: 160rpx;
-  height: 72rpx;
-  background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
-  border-radius: 36rpx;
-  box-shadow: 0 8rpx 24rpx rgba(59, 130, 246, 0.3);
-  margin-bottom: 16rpx;
-}
-
-.float-add-icon {
-  font-size: 28rpx;
-  font-weight: 400;
-  color: #fff;
-  line-height: 1;
-}
-
-.float-add-text {
-  font-size: 24rpx;
-  font-weight: 500;
-  color: #fff;
 }
 
 .card-item {
@@ -297,11 +266,37 @@ page {
   color: #475569;
 }
 
-.card-arrow-wrapper {
-  position: absolute;
-  top: 50%;
-  right: 24rpx;
-  transform: translateY(-50%);
+/* 卡片底部 */
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20rpx;
+  padding-top: 20rpx;
+  border-top: 2rpx solid rgba(0, 0, 0, 0.06);
+}
+
+/* 发名片按钮 */
+.send-card-btn {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 12rpx 24rpx;
+  background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+  border-radius: 24rpx;
+}
+
+.send-icon {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1;
+}
+
+.send-text {
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #fff;
 }
 
 .card-arrow {
