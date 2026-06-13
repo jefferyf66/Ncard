@@ -169,13 +169,6 @@
       </view>
     </view>
 
-    <button class="share-btn" open-type="share">
-      <view class="share-btn-content">
-        <view class="icon-share"></view>
-        <text class="share-text">发名片</text>
-      </view>
-    </button>
-
   </view>
 </view>
 

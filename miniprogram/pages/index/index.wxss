@@ -180,6 +180,37 @@ page {
 .card-list {
   display: flex;
   flex-direction: column;
+  align-items: center;
+}
+
+/* 悬浮发名片按钮 */
+.float-add-btn {
+  position: sticky;
+  top: calc(var(--status-bar-height) + 140rpx);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  width: 160rpx;
+  height: 72rpx;
+  background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+  border-radius: 36rpx;
+  box-shadow: 0 8rpx 24rpx rgba(59, 130, 246, 0.3);
+  margin-bottom: 16rpx;
+}
+
+.float-add-icon {
+  font-size: 28rpx;
+  font-weight: 400;
+  color: #fff;
+  line-height: 1;
+}
+
+.float-add-text {
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #fff;
 }
 
 .card-item {
@@ -256,93 +287,14 @@ page {
 .card-contact {
   display: flex;
   flex-direction: column;
-  gap: 12rpx;
+  gap: 8rpx;
 }
 
 .contact-item {
   display: flex;
-  align-items: center;
   justify-content: flex-end;
-  gap: 12rpx;
   font-size: 26rpx;
   color: #475569;
-}
-
-.contact-icon {
-  width: 36rpx;
-  height: 36rpx;
-  position: relative;
-}
-
-.contact-icon.icon-phone::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  border: 3rpx solid #3B82F6;
-  border-radius: 50%;
-}
-
-.contact-icon.icon-phone::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 14rpx;
-  height: 14rpx;
-  background: #3B82F6;
-  border-radius: 50%;
-}
-
-.contact-icon.icon-mail::before {
-  content: '';
-  position: absolute;
-  top: 4rpx;
-  left: 0;
-  width: 100%;
-  height: 28rpx;
-  border: 3rpx solid #3B82F6;
-  border-radius: 6rpx;
-}
-
-.contact-icon.icon-mail::after {
-  content: '';
-  position: absolute;
-  top: -4rpx;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 10rpx solid transparent;
-  border-right: 10rpx solid transparent;
-  border-bottom: 10rpx solid #3B82F6;
-}
-
-.contact-icon.icon-address::before {
-  content: '';
-  position: absolute;
-  top: 4rpx;
-  left: 4rpx;
-  width: 28rpx;
-  height: 24rpx;
-  border: 3rpx solid #3B82F6;
-  border-radius: 6rpx;
-}
-
-.contact-icon.icon-address::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 8rpx solid transparent;
-  border-right: 8rpx solid transparent;
-  border-top: 10rpx solid #3B82F6;
 }
 
 .card-arrow-wrapper {

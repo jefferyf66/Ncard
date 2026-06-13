@@ -10,11 +10,6 @@
           <view class="icon-desktop"></view>
         </view>
       </view>
-      <view class="add-btn" bindtap="goToEdit">
-        <view class="add-icon-wrapper">
-          <text class="add-icon">+</text>
-        </view>
-      </view>
     </view>
   </view>
 
@@ -35,6 +30,12 @@
   </view>
 
   <view class="card-list" wx:else>
+    <!-- 悬浮发名片按钮 -->
+    <view class="float-add-btn" bindtap="goToEdit">
+      <text class="float-add-icon">+</text>
+      <text class="float-add-text">发名片</text>
+    </view>
+    
     <view 
       wx:for="{{cards}}" 
       wx:key="_id" 
@@ -66,15 +67,12 @@
           <view class="card-contact">
             <view class="contact-item" wx:if="{{item.phone}}">
               <text>{{item.phone}}</text>
-              <view class="contact-icon icon-phone"></view>
             </view>
             <view class="contact-item" wx:if="{{item.email}}">
               <text>{{item.email}}</text>
-              <view class="contact-icon icon-mail"></view>
             </view>
             <view class="contact-item" wx:if="{{item.address}}">
               <text>{{item.address}}</text>
-              <view class="contact-icon icon-address"></view>
             </view>
           </view>
         </view>
