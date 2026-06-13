@@ -1,4 +1,5 @@
 const app = getApp()
+var shareCard = require('../../utils/shareCard')
 
 Page({
   data: {
@@ -16,12 +17,16 @@ Page({
       viewed: 0,
       newCards: 0
     },
-    recentVisitors: []
+    recentVisitors: [],
+    // 分享相关状态
+    shareCardId: '',
+    shareCardData: null
   },
 
   onLoad() {
     console.log('[Index] onLoad')
     this.checkPrivacySetting()
+    this.initShareMenu()
   },
 
   checkPrivacySetting() {
@@ -428,8 +433,87 @@ Page({
     })
   },
 
+  onShareButtonTap(e) {
+    const id = e.currentTarget.dataset.id
+    if (!id) return
+
+    const card = this.data.cards.find(c => c._id === id)
+    if (!card) return
+
+    this.setData({
+      shareCardId: id,
+      shareCardData: card
+    })
+
+    this._preGenerateShareCard(card, id)
+  },
+
   stopPropagation() {
     // 阻止事件冒泡
+  },
+
+  initShareMenu() {
+    wx.showShareMenu({
+      withShareTicket: true,
+      menus: ['shareAppMessage', 'shareTimeline'],
+      success: () => console.log('[Index] 分享菜单初始化成功'),
+      fail: (err) => console.warn('[Index] 分享菜单初始化失败:', err)
+    })
+  },
+
+  onShareAppMessage() {
+    const card = this.data.shareCardData || {}
+    const id = this.data.shareCardId || ''
+    const path = id ? `/pages/preview/index?id=${id}&source=share` : '/pages/index/index'
+
+    var imageUrl = this._shareImagePath || ''
+    if (!imageUrl) {
+      var avatar = card.avatar || ''
+      if (avatar.indexOf('https://') === 0) {
+        imageUrl = avatar
+      }
+    }
+
+    return {
+      title: (card.name || '名片') + ' - ' + (card.company || ''),
+      path: path,
+      imageUrl: imageUrl
+    }
+  },
+
+  onShareTimeline() {
+    const card = this.data.shareCardData || {}
+    const id = this.data.shareCardId || ''
+
+    var imageUrl = this._shareImagePath || ''
+    if (!imageUrl) {
+      var avatar = card.avatar || ''
+      if (avatar.indexOf('https://') === 0) {
+        imageUrl = avatar
+      }
+    }
+
+    return {
+      title: (card.name || '名片') + ' - ' + (card.company || ''),
+      query: id ? 'id=' + id : '',
+      imageUrl: imageUrl
+    }
+  },
+
+  _preGenerateShareCard(card, cardId) {
+    if (this._isGeneratingShare) return
+    this._isGeneratingShare = true
+
+    shareCard.generate('#shareCanvas', card, {
+      cardKey: cardId || ('share_' + Date.now())
+    }).then(res => {
+      this._shareImagePath = res.tempFilePath
+      this._isGeneratingShare = false
+      console.log('[Index] 分享卡片已生成:', res.tempFilePath)
+    }).catch(err => {
+      this._isGeneratingShare = false
+      console.warn('[Index] 分享卡片生成失败:', err && err.message)
+    })
   },
 
   goToPreview(e) {

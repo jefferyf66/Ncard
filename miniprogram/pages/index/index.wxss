@@ -653,3 +653,13 @@ page {
   height: 1px;
   opacity: 0;
 }
+
+.share-canvas-hidden {
+  position: fixed;
+  top: -1000px;
+  left: -1000px;
+  width: 800px;
+  height: 400px;
+  opacity: 0;
+  pointer-events: none;
+}
