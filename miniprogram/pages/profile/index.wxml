@@ -107,7 +107,7 @@
   </view>
 
   <view class="version-info">
-    <text class="version-text">科博名片 v1.0.0</text>
+    <text class="version-text">科博名片 v1.0.6</text>
   </view>
 
   <view class="modal-overlay" wx:if="{{showThemePicker}}" catchtap="closeThemePicker">
