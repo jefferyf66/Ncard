@@ -1,12 +1,4 @@
 <view class="container">
-  <!-- 隐藏的 Canvas 用于渲染卡片预览 -->
-  <canvas 
-    type="2d" 
-    id="indexCardCanvas" 
-    class="hidden-canvas"
-    style="width: 800px; height: 400px;"
-  ></canvas>
-  
   <view class="header">
     <view class="header-content">
       <text class="title">我的名片</text>
@@ -50,22 +42,8 @@
       bindtap="goToPreview"
       data-id="{{item._id}}"
     >
-      <!-- Canvas 渲染的卡片预览 -->
-      <image 
-        class="card-preview"
-        src="{{cardPreviews[item._id] || ''}}"
-        mode="widthFix"
-        wx:if="{{cardPreviews[item._id]}}"
-        lazy-load
-      />
-      
-      <!-- 渲染中加载状态 -->
-      <view class="card-loading" wx:elif="{{isRendering && !cardPreviews[item._id]}}">
-        <view class="loading-spinner"></view>
-      </view>
-      
-      <!-- 传统卡片布局（作为降级方案） -->
-      <view class="card-content" wx:else>
+      <!-- 优化后卡片布局：左侧头像 + 右对齐联系方式 -->
+      <view class="card-content">
         <view class="card-left">
           <image 
             class="card-avatar" 
