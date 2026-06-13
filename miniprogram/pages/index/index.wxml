@@ -183,6 +183,11 @@
     </view>
   </view>
 
+  <!-- 新增名片悬浮按钮 -->
+  <view class="add-btn" bindtap="goToEdit">
+    <text class="add-btn-icon">+</text>
+  </view>
+
   <!-- 隐私授权弹窗 -->
   <view class="privacy-mask" wx:if="{{showPrivacyPopup}}" catchtouchmove="preventTouchMove">
     <view class="privacy-popup" catchtouchmove="preventTouchMove">
