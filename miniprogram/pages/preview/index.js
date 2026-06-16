@@ -74,7 +74,9 @@ Page({
   },
 
   onShow() {
-    if (this.data.id && this.data.isError) {
+    // 从编辑页返回时，名片数据可能已变更，总是重新加载
+    if (this.data.id) {
+      console.log('[Preview] onShow, 重新加载名片:', this.data.id)
       this.setData({ isError: false, isLoading: true })
       this.loadCard(this.data.id)
     }

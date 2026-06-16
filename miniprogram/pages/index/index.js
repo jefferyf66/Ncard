@@ -1,6 +1,7 @@
 const app = getApp()
 var shareCard = require('../../utils/shareCard')
 var shareUtil = require('../../utils/share')
+var cardStyle = require('../../config/cardStyle')
 
 Page({
   data: {
@@ -12,6 +13,19 @@ Page({
     hasMore: true,
     pageSize: 10,
     currentPage: 0,
+    // Canvas 尺寸（5:4 比例 = 微信分享图显示规范，含横幅，经气泡适配）
+    canvasWidth: (function() {
+      var cw = cardStyle.CARD.cardWidth
+      var ch = cardStyle.calcCardHeight(cw, 3) + cardStyle.rpxToCanvas(cardStyle.CARD.bannerHeight, cw)
+      var fitted = cardStyle.fitToBubbleSize(cw, ch)
+      return fitted.width
+    })(),
+    canvasHeight: (function() {
+      var cw = cardStyle.CARD.cardWidth
+      var ch = cardStyle.calcCardHeight(cw, 3) + cardStyle.rpxToCanvas(cardStyle.CARD.bannerHeight, cw)
+      var fitted = cardStyle.fitToBubbleSize(cw, ch)
+      return Math.round(fitted.width * 4 / 5)  // 5:4 比例 = 600 × 0.8 = 480
+    })(),
     visitorStats: {
       visitors: 0,
       viewed: 0,
@@ -94,13 +108,39 @@ Page({
     // 静默注册访客身份（idempotent：已存在则跳过）
     this._registerVisitorProfile()
     
+    var needsRefresh = app.getCache('cardsNeedRefresh')
+    if (needsRefresh) {
+      // 编辑页设置了刷新标志 → 强制重新加载卡片
+      app.setCache('cardsNeedRefresh', false)
+      console.log('[Index] 检测到卡片变更，强制刷新')
+      this.loadCards(true)
+      this.loadVisitorData()
+      return
+    }
+    
     const lastUpdate = app.getCache('lastCardUpdate')
     const now = Date.now()
     
     if (!lastUpdate || now - lastUpdate > 300000) {
       this.loadCards(true)
+    } else {
+      // 清除分享图片缓存：卡片可能在编辑页被修改
+      // 防止转发时使用过时数据
+      this._clearShareImageCache()
     }
     this.loadVisitorData()
+  },
+
+  /**
+   * 清除分享图片缓存（页面级 + shareCard 模块级）
+   */
+  _clearShareImageCache() {
+    if (this._shareImageCache) {
+      this._shareImageCache = {}
+      console.log('[Index] 分享图片缓存已清除')
+    }
+    this._shareImagePath = ''
+    this._shareImageCardId = ''
   },
 
   loadVisitorData() {
@@ -414,6 +454,11 @@ Page({
         app.setCache('lastCardUpdate', Date.now())
 
         if (callback) callback()
+
+        // 【新增】后台预生成分享卡片（避免用户点击分享时图片未就绪）
+        // 先清除旧的页面级缓存，确保使用最新数据
+        this._clearShareImageCache()
+        this._preGenerateVisibleCards(cards)
       })
       .catch(err => {
         clearTimeout(timer)
@@ -467,29 +512,12 @@ Page({
       this._shareImageCache = {}
     }
 
-    // 如果已有缓存，直接使用
-    if (this._shareImageCache[id]) {
-      this._shareImagePath = this._shareImageCache[id]
-      this.setData({
-        shareCardId: id,
-        shareCardData: card
-      })
-      console.log('[Index] 使用缓存的分享图片:', id)
-      return
-    }
+    // 【修复】清除过时缓存：卡片可能已被修改，强制重新生成
+    delete this._shareImageCache[id]
 
-    // 清除旧的分享图片引用（包括其他名片的缓存）
+    // 清除旧的分享图片引用
     this._shareImagePath = ''
-    
-    // 【关键修复】清除其他名片的缓存，确保每次分享都生成新图片
-    if (this._shareImageCache) {
-      const keys = Object.keys(this._shareImageCache)
-      keys.forEach(key => {
-        if (key !== id) {
-          delete this._shareImageCache[key]
-        }
-      })
-    }
+    this._shareImageCardId = ''
 
     this.setData({
       shareCardId: id,
@@ -499,63 +527,93 @@ Page({
     this._preGenerateShareCardWithKey(card, id)
   },
 
-  _preGenerateShareCardWithKey(card, cardId) {
-    if (this._isGeneratingShare) {
-      console.log('[Index] 正在生成分享卡片，跳过重复请求:', cardId)
+  _preGenerateShareCardWithKey(card, cardId, retryCount) {
+    // 按卡片 ID 独立锁定，避免全局锁阻塞不同卡片的并行生成
+    if (!this._generatingCards) {
+      this._generatingCards = {}
+    }
+    if (this._generatingCards[cardId]) {
+      console.log('[Index] 该卡片正在生成中，跳过重复请求:', cardId)
       return
     }
 
-    // 【修复】检查 Canvas 节点是否就绪
-    if (!this._isCanvasReady()) {
-      console.log('[Index] Canvas 节点未就绪，延迟重试:', cardId)
-      this._isGeneratingShare = false
-      setTimeout(() => {
-        this._preGenerateShareCardWithKey(card, cardId)
-      }, 100)
-      return
+    retryCount = retryCount || 0
+    var MAX_RETRIES = 3
+    var RETRY_DELAYS = [100, 300, 600]  // 退避延迟 (ms)
+    var that = this
+
+    this._generatingCards[cardId] = true
+    console.log('[Index] 开始生成分享卡片, id:', cardId, 'retry:', retryCount, 'name:', card.name)
+
+    // 【修复】清除过时缓存：卡片数据可能已被编辑，强制重新生成
+    if (that._shareImageCache) {
+      delete that._shareImageCache[cardId]
     }
-
-    this._isGeneratingShare = true
-
-    console.log('[Index] 开始生成分享卡片, id:', cardId)
 
     shareCard.generate('#shareCanvas', card, {
-      cardKey: cardId
-    }).then(res => {
+      cardKey: cardId,
+      pageContext: this  // 【修复】传入页面作用域，确保真机 type="2d" canvas 可查询
+    }).then(function (res) {
       console.log('[Index] 分享卡片生成成功:', res.tempFilePath)
-      this._shareImagePath = res.tempFilePath
+      that._shareImagePath = res.tempFilePath
+      that._shareImageCardId = cardId
 
-      // 保存到缓存
-      if (!this._shareImageCache) {
-        this._shareImageCache = {}
+      if (!that._shareImageCache) {
+        that._shareImageCache = {}
       }
-      this._shareImageCache[cardId] = res.tempFilePath
+      that._shareImageCache[cardId] = res.tempFilePath
 
-      this._isGeneratingShare = false
+      that._generatingCards[cardId] = false
       console.log('[Index] 分享卡片已生成并缓存:', res.tempFilePath)
-    }).catch(err => {
-      this._isGeneratingShare = false
-      console.error('[Index] 分享卡片生成失败:', err && err.message)
+    }).catch(function (err) {
+      var msg = (err && err.message) || ''
+
+      // Canvas 节点未就绪 → 退避重试
+      if (msg.indexOf('Canvas 节点未找到') >= 0 && retryCount < MAX_RETRIES) {
+        var delay = RETRY_DELAYS[retryCount] || 600
+        console.log('[Index] Canvas 节点未就绪，', delay + 'ms 后重试 (',
+          (retryCount + 1) + '/' + MAX_RETRIES + '), id:', cardId)
+        that._generatingCards[cardId] = false
+        setTimeout(function () {
+          that._preGenerateShareCardWithKey(card, cardId, retryCount + 1)
+        }, delay)
+        return
+      }
+
+      // 已达最大重试次数或其它错误 → 放弃
+      that._generatingCards[cardId] = false
+      console.error('[Index] 分享卡片生成失败 (' + retryCount + ' retries):', msg)
     })
   },
 
   /**
-   * 检查分享 Canvas 节点是否已就绪
-   * 【修复】解决"Canvas 节点未就绪，稍后重试"告警
+   * 后台预生成分享卡片（加载完成后调用，避免用户首次分享时图片未就绪）
+   * @param {Array} cards - 当前页面的名片列表
    */
-  _isCanvasReady() {
-    try {
-      const query = wx.createSelectorQuery().in(this)
-      let ready = false
-      query.select('#shareCanvas')
-        .fields({ node: true, size: true })
-        .exec((res) => {
-          ready = !!(res && res[0] && res[0].node)
-        })
-      return ready
-    } catch (e) {
-      return false
-    }
+  _preGenerateVisibleCards(cards) {
+    if (!cards || cards.length === 0) return
+    var that = this
+
+    // 延迟 600ms 等页面渲染完成，Canvas 节点挂载后再生成
+    setTimeout(function () {
+      var count = Math.min(cards.length, 2)
+      console.log('[Index] 后台预生成分享卡片, 数量:', count)
+
+      for (var i = 0; i < count; i++) {
+        var card = cards[i]
+        var cardId = card._id
+        if (!cardId) continue
+
+        if (that._shareImageCache && that._shareImageCache[cardId]) continue
+
+        // 延迟错开避免并发 canvas 操作冲突
+        ;(function (c, cId, delay) {
+          setTimeout(function () {
+            that._preGenerateShareCardWithKey(c, cId)
+          }, delay)
+        })(card, cardId, i * 400)
+      }
+    }, 600)
   },
 
   stopPropagation() {
@@ -579,37 +637,71 @@ Page({
     // 【重构】使用公共模块生成标题
     const title = shareUtil.buildShareTitle(card)
 
-    // 【修复】图片优先级：
-    // 1. 当前生成的图片 (_shareImagePath)
-    // 2. 缓存的图片
-    // 3. HTTPS 头像（作为备选，避免微信截取页面）
-    var imageUrl = ''
-    
-    // 【关键修复】优先使用当前生成的图片
-    if (this._shareImagePath) {
-      imageUrl = this._shareImagePath
-    }
-    
-    // 其次使用缓存的图片
-    if (!imageUrl && this._shareImageCache && this._shareImageCache[id]) {
-      imageUrl = this._shareImageCache[id]
-    }
-    
-    // 最后降级使用头像（确保不会为空，避免微信截图）
-    if (!imageUrl) {
-      var avatar = card.avatar || ''
-      if (avatar.indexOf('https://') === 0) {
-        imageUrl = avatar
+    // 【修复 Bug #2】Canvas 生成是异步的，onShareAppMessage 触发时图片很可能尚未就绪
+    // → 返回 Promise，微信框架会显示加载指示器等待 resolve
+    var that = this
+
+    // 快速路径：缓存已命中 → 直接返回（同步 Object）
+    if (this._shareImageCache && this._shareImageCache[id]) {
+      console.log('[Index] 分享图片缓存命中, 直接返回:', id)
+      return {
+        title: title,
+        path: path,
+        imageUrl: this._shareImageCache[id]
       }
     }
 
-    console.log('[Index] onShareAppMessage, id:', id, 'imageUrl:', imageUrl ? '已设置' : '未设置')
+    // 慢速路径：等待 Canvas 异步生成完成
+    // 微信基础库 2.11.3+ 支持 onShareAppMessage 返回 Promise
+    console.log('[Index] 分享图片未就绪，启动异步等待, cardId:', id)
 
-    return {
-      title: title,
-      path: path,
-      imageUrl: imageUrl
+    // 兜底：如果还未触发预生成（例如用户通过右上角菜单分享），主动触发
+    if (id && card._id && !(that._generatingCards && that._generatingCards[id])) {
+      console.log('[Index] 异步等待: 触发预生成, cardId:', id)
+      that._preGenerateShareCardWithKey(card, id)
     }
+
+    return new Promise(function (resolve) {
+      var startTime = Date.now()
+      var MAX_WAIT = 8000   // 最多等待 8 秒
+
+      function tryResolve() {
+        // 优先：当前卡片专属缓存
+        var imageUrl = ''
+        if (that._shareImageCache && that._shareImageCache[id]) {
+          imageUrl = that._shareImageCache[id]
+          console.log('[Index] 异步等待命中缓存:', id)
+        }
+
+        if (!imageUrl && that._shareImagePath && that._shareImageCardId === id) {
+          imageUrl = that._shareImagePath
+          console.log('[Index] 异步等待命中最新图片:', id)
+        }
+
+        if (imageUrl) {
+          resolve({ title: title, path: path, imageUrl: imageUrl })
+          return true
+        }
+        return false
+      }
+
+      function poll() {
+        if (tryResolve()) return
+
+        if (Date.now() - startTime > MAX_WAIT) {
+          // 超时 → 降级到头像，避免微信截取页面截图
+          console.warn('[Index] 分享图片生成超时，降级使用头像')
+          var avatar = card.avatar || ''
+          var fallbackUrl = avatar.indexOf('https://') === 0 ? avatar : ''
+          resolve({ title: title, path: path, imageUrl: fallbackUrl })
+          return
+        }
+
+        setTimeout(poll, 150)
+      }
+
+      poll()
+    })
   },
 
   onShareTimeline() {
@@ -623,31 +715,59 @@ Page({
     if (company) {
       title = name + '-' + company
     }
-    // 限制标题在20个字符以内
     if (title.length > 20) {
       title = title.substring(0, 17) + '...'
     }
 
-    // 使用缓存的图片
-    var imageUrl = ''
+    var that = this
+
+    // 快速路径：缓存命中
     if (this._shareImageCache && this._shareImageCache[id]) {
-      imageUrl = this._shareImageCache[id]
-    }
-    if (!imageUrl && this._shareImagePath) {
-      imageUrl = this._shareImagePath
-    }
-    if (!imageUrl) {
-      var avatar = card.avatar || ''
-      if (avatar.indexOf('https://') === 0) {
-        imageUrl = avatar
+      return {
+        title: title,
+        query: id ? 'id=' + id : '',
+        imageUrl: this._shareImageCache[id]
       }
     }
 
-    return {
-      title: title,
-      query: id ? 'id=' + id : '',
-      imageUrl: imageUrl
+    // 兜底：触发预生成
+    if (id && card._id && !(that._generatingCards && that._generatingCards[id])) {
+      that._preGenerateShareCardWithKey(card, id)
     }
+
+    // 慢速路径：Promise 等待
+    return new Promise(function (resolve) {
+      var startTime = Date.now()
+      var MAX_WAIT = 8000
+
+      function tryResolve() {
+        var imageUrl = ''
+        if (that._shareImageCache && that._shareImageCache[id]) {
+          imageUrl = that._shareImageCache[id]
+        }
+        if (!imageUrl && that._shareImagePath && that._shareImageCardId === id) {
+          imageUrl = that._shareImagePath
+        }
+        if (imageUrl) {
+          resolve({ title: title, query: id ? 'id=' + id : '', imageUrl: imageUrl })
+          return true
+        }
+        return false
+      }
+
+      function poll() {
+        if (tryResolve()) return
+        if (Date.now() - startTime > MAX_WAIT) {
+          var avatar = card.avatar || ''
+          var fallbackUrl = avatar.indexOf('https://') === 0 ? avatar : ''
+          resolve({ title: title, query: id ? 'id=' + id : '', imageUrl: fallbackUrl })
+          return
+        }
+        setTimeout(poll, 150)
+      }
+
+      poll()
+    })
   },
 
   goToPreview(e) {

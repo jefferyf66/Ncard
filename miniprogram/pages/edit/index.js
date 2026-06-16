@@ -410,6 +410,9 @@ Page({
           this._syncVisitorProfile()
         }
 
+        // 通知首页/预览页数据已变更，强制刷新
+        app.setCache('lastCardUpdate', Date.now())
+        app.setCache('cardsNeedRefresh', true)
         setTimeout(() => wx.navigateBack(), 1500)
       })
       .catch(() => {

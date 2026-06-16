@@ -15,15 +15,19 @@
 - 云存储权限：推荐「仅创建者可读写」— 跨用户头像访问通过 resolveCloudUrls 云函数代理
 - 已移除：scan 页面、crop 页面、parseCard 云函数（无扫描名片需求）
 
-## 分享卡片模块（v2 动态适配）
-- **文件**：`miniprogram/utils/shareCard.js`
-- **画布**：默认 800×400（2:1），可云端热更新尺寸无需发布
-- **布局**：比例化引擎 `computeLayout(w, h)` 自动计算所有坐标/字号 — Banner(25%H) + 头像(36.7%内容区) + 文字 + 联系方式
+## 分享卡片模块（v8 Banner 触顶 + 间隙居中 + 5:4 导出）
+- **文件**：`miniprogram/utils/shareCard.js`、`miniprogram/config/cardStyle.js`
+- **画布**：内容区填充整个 Canvas 宽度，经 `fitToBubbleSize()` 等比缩放至 600×480 气泡上限
+- **导出**：精确 5:4 = width × 4/5（微信分享图显示规范），`canvasToTempFilePath` 导出 600×480 PNG
+- **布局**：Banner 锚定 y=0（CTA 触顶）→ 透明间隙（header-content 呼吸间距）→ 名片卡片 → 底部透明留白
+- **布局**：`computeLayout(w, h)` 计算所有坐标/字号 — Banner(80rpx) + 头像 + 姓名/职位 + 分割线 + 公司 + 联系方式
 - **布局**：顶部浅蓝 Banner「点击保存我的名片」+ 左侧圆角头像 + 右侧姓名/职位 + 分割线 + 公司 + 联系方式
 - **对外 API**：`generate(canvasId, card, options)` → `{tempFilePath}`、`getCurrentDimensions()`、`refreshLayout()`
-- **缓存**：按 `cardKey_宽x高` 版本化缓存，换尺寸自动过期
-- **头像降级链**：resolveCloudUrls(管理员) → getTempFileURL(同用户) → 占位符
-- **云端配置**：云数据库 `config` 集合 → `{ _key: "shareCardDimensions", width, height }` → 首次读取后内存缓存（防并发）
+- **缓存**：按 `cardKey_宽x高_联系方式数c_v{数据版本}` 版本化缓存
+- **头像降级链**：`resolveCloudUrls(管理员)` → `getTempFileURL(同用户)` → `downloadFile→base64(云函数代理)` → 占位符
+- **Canvas 序列化锁**：`_canvasLock` Promise 链，确保多卡片共用 `#shareCanvas` 时排队生成，防止状态竞争
+- **云端配置**：云数据库 `config` 集合 → `{ _key: "shareCardDimensions", width, height }` → 首次读取后内存缓存
+- **阴影处理**：不预留留白空间，自然溢出被 Canvas 边界裁切（32rpx/8%透明度阴影裁切不可见）
 
 ## 页面结构
 - `pages/index/index` — 首页（仅显示自己创建的名片 + 访客统计 + 官方隐私弹窗）

@@ -1,3 +1,9 @@
+/**
+ * index.wxss — 首页样式
+ * ==========================================
+ * 名片卡片视觉属性与 config/cardStyle.js 保持同步（单一数据源）
+ * 修改卡片样式时请同步更新 cardStyle.js 中的对应常量
+ */
 page {
   background: linear-gradient(180deg, #EEF2FF 0%, #F5F5F5 100%);
   min-height: 100vh;
@@ -600,12 +606,11 @@ page {
   opacity: 0;
 }
 
+/* 分享卡片 Canvas（尺寸由 cardStyle 统一配置，数据绑定动态设置） */
 .share-canvas-hidden {
   position: fixed;
   top: 0;
   left: 0;
-  width: 800px;
-  height: 400px;
   opacity: 0;
   pointer-events: none;
   z-index: -1;

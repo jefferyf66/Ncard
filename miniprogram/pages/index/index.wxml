@@ -196,6 +196,6 @@
   </view>
 </view>
 
-<!-- 隐藏 Canvas 用于生成分享卡片 (2:1 微信分享标准比例) -->
+<!-- 隐藏 Canvas 用于生成分享卡片（尺寸由 cardStyle 统一配置） -->
 <canvas type="2d" id="shareCanvas" class="share-canvas-hidden"
-  style="width: 800px; height: 400px;"></canvas>
+  style="width: {{canvasWidth}}px; height: {{canvasHeight}}px;"></canvas>
