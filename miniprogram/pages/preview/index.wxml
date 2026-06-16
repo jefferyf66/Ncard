@@ -169,19 +169,8 @@
       </view>
     </view>
 
-    <button class="share-btn" open-type="share">
-      <view class="share-btn-content">
-        <view class="icon-share"></view>
-        <text class="share-text">发名片</text>
-      </view>
-    </button>
-
   </view>
 </view>
-
-<!-- 隐藏 Canvas 用于生成分享卡片 (2:1 居中布局) -->
-<canvas type="2d" id="shareCanvas" class="share-canvas-hidden"
-  style="width: 800px; height: 400px;"></canvas>
 
 <view class="delete-modal" wx:if="{{showDeleteConfirm}}" catchtap="cancelDelete">
   <view class="modal-content" catchtap="stopPropagation">

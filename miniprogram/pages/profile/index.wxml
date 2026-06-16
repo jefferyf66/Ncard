@@ -4,11 +4,8 @@
     <view class="user-content">
       <image class="user-avatar" src="{{(userInfo && userInfo.avatarUrl) || '../../images/avatar.png'}}" mode="aspectFill"></image>
       <view class="user-info">
-        <text class="user-name">{{(userInfo && userInfo.nickName) || '点击登录'}}</text>
+        <text class="user-name">{{(userInfo && userInfo.nickName) || '微信用户'}}</text>
         <text class="user-desc">{{openid ? '已绑定账号' : '请登录以使用完整功能'}}</text>
-      </view>
-      <view class="login-btn" bindtap="getUserInfo" wx:if="{{!userInfo}}">
-        <text class="login-text">登录</text>
       </view>
     </view>
   </view>

@@ -34,8 +34,6 @@
       wx:for="{{cards}}" 
       wx:key="_id" 
       class="card-item"
-      bindtap="goToPreview"
-      data-id="{{item._id}}"
     >
       <!-- 优化后卡片布局：参考设计稿 -->
       <view class="card-wrapper">
@@ -71,11 +69,13 @@
           </view>
         </view>
         <view class="card-footer">
-          <button class="send-card-btn" open-type="share" catchtap="onShareButtonTap" data-id="{{item._id}}">
-            <text class="send-icon">↑</text>
-            <text class="send-text">发名片</text>
+          <button class="footer-btn send-card-btn" open-type="share" data-id="{{item._id}}" bindtap="onShareButtonTap">
+            <text class="footer-btn-text">发名片</text>
           </button>
-          <view class="card-arrow">›</view>
+          <view class="footer-divider"></view>
+          <view class="footer-btn detail-card-btn" catchtap="goToPreview" data-id="{{item._id}}">
+            <text class="footer-btn-text">名片详情</text>
+          </view>
         </view>
       </view>
     </view>
@@ -185,43 +185,17 @@
 
   <!-- 新增名片悬浮按钮 -->
   <view class="add-btn" bindtap="goToEdit">
-    <text class="add-btn-icon">+</text>
-  </view>
-
-  <!-- 隐私授权弹窗 -->
-  <view class="privacy-mask" wx:if="{{showPrivacyPopup}}" catchtouchmove="preventTouchMove">
-    <view class="privacy-popup" catchtouchmove="preventTouchMove">
-      <view class="privacy-popup-header">
-        <text class="privacy-popup-title">用户隐私保护提示</text>
-      </view>
-      <view class="privacy-popup-body">
-        <text class="privacy-popup-text">
-          为了更好地保障您的合法权益，请您阅读并同意
-          <text class="privacy-link" bindtap="openPrivacyPolicy">《隐私政策》</text>
-          和
-          <text class="privacy-link" bindtap="openServiceAgreement">《用户服务协议》</text>
-          。我们将按照协议内容收集、使用和存储您的信息，包括您创建名片时填写的姓名、公司、手机号、邮箱等信息。
-        </text>
-      </view>
-      <view class="privacy-popup-footer">
-        <view class="privacy-btn-decline" bindtap="handlePrivacyDecline">
-          <text>不同意</text>
-        </view>
-        <button class="privacy-btn-agree" id="agree-btn" open-type="agreePrivacyAuthorization" bindagreeprivacyauthorization="handlePrivacyAgree">
-          同意
-        </button>
-      </view>
-    </view>
+    <text class="add-btn-text">新增名片</text>
   </view>
 
   <!-- 底部协议入口 -->
-  <view class="agreement-footer" wx:if="{{!showPrivacyPopup}}">
+  <view class="agreement-footer">
     <text class="agreement-link" bindtap="openPrivacyPolicy">隐私政策</text>
     <text class="agreement-sep">|</text>
     <text class="agreement-link" bindtap="openServiceAgreement">用户服务协议</text>
   </view>
 </view>
 
-<!-- 隐藏 Canvas 用于生成分享卡片 (2:1 居中布局) -->
+<!-- 隐藏 Canvas 用于生成分享卡片 (2:1 微信分享标准比例) -->
 <canvas type="2d" id="shareCanvas" class="share-canvas-hidden"
   style="width: 800px; height: 400px;"></canvas>

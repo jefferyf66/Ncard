@@ -194,6 +194,35 @@ exports.main = async (event, context) => {
       }
     }
 
+    // 获取我的访客仪表盘（统计 + 最近访客，合并为一次调用）
+    case 'getMyVisitorDashboard': {
+      const { cardOwnerId } = data
+
+      if (!cardOwnerId) {
+        return { ok: false, message: '缺少 cardOwnerId 参数' }
+      }
+
+      // 三路并行：总数、回访数、最近访客
+      const [totalResult, repeatResult, recentResult] = await Promise.all([
+        db.collection('visits').where({ cardOwnerId }).count(),
+        db.collection('visits')
+          .where({ cardOwnerId, visitCount: db.command.gt(1) })
+          .count(),
+        db.collection('visits')
+          .where({ cardOwnerId })
+          .orderBy('visitTime', 'desc')
+          .limit(20)
+          .get()
+      ])
+
+      return {
+        ok: true,
+        visitors: totalResult.total || 0,
+        viewed: repeatResult.total || 0,
+        recentVisitors: recentResult.data || []
+      }
+    }
+
     default:
       return { ok: false, message: '未知操作: ' + action }
   }

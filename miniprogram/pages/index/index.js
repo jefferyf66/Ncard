@@ -1,5 +1,6 @@
 const app = getApp()
 var shareCard = require('../../utils/shareCard')
+var shareUtil = require('../../utils/share')
 
 Page({
   data: {
@@ -11,7 +12,6 @@ Page({
     hasMore: true,
     pageSize: 10,
     currentPage: 0,
-    showPrivacyPopup: false,
     visitorStats: {
       visitors: 0,
       viewed: 0,
@@ -25,62 +25,75 @@ Page({
 
   onLoad() {
     console.log('[Index] onLoad')
-    this.checkPrivacySetting()
+    // 官方隐私弹窗模式：无需手动检查隐私授权状态
+    // 当调用隐私 API（如云开发）时，微信自动弹出官方隐私弹窗
+    this.loadCards(true)
     this.initShareMenu()
   },
 
-  checkPrivacySetting() {
-    if (wx.getPrivacySetting) {
-      wx.getPrivacySetting({
-        success: (res) => {
-          console.log('[Index] 隐私授权状态:', res.needAuthorization)
-          if (res.needAuthorization) {
-            this.setData({ showPrivacyPopup: true })
-          } else {
-            this.loadCards(true)
+  /**
+   * 静默注册访客身份：确保当前用户的 openid 存在于 visitor_profiles 集合
+   * 在 onShow 中调用（idempotent：已存在则跳过）
+   * 后续可通过创建名片(L3)或授权弹窗(L2)补充真实身份信息
+   */
+  _registerVisitorProfile() {
+    if (!wx.cloud) return
+    var that = this
+    app.getOpenId().then(function (myOpenId) {
+      if (!myOpenId) return
+      var db = wx.cloud.database()
+      db.collection('visitor_profiles').where({ openid: myOpenId }).count()
+        .then(function (res) {
+          if (res.total > 0) {
+            console.log('[Index] visitor_profiles 已存在，跳过注册')
+            return
           }
-        },
-        fail: () => {
-          // 接口不可用时直接加载
-          this.loadCards(true)
-        }
-      })
-    } else {
-      this.loadCards(true)
-    }
-  },
-
-  handlePrivacyAgree() {
-    console.log('[Index] 用户同意隐私协议')
-    this.setData({ showPrivacyPopup: false })
-    this.loadCards(true)
-  },
-
-  handlePrivacyDecline() {
-    console.log('[Index] 用户拒绝隐私协议')
-    this.setData({ showPrivacyPopup: false })
-    wx.showModal({
-      title: '提示',
-      content: '您需要同意隐私政策才能使用科博名片服务',
-      showCancel: false,
-      confirmText: '我知道了'
-    })
+          return db.collection('visitor_profiles').add({
+            data: {
+              openid: myOpenId,
+              nickname: '',
+              avatarUrl: '',
+              createdAt: new Date(),
+              updatedAt: new Date()
+            }
+          })
+        })
+        .then(function () {
+          console.log('[Index] visitor_profiles 注册成功')
+        })
+        .catch(function (err) {
+          console.warn('[Index] visitor_profiles 静默注册失败:', err)
+        })
+    }).catch(function () {})
   },
 
   openPrivacyPolicy() {
-    wx.navigateTo({ url: '/pages/agreement/index?tab=privacy' })
+    // 官方弹窗模式：使用微信内置隐私协议页替代自定义 agreement 页面
+    if (wx.openPrivacyContract) {
+      wx.openPrivacyContract({
+        success: () => console.log('[Index] 打开隐私协议页成功'),
+        fail: (err) => {
+          console.error('[Index] 打开隐私协议页失败:', err)
+          // 降级：跳转到自定义协议页
+          wx.navigateTo({ url: '/pages/agreement/index?tab=privacy' })
+        }
+      })
+    } else {
+      // 低版本微信降级
+      wx.navigateTo({ url: '/pages/agreement/index?tab=privacy' })
+    }
   },
 
   openServiceAgreement() {
     wx.navigateTo({ url: '/pages/agreement/index?tab=service' })
   },
 
-  preventTouchMove() {
-    // 阻止弹窗背后的页面滚动
-  },
-
   onShow() {
     console.log('[Index] onShow')
+    
+    // 静默注册访客身份（idempotent：已存在则跳过）
+    this._registerVisitorProfile()
+    
     const lastUpdate = app.getCache('lastCardUpdate')
     const now = Date.now()
     
@@ -122,27 +135,27 @@ Page({
     // 获取当前用户 openId 以按名片所有者过滤访客统计
     app.getOpenId().then((myOpenId) => {
       if (!myOpenId) {
-        // 无法获取 openId → 降级为不过滤
         this._loadVisitorStatsDirect()
         return
       }
       this._myOpenId = this._myOpenId || myOpenId
 
-      // 尝试云函数方式获取访客统计（传入 cardOwnerId）
+      // 合并调用：一次云函数获取统计 + 最近访客
       wx.cloud.callFunction({
         name: 'initVisits',
-        data: { action: 'getMyVisitorStats', data: { cardOwnerId: myOpenId } }
+        data: { action: 'getMyVisitorDashboard', data: { cardOwnerId: myOpenId } }
       }).then(res => {
         if (res.result && res.result.ok) {
           this.setData({
             'visitorStats.visitors': res.result.visitors || 0,
             'visitorStats.viewed': res.result.viewed || 0
           })
-          // 加载最近访客（也按 cardOwnerId 过滤）
-          this._loadRecentVisitors(myOpenId)
+          // 客户端聚合最近访客
+          if (res.result.recentVisitors && res.result.recentVisitors.length > 0) {
+            this._processRecentVisitors(res.result.recentVisitors)
+          }
         }
       }).catch(() => {
-        // 云函数未部署 → 尝试直接查 visits 集合
         this._loadVisitorStatsDirect()
       })
     }).catch(() => {
@@ -156,7 +169,6 @@ Page({
     var myOpenId = this._myOpenId || ''
     var that = this
 
-    // visits 集合可能不存在
     var handleError = function () {
       that.setData({
         'visitorStats.visitors': 0,
@@ -164,7 +176,6 @@ Page({
       })
     }
 
-    // 构建过滤条件：按 cardOwnerId 过滤（修复 P1：之前全量 count 无过滤）
     var baseWhere = myOpenId ? { cardOwnerId: myOpenId } : {}
     var query = db.collection('visits')
     if (myOpenId) query = query.where(baseWhere)
@@ -172,7 +183,6 @@ Page({
     query.count()
       .then(function (res) {
         that.setData({ 'visitorStats.visitors': res.total || 0 })
-        // 多次来访（回访访客数）
         var repeatWhere = myOpenId
           ? { cardOwnerId: myOpenId, visitCount: _.gt(1) }
           : { visitCount: _.gt(1) }
@@ -180,14 +190,41 @@ Page({
       })
       .then(function (res) {
         that.setData({ 'visitorStats.viewed': res.total || 0 })
-        that._loadRecentVisitors(myOpenId || undefined)
+        // 降级路径：直接查 visits 获取最近访客
+        return db.collection('visits')
+          .where(myOpenId ? { cardOwnerId: myOpenId } : {})
+          .orderBy('visitTime', 'desc')
+          .limit(20)
+          .get()
+      })
+      .then(function (res) {
+        if (res && res.data && res.data.length > 0) {
+          that._processRecentVisitors(res.data)
+        }
       })
       .catch(handleError)
   },
 
   /**
+   * 处理最近访客数据（云函数和降级路径共用）
+   * 客户端聚合去重 → 取 Top5 → 格式化展示
+   * @param {Array} rawVisits - 原始 visits 记录
+   */
+  _processRecentVisitors(rawVisits) {
+    if (!rawVisits || rawVisits.length === 0) return
+    var merged = this._aggregateVisitors(rawVisits)
+    var top5 = merged.slice(0, 5)
+    var that = this
+    var visitors = top5.map(function (v) {
+      return that._formatVisitorItem(v)
+    })
+    this.setData({ recentVisitors: visitors })
+  },
+
+  /**
    * 加载最近访客并聚合去重（客户端聚合：按 visitorOpenId 归并）
    * 展示结构：L3 卡片用户 → 真名+头像 / L2 已授权 → 昵称+头像 / L1 匿名 → "访客 #XXXX"
+   * @deprecated 已被 _processRecentVisitors 替代，保留向后兼容
    */
   _loadRecentVisitors(cardOwnerId) {
     var db = wx.cloud.database()
@@ -196,27 +233,12 @@ Page({
     if (cardOwnerId) {
       query = query.where({ cardOwnerId: cardOwnerId })
     }
-    // 取 20 条用于客户端聚合（云开发基础版无 aggregate 管道）
     query
       .orderBy('visitTime', 'desc')
       .limit(20)
       .get()
       .then(function (res) {
-        if (!res.data || res.data.length === 0) return
-
-        var rawVisits = res.data
-        // 客户端聚合：同一 visitorOpenId 合并为一条，保留最近访问时间
-        var merged = that._aggregateVisitors(rawVisits)
-
-        // 取前 5 展示在首页
-        var top5 = merged.slice(0, 5)
-
-        // 转换为展示数据（三层匿名级别）
-        var visitors = top5.map(function (v) {
-          return that._formatVisitorItem(v)
-        })
-
-        that.setData({ recentVisitors: visitors })
+        that._processRecentVisitors(res.data)
       })
       .catch(function () {})
   },
@@ -440,12 +462,100 @@ Page({
     const card = this.data.cards.find(c => c._id === id)
     if (!card) return
 
+    // 初始化缓存对象
+    if (!this._shareImageCache) {
+      this._shareImageCache = {}
+    }
+
+    // 如果已有缓存，直接使用
+    if (this._shareImageCache[id]) {
+      this._shareImagePath = this._shareImageCache[id]
+      this.setData({
+        shareCardId: id,
+        shareCardData: card
+      })
+      console.log('[Index] 使用缓存的分享图片:', id)
+      return
+    }
+
+    // 清除旧的分享图片引用（包括其他名片的缓存）
+    this._shareImagePath = ''
+    
+    // 【关键修复】清除其他名片的缓存，确保每次分享都生成新图片
+    if (this._shareImageCache) {
+      const keys = Object.keys(this._shareImageCache)
+      keys.forEach(key => {
+        if (key !== id) {
+          delete this._shareImageCache[key]
+        }
+      })
+    }
+
     this.setData({
       shareCardId: id,
       shareCardData: card
     })
 
-    this._preGenerateShareCard(card, id)
+    this._preGenerateShareCardWithKey(card, id)
+  },
+
+  _preGenerateShareCardWithKey(card, cardId) {
+    if (this._isGeneratingShare) {
+      console.log('[Index] 正在生成分享卡片，跳过重复请求:', cardId)
+      return
+    }
+
+    // 【修复】检查 Canvas 节点是否就绪
+    if (!this._isCanvasReady()) {
+      console.log('[Index] Canvas 节点未就绪，延迟重试:', cardId)
+      this._isGeneratingShare = false
+      setTimeout(() => {
+        this._preGenerateShareCardWithKey(card, cardId)
+      }, 100)
+      return
+    }
+
+    this._isGeneratingShare = true
+
+    console.log('[Index] 开始生成分享卡片, id:', cardId)
+
+    shareCard.generate('#shareCanvas', card, {
+      cardKey: cardId
+    }).then(res => {
+      console.log('[Index] 分享卡片生成成功:', res.tempFilePath)
+      this._shareImagePath = res.tempFilePath
+
+      // 保存到缓存
+      if (!this._shareImageCache) {
+        this._shareImageCache = {}
+      }
+      this._shareImageCache[cardId] = res.tempFilePath
+
+      this._isGeneratingShare = false
+      console.log('[Index] 分享卡片已生成并缓存:', res.tempFilePath)
+    }).catch(err => {
+      this._isGeneratingShare = false
+      console.error('[Index] 分享卡片生成失败:', err && err.message)
+    })
+  },
+
+  /**
+   * 检查分享 Canvas 节点是否已就绪
+   * 【修复】解决"Canvas 节点未就绪，稍后重试"告警
+   */
+  _isCanvasReady() {
+    try {
+      const query = wx.createSelectorQuery().in(this)
+      let ready = false
+      query.select('#shareCanvas')
+        .fields({ node: true, size: true })
+        .exec((res) => {
+          ready = !!(res && res[0] && res[0].node)
+        })
+      return ready
+    } catch (e) {
+      return false
+    }
   },
 
   stopPropagation() {
@@ -466,7 +576,26 @@ Page({
     const id = this.data.shareCardId || ''
     const path = id ? `/pages/preview/index?id=${id}&source=share` : '/pages/index/index'
 
-    var imageUrl = this._shareImagePath || ''
+    // 【重构】使用公共模块生成标题
+    const title = shareUtil.buildShareTitle(card)
+
+    // 【修复】图片优先级：
+    // 1. 当前生成的图片 (_shareImagePath)
+    // 2. 缓存的图片
+    // 3. HTTPS 头像（作为备选，避免微信截取页面）
+    var imageUrl = ''
+    
+    // 【关键修复】优先使用当前生成的图片
+    if (this._shareImagePath) {
+      imageUrl = this._shareImagePath
+    }
+    
+    // 其次使用缓存的图片
+    if (!imageUrl && this._shareImageCache && this._shareImageCache[id]) {
+      imageUrl = this._shareImageCache[id]
+    }
+    
+    // 最后降级使用头像（确保不会为空，避免微信截图）
     if (!imageUrl) {
       var avatar = card.avatar || ''
       if (avatar.indexOf('https://') === 0) {
@@ -474,8 +603,10 @@ Page({
       }
     }
 
+    console.log('[Index] onShareAppMessage, id:', id, 'imageUrl:', imageUrl ? '已设置' : '未设置')
+
     return {
-      title: (card.name || '名片') + ' - ' + (card.company || ''),
+      title: title,
       path: path,
       imageUrl: imageUrl
     }
@@ -485,7 +616,26 @@ Page({
     const card = this.data.shareCardData || {}
     const id = this.data.shareCardId || ''
 
-    var imageUrl = this._shareImagePath || ''
+    // 生成标题：姓名-公司名称，限制20个字符
+    var name = card.name || ''
+    var company = card.company || ''
+    var title = name
+    if (company) {
+      title = name + '-' + company
+    }
+    // 限制标题在20个字符以内
+    if (title.length > 20) {
+      title = title.substring(0, 17) + '...'
+    }
+
+    // 使用缓存的图片
+    var imageUrl = ''
+    if (this._shareImageCache && this._shareImageCache[id]) {
+      imageUrl = this._shareImageCache[id]
+    }
+    if (!imageUrl && this._shareImagePath) {
+      imageUrl = this._shareImagePath
+    }
     if (!imageUrl) {
       var avatar = card.avatar || ''
       if (avatar.indexOf('https://') === 0) {
@@ -494,26 +644,10 @@ Page({
     }
 
     return {
-      title: (card.name || '名片') + ' - ' + (card.company || ''),
+      title: title,
       query: id ? 'id=' + id : '',
       imageUrl: imageUrl
     }
-  },
-
-  _preGenerateShareCard(card, cardId) {
-    if (this._isGeneratingShare) return
-    this._isGeneratingShare = true
-
-    shareCard.generate('#shareCanvas', card, {
-      cardKey: cardId || ('share_' + Date.now())
-    }).then(res => {
-      this._shareImagePath = res.tempFilePath
-      this._isGeneratingShare = false
-      console.log('[Index] 分享卡片已生成:', res.tempFilePath)
-    }).catch(err => {
-      this._isGeneratingShare = false
-      console.warn('[Index] 分享卡片生成失败:', err && err.message)
-    })
   },
 
   goToPreview(e) {

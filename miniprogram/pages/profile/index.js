@@ -71,19 +71,6 @@ Page({
     })
   },
 
-  getUserInfo() {
-    wx.getUserInfo({
-      desc: '用于展示用户信息',
-      success: (res) => {
-        app.globalData.userInfo = res.userInfo
-        this.setData({ userInfo: res.userInfo })
-      },
-      fail: () => {
-        wx.showToast({ title: '授权已取消', icon: 'none' })
-      }
-    })
-  },
-
   goToVisitors() {
     wx.navigateTo({ url: '/pages/visitors/index' })
   },

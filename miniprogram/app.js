@@ -7,29 +7,6 @@ App({
   onLaunch() {
     this.getSystemInfo()
     this.initCloud()
-    this.initPrivacy()
-  },
-
-  initPrivacy() {
-    if (wx.onNeedPrivacyAuthorization) {
-      wx.onNeedPrivacyAuthorization((resolve, event) => {
-        console.log('[App] onNeedPrivacyAuthorization', event)
-        wx.showModal({
-          title: '隐私授权',
-          content: '使用此功能需要您同意隐私政策',
-          confirmText: '同意',
-          cancelText: '不同意',
-          success: (res) => {
-            if (res.confirm) {
-              resolve({ event: 'agree', button: 'agree' })
-            } else {
-              resolve({ event: 'disagree' })
-            }
-          },
-          fail: () => resolve({ event: 'disagree' })
-        })
-      })
-    }
   },
 
   getSystemInfo() {
@@ -139,6 +116,23 @@ App({
   },
 
   /**
+   * 隐私错误处理：识别官方弹窗拒绝后的错误码
+   * 官方弹窗模式下，用户拒绝隐私授权后调用隐私 API 会返回 errCode 103/104
+   * @param {Object} err - API 调用失败返回的错误对象
+   * @returns {boolean} 是否为隐私相关错误（已弹提示）
+   */
+  showPrivacyError(err) {
+    var errMsg = (err && err.errMsg) || ''
+    // errCode 103: 用户拒绝隐私授权（耦合接口）
+    // errCode 104: 用户拒绝隐私授权（直接接口）
+    if (errMsg.indexOf('privacy') > -1 || errMsg.indexOf('103') > -1 || errMsg.indexOf('104') > -1) {
+      wx.showToast({ title: '需要同意隐私协议后才能使用此功能', icon: 'none', duration: 2500 })
+      return true
+    }
+    return false
+  },
+
+  /**
    * 批量将云文件 cloud:// ID 转换为临时 HTTPS URL
    * 通过云函数代理调用 getTempFileURL，以管理员身份绕过存储权限限制
    * 云存储可设为「仅创建者可读写」，无需担心被分享者无法查看头像
@@ -169,8 +163,26 @@ App({
           resolve((res.result && res.result.urls) || {})
         },
         fail: function (err) {
-          console.error('[App] resolveCloudUrls 云函数调用失败:', err)
-          resolve({})
+          console.warn('[App] resolveCloudUrls 云函数未部署，降级使用 getTempFileURL')
+          // Fallback: 直接调用客户端 API（仅对当前用户有权限的云文件有效）
+          // 云存储设为「仅创建者可读写」时，跨用户头像可能无法解析
+          // 此时返回空映射，由调用方兜底为默认头像
+          wx.cloud.getTempFileURL({
+            fileList: cloudIDs,
+            success: function (res) {
+              var urlMap = {}
+              ;(res.fileList || []).forEach(function (item) {
+                if (item.tempFileURL) {
+                  urlMap[item.fileID] = item.tempFileURL
+                }
+              })
+              console.log('[App] getTempFileURL 降级解析:', Object.keys(urlMap).length + '/' + cloudIDs.length)
+              resolve(urlMap)
+            },
+            fail: function () {
+              resolve({})
+            }
+          })
         }
       })
     })

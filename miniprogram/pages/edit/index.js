@@ -111,6 +111,8 @@ Page({
       fail: function(err) {
         var errMsg = (err && err.errMsg) || ''
         if (errMsg.indexOf('cancel') > -1) return
+        // 检查是否为隐私授权拒绝（官方弹窗模式）
+        if (app.showPrivacyError(err)) return
         if (errMsg.indexOf('auth deny') > -1 || errMsg.indexOf('auth denied') > -1) {
           wx.showModal({
             title: '相册权限未开启',
@@ -196,6 +198,8 @@ Page({
       fail: (err) => {
         const errMsg = err.errMsg || ''
         if (errMsg.indexOf('cancel') > -1) return
+        // 检查是否为隐私授权拒绝（官方弹窗模式）
+        if (app.showPrivacyError(err)) return
       }
     })
   },
@@ -400,11 +404,52 @@ Page({
       .then(() => {
         this.setData({ isSaving: false })
         app.showSuccess(this.data.isEdit ? '修改成功' : '创建成功')
+
+        // 同步更新 visitor_profiles：创建/编辑名片后升级为 L3 卡片用户身份
+        if (!this.data.isEdit) {
+          this._syncVisitorProfile()
+        }
+
         setTimeout(() => wx.navigateBack(), 1500)
       })
       .catch(() => {
         this.setData({ isSaving: false })
         app.showError('保存失败，请重试')
       })
+  },
+
+  /**
+   * 同步更新 visitor_profiles：创建名片后将用户的真实姓名和头像写入
+   * 之后他人查看此用户的名片时，initVisits 云函数将识别为 L3 卡片用户
+   */
+  _syncVisitorProfile() {
+    if (!wx.cloud) return
+    var that = this
+    app.getOpenId().then(function (myOpenId) {
+      if (!myOpenId) return
+      var db = wx.cloud.database()
+      var profileData = {
+        nickname: that.data.name.trim(),
+        avatarUrl: that.data.avatar || '',
+        updatedAt: new Date()
+      }
+      // 先查是否存在 → upsert
+      db.collection('visitor_profiles').where({ openid: myOpenId }).limit(1).get()
+        .then(function (res) {
+          if (res.data && res.data.length > 0) {
+            return db.collection('visitor_profiles').doc(res.data[0]._id).update({ data: profileData })
+          } else {
+            return db.collection('visitor_profiles').add({
+              data: Object.assign({ openid: myOpenId, createdAt: new Date() }, profileData)
+            })
+          }
+        })
+        .then(function () {
+          console.log('[Edit] visitor_profiles 同步成功')
+        })
+        .catch(function (err) {
+          console.warn('[Edit] visitor_profiles 同步失败:', err)
+        })
+    }).catch(function () {})
   }
 })

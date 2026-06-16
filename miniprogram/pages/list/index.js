@@ -95,10 +95,13 @@ Page({
                 c.avatar = urlMap[c.avatar]
               }
             })
+            // 兜底：将未解析成功的 cloud:// URL 替换为默认头像，避免渲染层加载失败
+            this._fallbackCloudAvatars(cards)
             finishLoad()
-          }).catch(function () {
+          }.bind(this)).catch(function () {
+            this._fallbackCloudAvatars(cards)
             finishLoad()
-          })
+          }.bind(this))
         } else {
           finishLoad()
         }
@@ -108,6 +111,18 @@ Page({
         this.setData({ isLoading: false })
         wx.showToast({ title: '获取失败，请下拉刷新', icon: 'none' })
       })
+  },
+
+  /**
+   * 兜底：将未成功解析的 cloud:// 头像替换为默认头像
+   * 避免 cloud:// URL 传给渲染层导致图片加载失败
+   */
+  _fallbackCloudAvatars(cards) {
+    cards.forEach(function (c) {
+      if (c.avatar && typeof c.avatar === 'string' && c.avatar.indexOf('cloud://') === 0) {
+        c.avatar = '/images/avatar.png'
+      }
+    })
   },
 
   goToPreview(e) {

@@ -1,8 +1,5 @@
 const app = getApp()
 
-// 【优化】导入分享卡片生成工具模块
-var shareCard = require('../../utils/shareCard')
-
 Page({
   data: {
     card: {},
@@ -18,16 +15,13 @@ Page({
 
   onLoad(options) {
     console.log('[Preview] onLoad, options:', options)
-    
+
     const id = options?.id || ''
-    this._shareOptions = options  // 保存分享参数供 loadCard 回调使用
-    this._shareImagePath = ''     // 【优化】分享卡片图片缓存路径
-    this._isGeneratingShare = false
+    this._shareOptions = options  // 保存分享参数供 recordVisit 使用
     this.setData({ id, isLoading: !!id })
-    
+
     if (id) {
       this.loadCard(id)
-      this.initShareMenu()
     }
   },
 
@@ -86,57 +80,6 @@ Page({
     }
   },
 
-  initShareMenu() {
-    wx.showShareMenu({
-      withShareTicket: true,
-      menus: ['shareAppMessage', 'shareTimeline'],
-      success: () => console.log('[Preview] 分享菜单初始化成功'),
-      fail: (err) => console.warn('[Preview] 分享菜单初始化失败:', err)
-    })
-  },
-
-  onShareAppMessage() {
-    var card = this.data.card
-    var path = '/pages/preview/index?id=' + this.data.id + '&source=share'
-
-    // 【P0修复】imageUrl 优先级:
-    //   1. Canvas 生成的分享卡片 (wxfile:// 本地路径，微信可识别)
-    //   2. 已解析的 HTTPS 头像 (resolveCloudUrls 转换后)
-    //   3. 空值 (让微信生成默认灰色卡片)
-    //   ❌ cloud:// 格式绝不能传入——微信分享 API 无法识别
-    var imageUrl = this._shareImagePath || ''
-    if (!imageUrl) {
-      var avatar = card.avatar || ''
-      // 只使用 HTTPS 头像，过滤掉 cloud:// 和本地路径
-      if (avatar.indexOf('https://') === 0) {
-        imageUrl = avatar
-      }
-    }
-
-    return {
-      title: (card.name || '名片') + ' - ' + (card.company || ''),
-      path: path,
-      imageUrl: imageUrl
-    }
-  },
-
-  onShareTimeline() {
-    var card = this.data.card
-    var imageUrl = this._shareImagePath || ''
-    if (!imageUrl) {
-      var avatar = card.avatar || ''
-      if (avatar.indexOf('https://') === 0) {
-        imageUrl = avatar
-      }
-    }
-
-    return {
-      title: (card.name || '名片') + ' - ' + (card.company || ''),
-      query: 'id=' + this.data.id,
-      imageUrl: imageUrl
-    }
-  },
-
   loadCard(id) {
     if (!id || !wx.cloud) {
       this.setData({
@@ -183,11 +126,6 @@ Page({
           // 转换云文件 cloud:// ID 为临时 HTTPS URL（跨设备名片分享时头像可见性修复）
           this._resolveCardAvatar(card)
 
-          // 【P2修复】并行启动分享卡片 Canvas 生成
-          // shareCard.js 内部已独立处理 cloud:// → HTTPS 转换，
-          // 无需等待 _resolveCardAvatar 完成，缩短分享按钮空窗期
-          this._generateShareCard()
-
           // 判断名片所有权和保存状态
           this._checkCardOwnership(id)
         } else {
@@ -211,8 +149,7 @@ Page({
 
   /**
    * 将名片中的 cloud:// 头像 ID 转换为 HTTPS URL
-   * 修复跨设备分享时头像不可见的问题
-   * 【P2修复】_generateShareCard 已移至 loadCard 并行触发，此处仅负责页面头像解析
+   * 修复跨设备查看时头像不可见的问题
    */
   _resolveCardAvatar(card) {
     var avatar = card.avatar
@@ -225,6 +162,10 @@ Page({
       var resolvedUrl = urlMap[avatar]
       if (resolvedUrl) {
         this.setData({ 'card.avatar': resolvedUrl })
+      } else {
+        // 云函数未部署或无权限时，兜底为默认头像
+        console.warn('[Preview] cloud:// 头像解析失败，使用默认头像')
+        this.setData({ 'card.avatar': '/images/avatar.png' })
       }
     }.bind(this))
   },
@@ -376,7 +317,10 @@ Page({
         } else {
           wx.setClipboardData({
             data: phone,
-            success: () => app.showSuccess('号码已复制')
+            success: () => app.showSuccess('号码已复制'),
+            fail: (err) => {
+              if (!app.showPrivacyError(err)) app.showError('复制失败')
+            }
           })
         }
       }
@@ -389,7 +333,10 @@ Page({
     
     wx.setClipboardData({
       data: email,
-      success: () => app.showSuccess('邮箱已复制')
+      success: () => app.showSuccess('邮箱已复制'),
+      fail: (err) => {
+        if (!app.showPrivacyError(err)) app.showError('复制失败')
+      }
     })
   },
 
@@ -399,7 +346,10 @@ Page({
     
     wx.setClipboardData({
       data: address,
-      success: () => app.showSuccess('地址已复制')
+      success: () => app.showSuccess('地址已复制'),
+      fail: (err) => {
+        if (!app.showPrivacyError(err)) app.showError('复制失败')
+      }
     })
   },
 
@@ -415,7 +365,9 @@ Page({
       success: () => {
         app.showSuccess('链接已复制，请在微信中打开')
       },
-      fail: () => app.showError('复制失败')
+      fail: (err) => {
+        if (!app.showPrivacyError(err)) app.showError('复制失败')
+      }
     })
   },
 
@@ -436,7 +388,9 @@ Page({
           confirmText: '好的'
         })
       },
-      fail: () => app.showError('复制失败')
+      fail: (err) => {
+        if (!app.showPrivacyError(err)) app.showError('复制失败')
+      }
     })
   },
 
@@ -621,61 +575,30 @@ Page({
 
   stopPropagation() {},
 
-  // =========================================================================
-  // 【新增】分享卡片生成
-  // =========================================================================
-
-  /**
-   * 在 Canvas 上生成方案A「经典商务风」分享卡片图片
-   * 【优化】异步非阻塞——生成过程中不影响正常交互
-   * 生成结果缓存到 this._shareImagePath，供分享回调使用
-   */
-  _generateShareCard() {
-    if (this._isGeneratingShare) return
-    this._isGeneratingShare = true
-
-    var that = this
-    var card = this.data.card
-
-    shareCard.generate('#shareCanvas', card, {
-      cardKey: card._id || ('share_' + this.data.id)
-    }).then(function (res) {
-      that._shareImagePath = res.tempFilePath
-      that._isGeneratingShare = false
-      console.log('[Preview] 分享卡片已生成:', res.tempFilePath)
-    }).catch(function (err) {
-      that._isGeneratingShare = false
-      console.warn('[Preview] 分享卡片生成失败（降级使用头像）:', err && err.message)
-      // 失败不阻断，分享回调会自动回退到空（微信生成默认卡片）
-    })
-  },
-
   /**
    * 检查是否需要展示匿名访客授权引导条
    * 非阻断式底部通知条，引导用户授权微信昵称/头像
-   * 拒绝后 7 天内不再显示（冷却期）
+   * 当天内拒绝后不再显示（冷却期：同一自然日）
    */
   _checkAuthBanner() {
     var that = this
-    // 检查是否在冷却期内
+    // 检查是否在冷却期内（当天拒绝过）
     try {
-      var dismissed = wx.getStorageSync('auth_banner_dismissed_at')
-      if (dismissed) {
-        var now = Date.now()
-        var cooldownMs = 7 * 24 * 60 * 60 * 1000  // 7天冷却期
-        if (now - dismissed < cooldownMs) {
-          console.log('[Preview] 授权引导条处于冷却期，跳过')
+      var dismissedDate = wx.getStorageSync('auth_banner_dismissed_date')
+      if (dismissedDate) {
+        var today = new Date()
+        var todayStr = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate()
+        if (dismissedDate === todayStr) {
+          console.log('[Preview] 授权引导条今日已拒绝，跳过')
           return
         }
-        // 冷却期已过，清除记录
-        wx.removeStorageSync('auth_banner_dismissed_at')
+        // 非今日 → 清除旧记录
+        wx.removeStorageSync('auth_banner_dismissed_date')
       }
     } catch (e) {}
 
-    // 弹授权引导条前等待 3 秒，避免与页面渲染争抢
-    setTimeout(function () {
-      that.setData({ showAuthBanner: true })
-    }, 3000)
+    // 立即显示授权引导条（隐私同意后无需延迟）
+    that.setData({ showAuthBanner: true })
   },
 
   /**
@@ -743,9 +666,11 @@ Page({
       },
       fail: function (err) {
         console.log('[Preview] 用户拒绝授权:', err)
-        // 拒绝授权也记录冷却期
+        // 拒绝授权 → 记录当日冷却期
         try {
-          wx.setStorageSync('auth_banner_dismissed_at', Date.now())
+          var today = new Date()
+          wx.setStorageSync('auth_banner_dismissed_date',
+            today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate())
         } catch (e) {}
         wx.showToast({ title: '已跳过', icon: 'none' })
       }
@@ -754,12 +679,14 @@ Page({
 
   /**
    * 关闭授权引导条（暂不授权）
-   * 记录冷却期时间戳，7 天内不重复展示
+   * 记录当日日期，同一天内不重复展示
    */
   dismissAuthBanner() {
     this.setData({ showAuthBanner: false })
     try {
-      wx.setStorageSync('auth_banner_dismissed_at', Date.now())
+      var today = new Date()
+      wx.setStorageSync('auth_banner_dismissed_date',
+        today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate())
     } catch (e) {}
   }
 })

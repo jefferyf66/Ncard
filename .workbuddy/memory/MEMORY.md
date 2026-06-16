@@ -9,22 +9,24 @@
 
 ## 技术栈
 - 微信小程序原生 + 微信云开发（DYNAMIC_CURRENT_ENV）
-- 云数据库集合：cards（名片）、visits（访客记录）、user_save_cards（用户保存的名片关联）、visitor_profiles（访客授权身份，待创建）
+- 云数据库集合：cards（名片）、visits（访客记录）、user_save_cards（用户保存的名片关联）、visitor_profiles（访客授权身份）
 - 云函数：getOpenId、getQrCode、initVisits（含三级访客身份识别 enrichment）、deleteCard（级联删除）、resolveCloudUrls（cloud:// → HTTPS URL 安全代理）
 - 云存储路径：avatars/（头像）、attachments/（附件）、qrcodes/（小程序码）
 - 云存储权限：推荐「仅创建者可读写」— 跨用户头像访问通过 resolveCloudUrls 云函数代理
 - 已移除：scan 页面、crop 页面、parseCard 云函数（无扫描名片需求）
 
-## 分享卡片模块
+## 分享卡片模块（v2 动态适配）
 - **文件**：`miniprogram/utils/shareCard.js`
-- **画布**：800×400（2:1 比例），微信 shareAppMessage/shareTimeline 封面
-- **布局**：蓝色顶条(12px) + 居中圆形头像(130×130) + 短分割线(160px) + 居中联系方式 + 底部「点击保存」提示
-- **对外 API**：`generate(canvasId, card, options)` → `{tempFilePath}`、`clearCache(cardKey)`
-- **缓存**：按 cardKey 内存缓存，10 分钟 TTL
+- **画布**：默认 800×400（2:1），可云端热更新尺寸无需发布
+- **布局**：比例化引擎 `computeLayout(w, h)` 自动计算所有坐标/字号 — Banner(25%H) + 头像(36.7%内容区) + 文字 + 联系方式
+- **布局**：顶部浅蓝 Banner「点击保存我的名片」+ 左侧圆角头像 + 右侧姓名/职位 + 分割线 + 公司 + 联系方式
+- **对外 API**：`generate(canvasId, card, options)` → `{tempFilePath}`、`getCurrentDimensions()`、`refreshLayout()`
+- **缓存**：按 `cardKey_宽x高` 版本化缓存，换尺寸自动过期
 - **头像降级链**：resolveCloudUrls(管理员) → getTempFileURL(同用户) → 占位符
+- **云端配置**：云数据库 `config` 集合 → `{ _key: "shareCardDimensions", width, height }` → 首次读取后内存缓存（防并发）
 
 ## 页面结构
-- `pages/index/index` — 首页（仅显示自己创建的名片 + 访客统计 + 隐私弹窗）
+- `pages/index/index` — 首页（仅显示自己创建的名片 + 访客统计 + 官方隐私弹窗）
 - `pages/edit/index` — 名片编辑/创建
 - `pages/preview/index` — 名片详情预览（智能操作：自有→编辑/删除，他人→保存/已保存）
 - `pages/visitors/index` — 访客记录
@@ -33,9 +35,7 @@
 - `pages/profile/index` — 个人中心
 
 ## 关键配置
-- `app.json`: `"navigationBarBackgroundColor": "#3B82F6"`
-- **开发环境**：`__usePrivacyCheck__` 已移除，使用老式权限系统（wx.authorize + 原生弹窗）
-- **发布前**：恢复 `"__usePrivacyCheck__": true` + MP 后台配置隐私指引 + 提交审核
+- `app.json`: `"navigationBarBackgroundColor": "#3B82F6"` + `"__usePrivacyCheck__": true`
 - 头像上传：`wx.authorize('scope.camera')` → `wx.chooseImage` → `wx.chooseMedia`（三级降级）
 
 ## 已知修复记录
@@ -50,7 +50,7 @@
   - **P0 Bug修复**：recordVisit openid 解析改用 `app.getOpenId()`、名片数 count 添加 `_openid` 过滤、降级路径添加 cardOwnerId、访客页 cardOwnerId 传参修正
   - **三级访客体系**：L3 卡片用户（真名+头像）→ L2 已授权（微信昵称+头像）→ L1 匿名（"访客 #XXXX"）
   - **云函数 enrichment**：`initVisits recordVisit` 自动查 cards(L3) → visitor_profiles(L2) → 写入 visitorName/visitorAvatar/visitorLevel 等 6 字段
-  - **前端授权引导**：非阻断式底部通知条（`.auth-banner`）+ 7 天冷却期
+  - **前端授权引导**：非阻断式底部通知条（`.auth-banner`）+ 当天冷却期（同日不重复）
   - **客户端聚合**：`_aggregateVisitors()` 按 visitorOpenId 归并 + `_formatVisitorItem()` 三级分层展示
   - **新建集合**：`visitor_profiles`（`_openid`/`nickname`/`avatarUrl`/时间戳）— 需用户在云控制台手动创建
   - **待部署**：`initVisits` 云函数需重新部署到云端
@@ -74,9 +74,21 @@
   - app.wxss 移除 transition 属性
   - 访客统计 viewed/newCards 真实查询 / 按钮冒泡修复（catchtap）
   - project.config.json 清理模板残留
+- 2026-06-15：访客追踪系统两期优化
+  - **第一期（隐私联动）**：隐私同意后静默注册 openid 到 visitor_profiles（`_registerVisitorProfile`）、auth-banner 去 3 秒延迟 + 冷却期从 7 天改为当天（date 字符串比较）、删除 profile 页 `getUserInfo` 死代码
+  - **第二期（身份联动）**：创建名片后同步 visitor_profiles → L3 升级（`_syncVisitorProfile`）、initVisits 新增 `getMyVisitorDashboard` 合并三路查询（`Promise.all`），首页从两次独立调用改为单次 dashboard 调用
+
+- 2026-06-16：官方隐私弹窗切换（方案v4实施）
+  - **切换**：从自定义隐私弹窗（Option A）→ 官方隐私弹窗（Option B）
+  - **app.js**：删除 `_privacyResolve` + `initPrivacy()` + `onNeedPrivacyAuthorization` 监听；新增 `showPrivacyError(err)` 识别 errCode 103/104
+  - **index**：删除 `checkPrivacySetting/handlePrivacyAgree/handlePrivacyDecline/preventTouchMove` 四个方法；`openPrivacyPolicy` → `wx.openPrivacyContract({})`；`_registerVisitorProfile()` 改为在 `onShow` 触发
+  - **index.wxml/wxss**：删除自定义隐私弹窗区块和10个样式块
+  - **edit**：2处 `chooseImage` fail 增加隐私错误识别
+  - **preview**：5处 `setClipboardData` 增加 fail 回调（handlePhone/Email/Address/openWechatOfficial/openCompanyWebsite）
+  - **行为**：用户首次调用云开发API时微信自动弹出官方弹窗；拒绝后隐私API返回 errCode 103/104，`showPrivacyError` 统一提示
 
 ## 发布前待办
-- [ ] 在 `app.json` 中恢复 `"__usePrivacyCheck__": true`
+- [x] 在 `app.json` 中启用 `"__usePrivacyCheck__": true`
 - [ ] MP 后台配置隐私保护指引（勾选「收集你选中的照片或视频文件」+「获取你的相机权限」）
 - [ ] 提交微信审核 → 审核通过后发布（隐私指引随版本一同生效）
 - [ ] 部署全部 5 个云函数到生产环境（getOpenId/getQrCode/initVisits/deleteCard/resolveCloudUrls）
