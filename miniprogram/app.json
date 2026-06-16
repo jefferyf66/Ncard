@@ -6,9 +6,7 @@
     "pages/visitors/index",
     "pages/agreement/index",
     "pages/list/index",
-    "pages/profile/index",
-    "pages/crop/index",
-    "pages/test/index"
+    "pages/profile/index"
   ],
   "window": {
     "backgroundTextStyle": "light",
@@ -20,13 +18,5 @@
   "style": "v2",
   "sitemapLocation": "sitemap.json",
   "cloud": true,
-  "__usePrivacyCheck__": true,
-  "permission": {
-    "scope.camera": {
-      "desc": "用于拍照、录制视频"
-    },
-    "scope.writePhotosAlbum": {
-      "desc": "用于保存图片到相册"
-    }
-  }
+  "__usePrivacyCheck__": true
 }

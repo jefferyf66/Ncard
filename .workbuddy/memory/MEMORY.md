@@ -13,7 +13,12 @@
 - 云函数：getOpenId、getQrCode、initVisits（含三级访客身份识别 enrichment）、deleteCard（级联删除）、resolveCloudUrls（cloud:// → HTTPS URL 安全代理）
 - 云存储路径：avatars/（头像）、attachments/（附件）、qrcodes/（小程序码）
 - 云存储权限：推荐「仅创建者可读写」— 跨用户头像访问通过 resolveCloudUrls 云函数代理
-- 已移除：scan 页面、crop 页面、parseCard 云函数（无扫描名片需求）
+- 已移除：scan 页面、crop 页面、parseCard 云函数、test 页面（无扫描名片需求，测试页不上线）
+
+## 版本发布约定
+- 打 tag 时**必须同时更新** `RELEASE_NOTES.md` 和 `README.md`（版本历史 + 功能特性同步）
+- app.json 不注册测试页面（pages/test/index、pages/crop/index）
+- app.json 不声明未使用的 permission（scope.camera、scope.writePhotosAlbum）
 
 ## 分享卡片模块（v8 Banner 触顶 + 间隙居中 + 5:4 导出）
 - **文件**：`miniprogram/utils/shareCard.js`、`miniprogram/config/cardStyle.js`

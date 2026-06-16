@@ -478,6 +478,9 @@ Page({
 
   handleContactSaveError(err) {
     console.error('[Preview] 保存通讯录失败:', err)
+    // 隐私协议拒绝（errCode 103/104）
+    if (app.showPrivacyError(err)) return
+
     const errMsg = err.errMsg || ''
     
     if (errMsg.includes('cancel')) {
@@ -668,6 +671,8 @@ Page({
       },
       fail: function (err) {
         console.log('[Preview] 用户拒绝授权:', err)
+        // 隐私协议拒绝 → 统一提示
+        if (app.showPrivacyError(err)) return
         // 拒绝授权 → 记录当日冷却期
         try {
           var today = new Date()
