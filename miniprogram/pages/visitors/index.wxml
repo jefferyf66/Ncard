@@ -78,13 +78,6 @@
           <text class="visitor-desc">{{item.description}}</text>
         </view>
       </view>
-      <view 
-        class="visitor-button {{item.buttonType}}" 
-        catchtap="handleAction"
-        data-item="{{item}}"
-      >
-        {{item.buttonText}}
-      </view>
     </view>
   </view>
 

@@ -104,6 +104,26 @@
 - [ ] 云开发控制台 → 存储权限 → 改为「仅创建者可读写」
 - [ ] 删除云存储中的孤儿目录（avatar/、avartar/、scans/、cards/）
 
+## 审核报告
+- 2026-06-17：深度诊断审核报告生成（`artifacts/deep-audit-report.md`）
+  - P0 阻塞上线 3 项：getQrCode 云函数代码缺失、index.wxml 重复渲染节点、initVisits/deleteCard 缺少 wx-server-sdk 依赖声明
+  - P1 上线前修复 4 项：selectDefaultCard 未持久化、DOCUMENTATION.md 过时(10+处)、DEPLOYMENT-GUIDE.md 过时、loadCardList 无显式 _openid 过滤
+  - P2 上线后优化 5 项：主题无云同步、空壳操作按钮、ES5/ES6 混用、sitemap.json 未配置、crop 页面死代码
+  - 用户审核确认后执行修复
+
+## 2026-06-17 修复执行
+- 全部 12 项修复已完成
+- 用户决策：selectDefaultCard 用方案B（云端持久化 isDefault 字段）、空壳按钮隐藏、主题同步本次加
+- 新增：getQrCode 云函数（index.js + package.json）
+- 修改：profile/index.js 重写（默认名片云端持久化 + 主题云同步 + loadCardList _openid 过滤 + 版本号修正）
+- 修改：index.wxml 删除重复 empty-state 节点 + 隐藏 visitor-button
+- 修改：visitors/index.wxml 隐藏 visitor-button
+- 修改：visitors/index.js ES5→ES6 统一 + 删除空壳 handleAction
+- 修改：edit/index.js chooseAvatar 直接上传（删除 crop 跳转和 onCropResult）
+- 修改：sitemap.json 配置隐私页面禁止收录
+- 修改：initVisits/package.json + deleteCard/package.json 补充 wx-server-sdk 依赖
+- 修改：DOCUMENTATION.md 全面重写、DEPLOYMENT-GUIDE.md 修订（agent 完成）
+
 ## 已知数据问题
 审计日期 2026-06-11，P0 全部已修复，详见 `artifacts/data-audit-report.md`。
 

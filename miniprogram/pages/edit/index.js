@@ -94,7 +94,7 @@ Page({
       })
   },
 
-  // 直接打开系统相册选择图片 → 跳裁切页
+  // 直接打开系统相册选择图片 → 上传头像（无需裁切页）
   chooseAvatar() {
     wx.chooseImage({
       count: 1,
@@ -103,10 +103,8 @@ Page({
       success: (res) => {
         var tempFilePath = res.tempFilePaths && res.tempFilePaths[0]
         if (!tempFilePath) return
-        app.globalData.cropImageSrc = tempFilePath
-        wx.navigateTo({
-          url: '/pages/crop/index'
-        })
+        // 直接上传，不再跳转 crop 页面（该页面已移除）
+        this._uploadAvatar(tempFilePath)
       },
       fail: function(err) {
         var errMsg = (err && err.errMsg) || ''
@@ -125,12 +123,6 @@ Page({
         app.showError('打开相册失败，请重试')
       }
     })
-  },
-
-  // 裁切页返回的结果回调
-  onCropResult(tempFilePath) {
-    if (!tempFilePath) return
-    this._uploadAvatar(tempFilePath)
   },
 
   _uploadAvatar(tempFilePath) {

@@ -54,7 +54,6 @@
 │   └── app.wxss          # 全局样式
 ├── cloudfunctions/       # 云函数
 │   ├── getOpenId/        # 获取用户 OpenID
-│   ├── getQrCode/        # 生成小程序二维码
 │   ├── initVisits/       # 访客记录管理（含三级身份 enrichment）
 │   ├── resolveCloudUrls/ # 云文件 URL 转换代理（安全访问）
 │   └── deleteCard/       # 级联删除名片
@@ -75,9 +74,6 @@
 
 ### getOpenId
 获取当前用户的 OpenID，用于身份验证和数据隔离。客户端有内存缓存避免重复调用。
-
-### getQrCode
-生成小程序二维码，支持自定义页面路径。
 
 ### initVisits
 访客记录管理，包含以下操作：
@@ -114,7 +110,7 @@
 - [x] 删除所有测试页面和未使用权限声明
 - [x] 品牌色统一为 `#3B82F6`
 - [x] 官方隐私弹窗已启用（`__usePrivacyCheck__`）
-- [x] 云函数已全部部署（5 个）
+- [x] 云函数已全部部署（4 个）
 - [ ] MP 后台：配置用户隐私保护指引（仅勾选「收集你选中的照片或视频文件」）
 - [ ] MP 后台：提交审核
 - [ ] 云控制台：存储权限改为「仅创建者可读写」
@@ -127,7 +123,7 @@
 # 云函数部署（首次部署）
 # 1. 在微信开发者工具中右键云函数目录
 # 2. 选择"上传并部署：云端安装依赖"
-# 3. 全部 5 个云函数都需要部署
+# 3. 全部 4 个云函数都需要部署
 
 # 数据库初始化
 # 1. 在云开发控制台创建以下集合：
@@ -166,6 +162,16 @@
 - 通过 `resolveCloudUrls` 云函数代理访问（内置 115 分钟缓存）
 
 ## 版本历史
+
+### v1.1.0 (2026-06-17)
+- 深度审核修复 12 项：删除无用 getQrCode 云函数、修复 WXML 重复渲染、补充云函数依赖声明
+- selectDefaultCard 云端持久化（cards 集合 isDefault 字段）
+- 主题选择云同步（visitor_profiles themeColor 字段）
+- profile 页 loadCardList 显式 _openid 过滤
+- 隐藏空壳操作按钮、visitors 页 ES5→ES6 改写
+- sitemap.json 隐私页面禁止收录
+- edit 页 chooseAvatar 直接上传（移除 crop 跳转死代码）
+- DOCUMENTATION.md 全面重写、DEPLOYMENT-GUIDE.md 修订
 
 ### v1.0.9 (2026-06-16)
 - 分享卡片 v8 重构：Banner 触顶 + 透明间隙 + 精确 5:4 导出（符合微信分享规范）

@@ -1,4 +1,4 @@
-# 科博名片小程序 - 详细设计文档
+# 科博名片小程序 - 项目文档
 
 ---
 
@@ -6,32 +6,42 @@
 
 **项目名称**：科博名片（Kebo Business Card）
 
-**项目简介**：一款专业的电子名片管理微信小程序，支持名片创建、编辑、预览、分享、访客追踪等功能，采用微信云开发技术栈实现。
+**项目简介**：一款专业的电子名片管理微信小程序，支持名片创建、编辑、预览、分享、访客追踪、名片夹管理等功能，采用微信云开发技术栈实现。
 
 **技术栈**：
 
-| 分类 | 技术 | 版本 |
+| 分类 | 技术 | 说明 |
 |------|------|------|
 | 框架 | 微信小程序 | 原生（style: v2） |
-| 后端 | 微信云开发 | 2.0+ |
-| 数据库 | Cloud Firestore | NoSQL |
-| 云函数 | Node.js | 16.x |
-| 语法标准 | ES5（开发者工具 babel 兼容性） | - |
+| 后端 | 微信云开发 | DYNAMIC_CURRENT_ENV |
+| 数据库 | 云开发 NoSQL | 5 个活跃集合 |
+| 云函数 | Node.js (wx-server-sdk) | 5 个云函数 |
+| 基础库 | 3.16.0 | project.config.json 配置 |
+| 隐私 | 官方弹窗模式 | `__usePrivacyCheck__: true` |
 
-**设计风格**：素雅简洁、扁平化设计、单色线条图标
+**AppID**：`wxd15d78bd1a5b75ef`
 
 ---
 
-## 2. 架构设计
+## 2. 技术架构
 
-### 2.1 整体架构
+### 2.1 双线程架构
+
+微信小程序采用双线程模型：
+
+- **渲染层（WebView）**：负责 WXML 模板渲染和 WXSS 样式计算，每个页面运行在独立的 WebView 线程中
+- **逻辑层（JsCore）**：负责 JS 逻辑执行，所有页面共享同一个 JsCore 线程
+
+两层通过微信 Native 层进行通信，`setData` 调用会触发从逻辑层到渲染层的数据传递。
+
+### 2.2 云开发架构
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    微信小程序客户端                          │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐          │
-│  │   页面层     │ │   组件层     │ │   工具层     │          │
-│  │ (Pages)     │ │ (Components)│ │ (app.js)    │          │
+│  │   页面层     │ │   工具模块   │ │   app.js    │          │
+│  │ (7 Pages)   │ │ (utils/)    │ │ (全局方法)   │          │
 │  └──────┬──────┘ └──────┬──────┘ └──────┬──────┘          │
 └─────────│────────────────│────────────────│─────────────────┘
           │                │                │
@@ -40,90 +50,113 @@
 │                    微信云开发平台                            │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐          │
 │  │  云数据库    │ │  云函数      │ │  云存储      │          │
-│  │ (Database)  │ │ (Functions) │ │ (Storage)   │          │
-│  │ cards,      │ │ getOpenId   │ │ avatars/    │          │
-│  │ visits      │ │ getQrCode   │ │ attachments/│          │
-│  │ user_save_  │ │ initVisits  │ │ qrcodes/    │          │
-│  │ cards       │ │ deleteCard  │ │  (0700)     │          │
-│  │ visitor_    │ │ resolve     │ │             │          │
-│  │ profiles    │ │ CloudUrls   │ │             │          │
+│  │ (5 集合)    │ │ (5 函数)    │ │ (3 目录)    │          │
+│  │ cards       │ │ getOpenId   │ │ avatars/    │          │
+│  │ visits      │ │ initVisits  │ │ attachments/│          │
+│  │ user_save_  │ │ deleteCard  │ │ qrcodes/    │          │
+│  │ cards       │ │ resolve     │ │             │          │
+│  │ visitor_    │ │ CloudUrls   │ │             │          │
+│  │ profiles    │ │ getQrCode   │ │             │          │
+│  │ config      │ │             │ │             │          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 页面路由表
+### 2.3 页面路由表
 
 | 页面路径 | 页面名称 | 功能描述 | 是否首页 |
 |---------|---------|---------|---------|
-| `pages/index/index` | 首页 | 名片列表、访客统计、快速入口 | ✅ |
+| `pages/index/index` | 首页 | 名片列表、访客统计、分享卡片生成 | ✅ |
 | `pages/edit/index` | 编辑页 | 创建/编辑名片信息 | - |
-| `pages/preview/index` | 预览页 | 名片详情展示、分享、操作 | - |
-| `pages/list/index` | 名片列表 | 完整名片列表、下拉刷新 | - |
-| `pages/profile/index` | 个人中心 | 用户信息、主题选择、设置 | - |
+| `pages/preview/index` | 预览页 | 名片详情展示、操作、访客记录 | - |
 | `pages/visitors/index` | 访客页 | 访客统计与记录管理 | - |
 | `pages/agreement/index` | 协议页 | 隐私政策、用户服务协议 | - |
-| `pages/crop/index` | 裁切页 | 头像图片正方形裁切 | - |
+| `pages/list/index` | 名片夹 | 保存的他人名片列表 | - |
+| `pages/profile/index` | 个人中心 | 主题选择、默认名片、设置 | - |
 
-> **注意**：没有 tabBar 配置，所有页面通过 `wx.navigateTo` 导航，首页 `pages/index/index` 为入口页。
+> **注意**：无 tabBar 配置，所有页面通过 `wx.navigateTo` 导航，首页 `pages/index/index` 为入口页。
 
-### 2.3 目录结构
+---
+
+## 3. 目录结构
 
 ```
 Ncard/
-├── cloudfunctions/           # 云函数目录
-│   ├── getOpenId/            # 获取用户 OpenID
-│   ├── getQrCode/            # 生成小程序码
-│   └── initVisits/           # 访客记录管理（多 action）
-├── miniprogram/              # 小程序源码
-│   ├── components/           # 公共组件
-│   │   └── cloudTipModal/    # 云开发提示弹窗
-│   ├── images/               # 静态资源
-│   │   ├── avatar.png        # 默认头像
-│   │   ├── icons/            # 图标资源
-│   │   └── tab/              # TabBar 图标
-│   ├── pages/                # 页面目录
-│   │   ├── index/            # 首页
-│   │   ├── edit/             # 编辑页
-│   │   ├── preview/          # 预览页
-│   │   ├── list/             # 名片列表
-│   │   ├── profile/          # 个人中心
-│   │   ├── visitors/         # 访客页
-│   │   ├── agreement/        # 协议页
-│   │   └── crop/             # 图片裁切页
-│   ├── app.js                # 应用入口 + 全局工具方法
-│   ├── app.json              # 全局配置（窗口样式、权限声明）
-│   └── app.wxss              # 全局样式（工具类、动画）
-├── .gitignore                # Git 忽略配置
-├── project.config.json       # 项目配置
-└── DOCUMENTATION.md          # 本文档
+├── cloudfunctions/                # 云函数目录
+│   ├── getOpenId/                 # 获取用户 OpenID
+│   │   └── index.js
+│   ├── initVisits/                # 访客记录管理（多 action）
+│   │   └── index.js
+│   ├── deleteCard/                # 级联删除名片
+│   │   └── index.js
+│   ├── resolveCloudUrls/          # cloud:// → HTTPS URL 转换
+│   │   └── index.js
+│   ├── getQrCode/                 # 生成小程序码
+│   │   └── index.js
+│   ├── parseCard/                 # （旧版，未激活）
+│   └── quickstartFunctions/       # （模板生成，未激活）
+├── miniprogram/                   # 小程序源码
+│   ├── config/                    # 配置模块
+│   │   ├── cardStyle.js           # 名片样式/Canvas 绘制参数
+│   │   └── cardStyle.test.js      # cardStyle 单元测试
+│   ├── images/                    # 静态资源
+│   │   ├── avatar.png             # 默认头像
+│   │   └── icons/                 # 应用图标
+│   │       ├── logo-app-144.png
+│   │       ├── logo-app-288.png
+│   │       ├── logo-app-432.png
+│   │       └── logo-app.svg
+│   ├── pages/                     # 页面目录
+│   │   ├── index/                 # 首页
+│   │   ├── edit/                  # 编辑页
+│   │   ├── preview/               # 预览页
+│   │   ├── visitors/              # 访客页
+│   │   ├── agreement/             # 协议页
+│   │   ├── list/                  # 名片夹
+│   │   └── profile/               # 个人中心
+│   ├── test/                      # 测试文件
+│   │   ├── shareCard.test.js
+│   │   └── shareFlow.test.js
+│   ├── utils/                     # 工具模块
+│   │   ├── shareCard.js           # 分享卡片 Canvas 生成
+│   │   └── share.js               # 分享标题构建
+│   ├── app.js                     # 应用入口 + 全局工具方法
+│   ├── app.json                   # 全局配置
+│   ├── app.wxss                   # 全局样式
+│   └── sitemap.json               # 站点地图
+├── project.config.json            # 项目配置
+├── .gitignore                     # Git 忽略配置
+└── DOCUMENTATION.md               # 本文档
 ```
 
 ---
 
-## 3. 数据模型设计
+## 4. 数据库集合
 
-### 3.1 名片数据结构（cards 集合）
+### 4.1 cards — 名片集合
 
 | 字段名 | 类型 | 含义 | 必填 | 默认值 |
 |--------|------|------|------|--------|
 | _id | string | 文档ID（自动生成） | 自动 | - |
+| _openid | string | 创建者 OpenID（云开发自动写入） | 自动 | - |
 | name | string | 姓名 | 是 | - |
 | position | string | 职位 | 否 | '' |
 | company | string | 公司名称 | 是 | - |
 | phone | string | 手机号码 | 否 | '' |
 | email | string | 邮箱地址 | 否 | '' |
 | address | string | 地址 | 否 | '' |
-| avatar | string | 头像云存储 fileID | 否 | '' |
-| personalIntro | string | 个人介绍（最长500字） | 否 | '' |
-| businessIntro | string | 业务介绍（最长1000字） | 否 | '' |
+| avatar | string | 头像（云存储 fileID 或 HTTPS URL） | 否 | '' |
+| personalIntro | string | 个人介绍 | 否 | '' |
+| businessIntro | string | 业务介绍 | 否 | '' |
 | experiences | array | 过往经历列表 | 否 | [] |
-| attachments | array | 名片附件列表 | 否 | [] |
-| wechatOfficial | object | 公众号信息 | 否 | {} |
-| companyWebsite | object | 公司主页 | 否 | {} |
-| publicSettings | object | 各模块公开/隐藏开关 | 否 | 见下文 |
+| attachments | array | 附件列表 | 否 | [] |
+| wechatOfficial | object | 公众号信息 | 否 | `{name:'',desc:'',url:''}` |
+| companyWebsite | object | 公司主页信息 | 否 | `{name:'',url:'',desc:''}` |
+| publicSettings | object | 各模块公开/隐藏开关 | 否 | 见下方 |
+| isDefault | boolean | 是否为默认名片 | 否 | false |
 | createTime | Date | 创建时间 | 自动 | new Date() |
 | updateTime | Date | 更新时间 | 自动 | new Date() |
 
-**publicSettings 对象结构**：
+**publicSettings 对象**：
 
 | 字段 | 类型 | 默认值 | 含义 |
 |------|------|--------|------|
@@ -132,261 +165,453 @@ Ncard/
 | showExperiences | boolean | true | 是否公开过往经历 |
 | showWechatOfficial | boolean | true | 是否公开公众号信息 |
 | showCompanyWebsite | boolean | true | 是否公开公司主页 |
-| showAttachments | boolean | true | 是否公开名片附件 |
+| showAttachments | boolean | true | 是否公开附件 |
 
-**experiences 数组元素结构**：
+**experiences 数组元素**：
 
 | 字段 | 类型 | 含义 |
 |------|------|------|
 | company | string | 公司名称 |
 | position | string | 职位 |
-| period | string | 工作时间（如：2020-2023） |
-| desc | string | 工作描述 |
+| period | string | 工作时间 |
+| desc | string | 描述 |
 
-**wechatOfficial 对象结构**：
-
-| 字段 | 类型 | 含义 |
-|------|------|------|
-| name | string | 公众号名称 |
-| desc | string | 简介 |
-| url | string | 公众号链接 |
-
-**companyWebsite 对象结构**：
-
-| 字段 | 类型 | 含义 |
-|------|------|------|
-| name | string | 网站名称 |
-| url | string | 网站地址 |
-| desc | string | 网站描述 |
-
-**attachments 数组元素结构**：
+**attachments 数组元素**：
 
 | 字段 | 类型 | 含义 |
 |------|------|------|
 | name | string | 文件名 |
 | url | string | 云存储 fileID |
 | size | string | 文件大小 |
-| time | string | 上传时间（格式化字符串） |
+| time | string | 上传时间 |
 
-### 3.2 访客数据结构（visits 集合）
+### 4.2 visits — 访客记录集合
 
 | 字段名 | 类型 | 含义 |
 |--------|------|------|
-| _id | string | 文档ID（自动生成） |
-| cardId | string | 被访问名片ID |
+| _id | string | 文档ID |
+| cardId | string | 被访问名片 ID |
 | cardOwnerId | string | 名片所有者 OpenID |
 | visitorOpenId | string | 访客 OpenID |
-| visitorName | string | 访客姓名（如有） |
-| visitorPhone | string | 访客电话（如有） |
-| visitorPosition | string | 访客职位（如有） |
-| visitorCompany | string | 访客公司（如有） |
-| visitorAvatar | string | 访客头像（如有） |
+| visitorName | string | 访客姓名（L2/L3 身份时填充） |
+| visitorAvatar | string | 访客头像 URL（L2/L3 身份时填充） |
+| visitorPosition | string | 访客职位（L3 身份时填充） |
+| visitorCompany | string | 访客公司（L3 身份时填充） |
+| visitorPhone | string | 访客电话（L3 身份时填充） |
+| visitorLevel | number | 访客身份等级（1=匿名 / 2=已授权 / 3=卡片用户） |
 | visitCount | number | 累计来访次数 |
 | visitTime | Date | 最近访问时间 |
-| source | string | 访问来源（direct/share/scan 等） |
+| source | string | 访问来源（direct/share/scan） |
 | actions | array | 访问行为记录 |
+
+### 4.3 user_save_cards — 名片夹集合
+
+| 字段名 | 类型 | 含义 |
+|--------|------|------|
+| _id | string | 文档ID |
+| _openid | string | 保存者 OpenID（云开发自动写入） |
+| cardId | string | 保存的名片 ID |
+| cardOwnerOpenId | string | 名片所有者 OpenID |
+| savedAt | Date | 保存时间 |
+
+### 4.4 visitor_profiles — 访客身份集合
+
+| 字段名 | 类型 | 含义 |
+|--------|------|------|
+| _id | string | 文档ID |
+| openid | string | 用户 OpenID |
+| nickname | string | 微信昵称（L2 授权后填充）或真实姓名（L3 卡片用户） |
+| avatarUrl | string | 头像 URL |
+| themeColor | string | 用户选择的主题色（如 `#3B82F6`） |
+| createdAt | Date | 创建时间 |
+| updatedAt | Date | 更新时间 |
+
+### 4.5 config — 全局配置集合
+
+用于存储小程序全局配置信息（如版本号、功能开关等）。
 
 ---
 
-## 4. 页面详细设计
+## 5. 云函数
 
-### 4.1 首页（pages/index/index）
+### 5.1 getOpenId
 
-**功能模块**：
+**功能**：获取当前用户的 OpenID、AppID、UnionID
 
-1. **隐私授权弹窗** - 首次进入或需要授权时展示，含隐私政策和服务协议链接
-2. **名片列表** - 按创建时间倒序展示用户名片，支持分页加载（每页10条）
-3. **访客统计** - 我的访客 / 多次来访 / 名片数 三栏统计卡片
-4. **最近访客** - 展示最近5位访客，支持"交换名片"/"请问是谁"操作
-5. **快捷入口** - 创建名片、查看全部名片、查看全部访客
-6. **添加到桌面** - 引导用户将小程序添加到桌面
+**入口参数**：无（从 `cloud.getWXContext()` 获取）
+
+**返回值**：
+
+```javascript
+{
+  success: true,
+  data: {
+    openid: string,
+    appid: string,
+    unionid: string   // 可能为空
+  }
+}
+```
+
+### 5.2 initVisits
+
+**功能**：访客记录管理（多 action 云函数），支持以下操作：
+
+| Action | 功能 | 关键参数 |
+|--------|------|---------|
+| `ensureCollection` | 确保 visits 集合存在 | 无 |
+| `recordVisit` | 记录一次名片访问 | cardId, visitorOpenId, cardOwnerId, source |
+| `getMyVisitorStats` | 获取访客统计 | cardOwnerId |
+| `getRecentVisitors` | 获取最近访客列表 | cardOwnerId, limit |
+| `getMyVisitorDashboard` | 获取访客仪表盘（统计+最近访客合并调用） | cardOwnerId |
+
+**recordVisit 三级访客身份识别（enrichment）**：
+
+| 等级 | 条件 | 显示方式 |
+|------|------|---------|
+| L3 | 访客有自己的名片（cards 集合中查到） | 真实姓名 + 头像 + 职位 + 公司 |
+| L2 | 访客在 visitor_profiles 中有授权记录 | 微信昵称 + 头像 |
+| L1 | 以上均无 | "访客 #XXXX"（OpenID 后4位） |
+
+**recordVisit 去重逻辑**：
+- 30 分钟内同一用户访问同一名片：更新 `visitTime` + `visitCount++` + 身份 enrichment 升级
+- 超过 30 分钟：创建新记录
+- 访问自己的名片：跳过不记录（`skipped: true`）
+
+**getMyVisitorDashboard 返回值**：
+
+```javascript
+{
+  ok: true,
+  visitors: number,        // 访客总数
+  viewed: number,          // 多次来访数
+  recentVisitors: array    // 最近20条访客记录
+}
+```
+
+### 5.3 deleteCard
+
+**功能**：级联删除名片（数据库 + 云存储），校验所有权
+
+**入口参数**：`cardId`
+
+**处理流程**：
+
+1. 查询 cards 文档，校验 `_openid === 调用者 openid`
+2. 收集需要删除的云存储文件（avatar + attachments 中的 cloud:// URL）
+3. 并行执行清理操作（Promise.all，allSettled 容错）：
+   - 删除 cards 文档
+   - 删除 user_save_cards 中所有保存记录
+   - 删除 visits 中所有访客记录
+   - 删除云存储文件
+4. 汇总结果，部分失败仍算基本成功
+
+**返回值**：
+
+```javascript
+{
+  ok: boolean,
+  allSettled: true,
+  results: array,         // 每步操作结果
+  failedCount: number,
+  message: string
+}
+```
+
+### 5.4 resolveCloudUrls
+
+**功能**：批量将 `cloud://` 文件 ID 转换为 HTTPS URL，绕开云存储 ACL 权限限制
+
+**入口参数**：`fileIDs`（string 数组）
+
+**处理流程**：
+
+1. **Step 1**：批量 `getTempFileURL`（对当前用户有权限的文件直接获取临时 URL）
+2. **Step 2**：对 Step 1 失败的文件（ACL 拒绝），降级 `downloadFile`（管理员权限） → base64 data URL
+
+**内存缓存机制**：
+- 缓存结构：`fileID → { tempFileURL, expireAt }`
+- 临时 URL 有效期 2h，缓存 115 分钟
+- 至少剩余 1 分钟才复用缓存
+
+**返回值**：
+
+```javascript
+{
+  urls: {                    // fileID → URL 映射
+    "cloud://xxx": "https://...",     // getTempFileURL 成功
+    "cloud://yyy": "data:image/..."   // downloadFile 降级
+  }
+}
+```
+
+### 5.5 getQrCode
+
+**功能**：生成名片小程序码，上传到云存储
+
+**入口参数**：
+
+| 参数 | 类型 | 含义 |
+|------|------|------|
+| cardId | string | 名片 ID（作为 scene 参数，最长 32 字符） |
+| page | string | 落地页路径，默认 `pages/preview/index` |
+
+**处理流程**：
+
+1. 调用 `cloud.openapi.wxacode.getUnlimited()` 生成小程序码
+2. 根据 `contentType` 确定扩展名（jpg/png）
+3. 上传到云存储 `qrcodes/{cardId}.{ext}`
+4. 返回 fileID
+
+**返回值**：
+
+```javascript
+{ fileID: string }   // 成功
+{ error: string }    // 失败
+```
+
+---
+
+## 6. 云存储路径
+
+| 路径 | 用途 | 上传方 |
+|------|------|--------|
+| `avatars/` | 用户头像 | edit 页（`chooseAvatar` → `_uploadAvatar`） |
+| `attachments/` | 名片附件图片 | edit 页（`chooseAttachment`） |
+| `qrcodes/` | 名片小程序码 | getQrCode 云函数 |
+
+**文件命名规则**：
+- 头像：`avatars/{timestamp}.jpg`
+- 附件：`attachments/attachment_{timestamp}.jpg`
+- 小程序码：`qrcodes/{cardId}.{ext}`
+
+**清理策略**：
+- 头像更换时自动删除旧文件（`_uploadAvatar` 中 `wx.cloud.deleteFile`）
+- 附件删除时自动删除云文件（`deleteAttachment` 中 `wx.cloud.deleteFile`）
+- 名片删除时通过 `deleteCard` 云函数级联清理所有关联文件
+
+---
+
+## 7. 页面说明
+
+### 7.1 首页（pages/index/index）
+
+**核心功能**：
+
+1. **名片列表** — 按创建时间倒序展示用户名片，支持分页加载（每页 10 条）
+2. **访客统计** — 我的访客 / 多次来访 / 名片数 三栏统计
+3. **最近访客** — 展示最近 5 位访客，按 visitorLevel 显示不同身份信息
+4. **分享卡片生成** — Canvas 2D 离屏绘制名片分享图，支持 5:4 比例适配微信气泡
+5. **快捷入口** — 创建名片、名片夹、全部访客
+6. **添加到桌面** — 引导用户添加小程序到手机桌面
+7. **隐私协议** — 支持打开微信官方隐私协议页或降级到自定义协议页
+
+**生命周期**：
+
+- `onLoad` → `loadCards(true)` + `initShareMenu()`
+- `onShow` → 静默注册 visitor_profiles + 检查缓存刷新标志/5 分钟过期策略
 
 **数据加载策略**：
-- `onLoad` → `checkPrivacySetting()` → 已授权则 `loadCards(true)`
-- `onShow` → 检查缓存是否过期（5分钟内不过期），过期则刷新
-- 访客数据采用**三级降级策略**加载
+
 - 名片数据 10 秒超时降级到缓存
+- 访客数据三级降级：云函数 → 直接查库 → 静默失败
+- `cardsNeedRefresh` 缓存标志：编辑页返回时强制刷新
 
-**访客数据三级降级策略**：
+**分享机制**：
 
-```
-_loadVisitorStats()
-  ├── ① 云函数 initVisits(getMyVisitorStats) → 成功则显示
-  ├── ② 降级：直接查询 visits 集合（count + where）
-  └── ③ 再次降级：静默失败，显示 0
-```
+- `onShareAppMessage`：支持 Promise 异步等待 Canvas 生成完成（最多 8 秒，超时降级到头像）
+- `onShareTimeline`：朋友圈分享，同样支持 Promise 异步
+- 后台预生成：加载完成后延迟 600ms 预生成前 2 张卡片的分享图
+- 按卡片 ID 独立锁定，避免全局锁阻塞不同卡片的并行生成
+- Canvas 节点未就绪时自动退避重试（最多 3 次，延迟 100/300/600ms）
 
 **关键方法**：
 
-| 方法名 | 功能 | 说明 |
-|--------|------|------|
-| `loadCards(isRefresh)` | 加载名片列表 | isRefresh=true 重置分页 |
-| `loadVisitorData()` | 加载访客数据 | 并行加载名片总数 + 访客统计 |
-| `_loadVisitorStats()` | 云函数方式加载访客 | 一级策略 |
-| `_loadVisitorStatsDirect()` | 直接查库加载访客 | 二级策略 |
-| `_loadRecentVisitors()` | 加载最近访客列表 | 取最近5条 |
-| `tryLoadCache()` | 降级使用缓存 | 10秒超时或网络失败时触发 |
+| 方法名 | 功能 |
+|--------|------|
+| `loadCards(isRefresh, callback)` | 加载名片列表，isRefresh=true 重置分页 |
+| `loadVisitorData()` | 并行加载名片夹数量 + 访客统计 |
+| `_loadVisitorStats()` | 云函数方式加载访客统计 |
+| `_loadVisitorStatsDirect()` | 降级：直接查 visits 集合 |
+| `_processRecentVisitors(rawVisits)` | 客户端聚合去重 → Top5 → 格式化 |
+| `_aggregateVisitors(visits)` | 按 visitorOpenId 归并访客记录 |
+| `_formatVisitorItem(v)` | 按等级格式化访客展示数据 |
+| `_preGenerateShareCardWithKey(card, cardId, retryCount)` | 生成分享卡片图片（带重试） |
+| `_preGenerateVisibleCards(cards)` | 后台预生成前 2 张卡片的分享图 |
+| `onShareButtonTap(e)` | 分享按钮点击：设置 shareCardData 并触发生成 |
+| `onAvatarError(e)` | 头像加载失败降级为默认头像 |
+| `_registerVisitorProfile()` | 静默注册访客身份（idempotent） |
 
 ---
 
-### 4.2 编辑页（pages/edit/index）
+### 7.2 编辑页（pages/edit/index）
 
-**功能模块**：
+**核心功能**：
 
-1. **头像上传** - 直接打开相册 → 跳裁切页 → 正方形裁切 → 上传云存储
-2. **基本信息** - 姓名、职位、公司、电话、邮箱、地址
-3. **个人介绍** - 多行文本输入（最长500字），可切换公开/隐藏
-4. **业务介绍** - 多行文本输入（最长1000字），可切换公开/隐藏
-5. **过往经历** - 可添加多条工作经历，支持拖拽排序（touchmove）
-6. **公众号信息** - 名称、简介、链接，可切换公开/隐藏
-7. **公司主页** - 名称、地址、描述，可切换公开/隐藏
-8. **名片附件** - 图片附件上传，可切换公开/隐藏
+1. **头像上传** — 直接打开系统相册选择图片，上传到云存储（无裁切页）
+2. **基本信息** — 姓名、职位、公司、电话、邮箱、地址
+3. **个人介绍** — 多行文本输入，可切换公开/隐藏
+4. **业务介绍** — 多行文本输入，可切换公开/隐藏
+5. **过往经历** — 可添加/删除多条工作经历，支持拖拽排序（touchmove）
+6. **公众号信息** — 名称、简介、链接，可切换公开/隐藏
+7. **公司主页** — 名称、地址、描述，可切换公开/隐藏
+8. **名片附件** — 图片附件上传/删除，可切换公开/隐藏
 
 **头像上传流程**：
 
 ```
 点击头像 → wx.chooseImage({ sourceType: ['album'] })
-  → 不弹 ActionSheet，直接进入系统相册
-  → 选图后存到 app.globalData.cropImageSrc
-  → wx.navigateTo('/pages/crop/index')
-  → 裁切页 onConfirm 后回调 edit 页的 onCropResult()
-  → 云存储上传（avatars/ 目录）
+  → 直接上传到云存储 avatars/ 目录
+  → 删除旧头像云文件
   → 更新 data.avatar
 ```
 
-> **优化**：已移除拍照选项和底部弹出菜单，用户点击头像直接进入相册。
-
-**表单验证规则**：
-
-| 字段 | 验证规则 | 错误提示 |
-|------|---------|---------|
-| name | 非空 | 请输入姓名 |
-| company | 非空 | 请输入公司名称 |
-| phone | 11位手机号 /^1[3-9]\d{9}$/ | 请输入正确的手机号码 |
-| email | 邮箱格式 /^[^\s@]+@[^\s@]+\.[^\s@]+$/ | 请输入正确的邮箱地址 |
+> **注意**：已移除裁切页（crop），选图后直接上传，不再跳转。
 
 **保存逻辑**：
+
 - 新建（无 `id`）→ `collection('cards').add()`
 - 编辑（有 `id`）→ `collection('cards').doc(id).update()`
-- 保存前自动过滤空白的经历条目
-- 成功提示后 1.5 秒自动返回
+- 保存前自动过滤空白经历条目（`company || position` 为空则移除）
+- 保存成功后同步更新 `visitor_profiles`（将真实姓名/头像写入，升级为 L3 卡片用户）
+- 设置 `cardsNeedRefresh` 缓存标志通知首页刷新
+- 1.5 秒后自动返回
+
+**表单验证**：
+
+| 字段 | 规则 | 错误提示 |
+|------|------|---------|
+| name | 非空 | 请输入姓名 |
+| company | 非空 | 请输入公司名称 |
+| phone | `/^1[3-9]\d{9}$/`（选填） | 请输入正确的手机号码 |
+| email | `/^[^\s@]+@[^\s@]+\.[^\s@]+$/`（选填） | 请输入正确的邮箱地址 |
 
 ---
 
-### 4.3 预览页（pages/preview/index）
+### 7.3 预览页（pages/preview/index）
 
-**功能模块**：
+**核心功能**：
 
-1. **名片卡片展示** - 头像、姓名、职位、公司、联系方式
-2. **过往经历列表** - 含公司、职位、时间段、描述
-3. **个人介绍 / 业务介绍** - 根据 publicSettings 控制显示
-4. **名片附件** - 支持下载和打开预览
-5. **公众号链接** - 复制链接到剪贴板
-6. **公司主页** - 复制链接到剪贴板
-7. **操作按钮** - 编辑、保存通讯录、删除、分享
-8. **访客记录** - onLoad 时调用 initVisits 云函数记录访问
+1. **名片详情展示** — 头像、姓名、职位、公司、联系方式、介绍、经历等
+2. **访客记录** — 访问他人名片时自动记录（含三级身份识别）
+3. **cloud:// 头像解析** — 通过 `resolveCloudFileIDs` 将云文件 ID 转为 HTTPS URL
+4. **保存/移除名片** — 保存他人名片到名片夹（user_save_cards）
+5. **保存通讯录** — 调用 `wx.addPhoneContact` 保存到手机通讯录
+6. **联系方式操作** — 电话（拨打/复制）、邮箱（复制）、地址（复制）
+7. **公众号/公司主页** — 复制链接到剪贴板
+8. **附件下载** — 下载云文件并打开预览
+9. **编辑/删除** — 所有者可编辑和级联删除名片
+10. **匿名访客授权引导** — L1 访客访问时底部展示授权引导条
 
 **访客记录机制**：
 
-```javascript
-onLoad → recordVisit()
-  ├── ① getOpenId 云函数获取 visiterOpenId
-  ├── ② initVisits 云函数 recordVisit 记录
-  │     ├── 30分钟内重复访问：更新 visitTime + visitCount++
-  │     ├── 访问自己的名片：跳过不记录
-  │     └── 新访问：创建新记录
-  └── 云函数未部署时静默忽略
+```
+loadCard(id) → 数据就绪后 → recordVisit(id, options)
+  ├── getOpenId() 获取 visitorOpenId
+  ├── 自有名片：跳过不记录
+  └── initVisits 云函数 recordVisit
+       ├── 三级身份 enrichment (L3 → L2 → L1)
+       ├── 30 分钟内重复：更新 visitTime + visitCount++
+       └── 新访问：创建新记录
 ```
 
-**分享功能**：
-- 支持分享给朋友（`onShareAppMessage`）
-- 支持分享到朋友圈（`onShareTimeline`）
-
-**交互功能**：
-
-| 操作 | 功能说明 |
-|------|---------|
-| 点击电话 | ActionSheet：拨打电话 / 复制号码 |
-| 点击邮箱 | 复制邮箱地址 |
-| 点击地址 | 复制地址到剪贴板 |
-| 点击公众号 | 复制公众号链接 |
-| 点击公司主页 | 复制网站链接 |
-| 点击附件 | 下载 → ActionSheet → 打开文件预览 |
-| 保存通讯录 | `wx.addPhoneContact` 保存到手机通讯录 |
-
----
-
-### 4.4 裁切页（pages/crop/index）
-
-**功能描述**：图片正方形裁切工具，用于头像上传裁剪。
-
-**两阶段加载方案**（解决 movable-view 内 image bindload 不可靠问题）：
+**cloud:// 头像解析**：
 
 ```
-阶段1（isLoading = true）
-  ├── 独立可见 <image> 渲染图片
-  ├── bindload 可靠触发 → 获取图片原始宽高
-  └── 计算初始缩放/位置，切换到阶段2
-
-阶段2（isLoading = false）
-  ├── movable-area + movable-view 交互
-  ├── 正方形 box-shadow 镂空遮罩 + 九宫格辅助线
-  ├── 双指缩放 + 单指移动
-  └── 确定 → Canvas 裁剪 → 回调上一页
+_resolveCardAvatar(card)
+  ├── cloud:// 头像 → app.resolveCloudFileIDs() → 替换为 HTTPS URL
+  └── 解析失败 → 兜底为 /images/avatar.png
 ```
 
-**关键技术点**：
+**授权引导条**：
 
-1. **非受控 movable-view**：`bindscale` / `bindchange` 中只更新内部变量 `_realX / _realY / _realScale`，不调用 `setData` 更新 x/y/scale-value，避免反馈环路导致回弹
-2. **bindscale vs bindchange**：`bindscale` 的 `detail` 含 `{x, y, scale}`，`bindchange` 的 `detail` 只有 `{x, y, source}` 无 scale
-3. **路径传递**：通过 `app.globalData.cropImageSrc` 传递图片路径，绕过 URL 编码问题
-4. **Canvas 输出**：使用 Canvas 2D API，输出正方形裁切图片，回调 `prevPage.onCropResult()`
+- 仅对 L1（匿名）访客展示
+- 当天内拒绝后不再显示（冷却期：同一自然日，`auth_banner_dismissed_date` Storage）
+- 用户点击"授权" → `wx.getUserProfile` 获取昵称/头像 → 写入 visitor_profiles
+- 官方隐私弹窗模式下，`wx.getUserProfile` 的 errCode 103/104 会统一提示
 
-**裁切参数**：
-- 裁切区边长：屏幕宽度 × 75%
-- 输出尺寸：与裁切区相同
-- 最小缩放：长边缩至裁切区 × 0.4，下限 0.3
-- 最大缩放：3×
+**名片所有权判断**：
 
----
+```
+_checkCardOwnership(cardId)
+  ├── openId === card._openid → isOwner: true
+  └── 否则 → 查询 user_save_cards → isSaved: true/false
+```
 
-### 4.5 访客页（pages/visitors/index）
+**级联删除**：
 
-**功能模块**：
-1. **统计数据** - 名片数 / 访客数 / 多次来访数
-2. **访客列表** - 最近访客（最多50条），含操作按钮
-
-**数据加载策略**：同样采用三级降级
-- 优先 `initVisits` 云函数
-- 降级为直接查 `visits` 集合
-- visits 集合不存在时显示空状态
+```
+deleteCard() → deleteCard 云函数
+  ├── 校验所有权
+  ├── 并行清理：cards + user_save_cards + visits + 云存储文件
+  └── 降级：云函数未部署时直接删 cards 文档
+```
 
 ---
 
-### 4.6 名片列表（pages/list/index）
+### 7.4 访客页（pages/visitors/index）
 
-**功能**：简单的名片列表页面，`onShow` 时全量刷新名片数据。
+**核心功能**：
 
-**关键方法**：
+1. **统计数据** — 访客数 / 多次来访 / 名片夹数量 三栏
+2. **访客列表** — 最近访客（最多 50 条），含身份信息、访问次数、来源描述
 
-| 方法 | 功能 |
-|------|------|
-| `loadCards()` | 全量加载名片（orderBy createTime desc） |
-| `goToEdit(e)` | 跳转编辑页，传 id 则为编辑模式 |
-| `goToPreview(e)` | 跳转预览页 |
-| `onPullDownRefresh()` | 下拉刷新 |
+**数据加载策略**：
+
+```
+loadVisitors()
+  ├── 获取 openId
+  ├── 并行：user_save_cards.count() + initVisits(getMyVisitorStats)
+  ├── initVisits(getRecentVisitors) → _processVisitors()
+  └── 降级：_loadVisitorsDirect()（直接查 visits 集合）
+```
+
+**客户端聚合**：
+
+- `_mergeVisitorsByOpenId(visitors)`：同一 visitorOpenId 的多次访问归并为一条，累加 visitCount
+- 与首页 `_aggregateVisitors` 逻辑保持一致
 
 ---
 
-### 4.7 个人中心（pages/profile/index）
+### 7.5 协议页（pages/agreement/index）
 
-**功能模块**：
+**核心功能**：隐私政策 + 用户服务协议展示，支持 Tab 切换
 
-1. **用户信息** - 微信头像、昵称、OpenID
-2. **快捷导航** - 名片列表、访客统计入口
-3. **主题选择** - 6种配色方案可选，持久化到 Storage
-4. **默认名片设置** - 从名片列表中选择默认名片
-5. **设置项** - 清空缓存、关于我们
+- 通过 URL 参数 `tab` 控制初始展示：`privacy`（默认）或 `service`
+- 内容以 HTML 富文本形式内嵌在 JS 中（`getPrivacyContent()` / `getServiceContent()`）
+- 首页通过 `wx.openPrivacyContract` 打开微信官方隐私协议页，降级时跳转此页面
+- 隐私政策更新/生效日期：2026年6月3日
+
+---
+
+### 7.6 名片夹（pages/list/index）
+
+**核心功能**：展示用户保存的他人名片列表
+
+**数据流程**：
+
+```
+loadCards()
+  ├── getOpenId()
+  ├── 查询 user_save_cards（按 savedAt 倒序）
+  ├── 提取 cardId 列表 → _fetchCardsByIds()
+  │    ├── 批量查询 cards 集合
+  │    ├── 解析 cloud:// 头像为 HTTPS URL
+  │    └── 兜底：未解析成功的 cloud:// 替换为 /images/avatar.png
+  └── 支持下拉刷新
+```
+
+---
+
+### 7.7 个人中心（pages/profile/index）
+
+**核心功能**：
+
+1. **主题色选择** — 6 种配色方案，本地 + 云端双写（visitor_profiles.themeColor）
+2. **默认名片设置** — 从自己的名片列表中选择默认名片（cards.isDefault），云端持久化
+3. **快捷导航** — 名片夹、访客统计入口
+4. **清空缓存** — `wx.clearStorageSync()`
+5. **关于** — 版本信息弹窗（v1.0.9）
 
 **主题配色方案**：
 
@@ -399,235 +624,197 @@ onLoad → recordVisit()
 | 香槟金 | #D9A94C |
 | 神秘紫 | #722ED1 |
 
----
+**默认名片设置流程**：
 
-### 4.8 协议页（pages/agreement/index）
-
-**功能**：隐私政策 + 用户服务协议展示，支持 Tab 切换。
-
-- 内容以 HTML 富文本形式内嵌在 JS 中
-- 通过 `tab` URL 参数控制初始展示哪个协议
-- 首页隐私弹窗中链接到此页面
-
----
-
-## 5. 云函数设计
-
-### 5.1 getOpenId
-
-**功能**：获取当前用户的 OpenID、AppID、UnionID
-
-**入口参数**：无（从 `cloud.getWXContext()` 获取）
-
-**返回值**：
-```javascript
-{
-  success: true,
-  data: {
-    openid: string,
-    appid: string,
-    unionid?: string
-  }
-}
+```
+selectDefaultCard(e)
+  ├── 清除旧默认名片（cards.isDefault = false）
+  ├── 设置新默认名片（cards.isDefault = true）
+  └── 同步本地缓存（defaultCardId, defaultCardName）
 ```
 
-### 5.2 getQrCode
+**设置加载策略**：云端优先，本地 Storage 降级
 
-**功能**：生成小程序码（wxacode）
-
-**入口参数**：
-
-| 参数 | 类型 | 含义 |
-|------|------|------|
-| path | string | 小程序页面路径 |
-
-**处理流程**：
 ```
-调用 cloud.openapi.wxacode.get() → 获取 buffer
-→ cloud.uploadFile() 上传到 qrcodes/ 目录
-→ 返回 fileID
-```
-
-**返回值**：
-```javascript
-{
-  success: true,
-  fileID: string      // 云存储 fileID
-}
-```
-
-### 5.3 initVisits
-
-**功能**：访客记录管理（多 action 云函数），支持以下操作：
-
-| Action | 功能 | 关键参数 |
-|--------|------|---------|
-| `ensureCollection` | 确保 visits 集合存在 | 无 |
-| `recordVisit` | 记录一次名片访问 | cardId, visitorOpenId, source |
-| `getMyVisitorStats` | 获取访客统计 | cardOwnerId |
-| `getRecentVisitors` | 获取最近访客列表 | cardOwnerId, limit |
-
-**recordVisit 去重逻辑**：
-- 30 分钟内同一用户访问同一名片：更新 `visitTime` + `visitCount++`
-- 超过 30 分钟：创建新记录
-- 访问自己的名片：跳过不记录（return skipped）
-
-**getMyVisitorStats 返回值**：
-```javascript
-{
-  ok: true,
-  visitors: number,   // 访客总数
-  viewed: number      // 多次来访数（visitCount > 1）
-}
+_loadSettings()
+  ├── 并行：visitor_profiles（主题色）+ cards（isDefault）
+  └── 降级：从本地 Storage 读取
 ```
 
 ---
 
-## 6. 全局应用（app.js）
+## 8. 核心功能流程
 
-### 6.1 globalData
+### 8.1 名片创建流程
+
+```
+首页 → 点击"创建名片" → wx.navigateTo('/pages/edit/index')
+  → 填写名片信息（头像、姓名、职位、公司等）
+  → 点击保存 → validate() → saveCard()
+     ├── collection('cards').add()
+     ├── _syncVisitorProfile()（升级为 L3 卡片用户）
+     ├── 设置 cardsNeedRefresh 缓存标志
+     └── 1.5 秒后 navigateBack()
+```
+
+### 8.2 名片分享流程
+
+```
+首页 → 点击分享按钮 → onShareButtonTap(e)
+  → _preGenerateShareCardWithKey(card, cardId)
+     ├── shareCard.generate('#shareCanvas', card, options)
+     │     └── Canvas 2D 绘制名片卡片图
+     ├── 成功 → 缓存到 _shareImageCache[cardId]
+     └── Canvas 未就绪 → 退避重试（最多 3 次）
+
+用户触发分享 → onShareAppMessage()
+  ├── 快速路径：缓存命中 → 直接返回
+  └── 慢速路径：Promise 轮询等待（150ms 间隔，最多 8 秒）
+       └── 超时降级：使用头像 URL 或空
+```
+
+### 8.3 访客追踪流程
+
+```
+用户 B 打开用户 A 的名片（preview 页）
+  → loadCard() → 数据就绪后 → recordVisit()
+     ├── getOpenId() 获取 visitorOpenId
+     ├── 自有名片跳过
+     └── initVisits(action: 'recordVisit')
+          ├── L3 检查：visitor 有自己的名片 → 真名+头像
+          ├── L2 检查：visitor_profiles 有授权 → 昵称+头像
+          ├── L1：匿名 → visitorLevel = 1
+          ├── 30 分钟内去重：visitCount++
+          └── 新记录：创建
+
+用户 A 查看访客 → 首页 / visitors 页
+  → initVisits(getMyVisitorDashboard / getRecentVisitors)
+  → 客户端聚合去重 → 格式化展示
+```
+
+### 8.4 名片夹流程
+
+```
+预览他人名片 → 保存名片 → saveCard()
+  → user_save_cards.add({ cardId, cardOwnerOpenId, savedAt })
+
+名片夹页面 → loadCards()
+  → 查询 user_save_cards → 提取 cardId 列表
+  → 批量查询 cards → 解析 cloud:// 头像 → 展示
+```
+
+---
+
+## 9. API 接口说明（app.js 全局方法）
+
+### 9.1 globalData
 
 | 字段 | 类型 | 含义 |
 |------|------|------|
-| userInfo | object | 微信用户信息 |
-| systemInfo | object | 系统/设备/窗口信息 |
-| cardsCache | array | 名片列表缓存 |
-| lastUpdateTime | number | 最后更新时间戳 |
-| cropImageSrc | string | 裁切页图片路径（临时） |
-| openid | string | 用户 OpenID（如有） |
+| userInfo | object\|null | 微信用户信息 |
+| systemInfo | object\|null | 系统/设备/窗口信息（合并 windowInfo + deviceInfo + appBaseInfo） |
+| _openId | string | 用户 OpenID（getOpenId 内部缓存） |
 
-### 6.2 工具方法
+### 9.2 生命周期方法
 
-| 方法名 | 功能 | 参数 |
+| 方法名 | 功能 | 说明 |
 |--------|------|------|
-| `initPrivacy()` | 初始化隐私授权监听 | 无 |
-| `initCloud()` | 初始化云开发环境 | 无 |
-| `getSystemInfo()` | 获取系统信息 | 无 |
-| `showLoading(title)` | 显示加载提示 | title: string |
-| `hideLoading()` | 隐藏加载提示 | 无 |
-| `showError(title, duration)` | 显示错误提示 | title, duration(默认2000ms) |
-| `showSuccess(title, duration)` | 显示成功提示 | title, duration(默认1500ms) |
-| `showConfirm(title, content)` | 显示确认弹窗 → Promise | title, content |
-| `getCache(key)` | 获取存储的缓存数据 | key |
-| `setCache(key, value, expire)` | 设置缓存（默认5分钟过期） | key, value, expire(ms) |
-| `isCacheValid(key)` | 检查缓存是否有效 | key |
-| `isValidPhone(phone)` | 验证手机号 | /^1[3-9]\d{9}$/ |
-| `isValidEmail(email)` | 验证邮箱 | /^[^\s@]+@[^\s@]+\.[^\s@]+$/ |
-| `formatTime(date)` | 格式化时间为 YYYY-MM-DD | date |
-| `debounce(fn, delay)` | 防抖函数 | fn, delay(默认500ms) |
+| `onLaunch()` | 应用启动 | 调用 `getSystemInfo()` + `initCloud()` |
+| `getSystemInfo()` | 获取系统信息 | 合并 getWindowInfo + getDeviceInfo + getAppBaseInfo，存入 globalData.systemInfo |
+| `initCloud()` | 初始化云开发 | `wx.cloud.init({ traceUser: true, env: DYNAMIC_CURRENT_ENV })` |
+
+### 9.3 工具方法
+
+| 方法名 | 签名 | 功能 |
+|--------|------|------|
+| `showLoading` | `showLoading(title = '加载中...')` | 显示加载提示（带遮罩） |
+| `hideLoading` | `hideLoading()` | 隐藏加载提示 |
+| `showError` | `showError(title = '操作失败', duration = 2000)` | 显示错误 Toast（icon: none） |
+| `showSuccess` | `showSuccess(title = '操作成功', duration = 1500)` | 显示成功 Toast（icon: success） |
+| `getCache` | `getCache(key)` → value\|null | 读取带过期时间的缓存 |
+| `setCache` | `setCache(key, value, expire = 300000)` | 写入带过期时间的缓存（默认 5 分钟） |
+| `formatTime` | `formatTime(date)` → `'YYYY-MM-DD'` | 格式化日期 |
+| `getOpenId` | `getOpenId()` → `Promise<string>` | 获取用户 OpenID（带 globalData._openId 缓存） |
+| `showPrivacyError` | `showPrivacyError(err)` → boolean | 识别隐私授权拒绝（errCode 103/104），统一提示 |
+| `resolveCloudFileIDs` | `resolveCloudFileIDs(fileIDs)` → `Promise<Object>` | 批量将 cloud:// ID 转为 HTTPS URL（调用 resolveCloudUrls 云函数，失败降级 getTempFileURL） |
 
 ---
 
-## 7. UI 设计规范
+## 10. 样式系统
 
-### 7.1 设计原则
+### 10.1 全局样式（app.wxss）
 
-1. **素雅简洁**：中性灰色系配色，降低视觉复杂度
-2. **扁平化设计**：无渐变填充，仅保留线条和基础形状
-3. **线条图标**：统一使用 CSS 绘制的单色线条图标
-4. **间距规范**：基础间距 24rpx，卡片圆角 20rpx
-5. **响应式布局**：使用 rpx 单位确保跨设备兼容
+| 选择器 | 规则 | 说明 |
+|--------|------|------|
+| `page` | font-family: 系统字体栈; font-size: 28rpx; color: #1F2937; background: #F9FAFB; line-height: 1.6 | 全局排版基准 |
+| `view, text` | box-sizing: border-box | 统一盒模型 |
+| `image` | display: block | 消除图片底部间隙 |
+| `button` | margin/padding/border/background/line-height 重置 | 清除微信默认按钮样式 |
+| `button::after` | border: none | 清除默认边框 |
+| `button:focus` | outline: none | 清除焦点轮廓 |
+| `.container` | min-height: 100vh; padding: 24rpx | 页面容器 |
+| `.avatar` | border-radius: 50%; background: #F9FAFB | 头像圆形裁切 |
 
-### 7.2 颜色规范
+### 10.2 全局配置（app.json 窗口样式）
 
-| 颜色用途 | 颜色值 |
-|---------|--------|
-| 主文字 | #1F2937 |
-| 次要文字 | #4B5563 |
-| 辅助文字 | #6B7280 |
-| 提示文字 | #9CA3AF |
-| 背景色 | #F9FAFB |
-| 卡片背景 | #FFFFFF |
-| 分隔线 | #F3F4F6 |
-| 边框 | #E5E7EB |
-| 导航栏 | #3B82F6 |
-| 危险/删除 | #EF4444 |
-| 成功 | #10B981 |
-| 裁切页背景 | #000000 / #111111 |
+| 配置项 | 值 | 说明 |
+|--------|------|------|
+| navigationBarBackgroundColor | #3B82F6 | 导航栏品牌蓝 |
+| navigationBarTitleText | 科博名片 | 导航栏标题 |
+| navigationBarTextStyle | white | 导航栏文字白色 |
+| backgroundColor | #F5F7FA | 页面背景色 |
+| backgroundTextStyle | light | 下拉刷新样式 |
 
-### 7.3 全局工具类（app.wxss）
+### 10.3 页面级样式
 
-提供 flex 布局、文本颜色、背景色、圆角、阴影、动画等通用原子类：
-- `.flex` / `.flex-center` / `.flex-between` / `.flex-column`
-- `.text-primary` / `.text-secondary` / `.text-danger` / `.text-success`
-- `.bg-white` / `.bg-primary` / `.bg-gray-50`
-- `.rounded-sm` (8rpx) / `.rounded` (12rpx) / `.rounded-lg` (20rpx) / `.rounded-xl` (28rpx) / `.rounded-full`
-- `.shadow-sm` / `.shadow-md` / `.shadow-lg`
-- `.card` - 标准卡片样式
-- `.btn-primary` / `.btn-secondary` - 按钮样式
-- `.safe-area-bottom` - 安全区适配
+各页面在自身 `index.wxss` 中定义局部样式，遵循 BEM-like 命名规范，不依赖全局原子类。
 
 ---
 
-## 8. 全局配置（app.json）
+## 11. 隐私与安全
 
-**导航栏**：品牌蓝 (#3B82F6) 背景，白色文字
+### 11.1 隐私授权机制
 
-**已注册页面（8个）**：
-```
-pages/index/index（首页入口）
-pages/edit/index
-pages/preview/index
-pages/visitors/index
-pages/agreement/index
-pages/list/index
-pages/profile/index
-pages/crop/index
-```
+- **官方弹窗模式**：`app.json` 声明 `"__usePrivacyCheck__": true`，微信自动在用户首次调用隐私 API 时弹出官方隐私协议弹窗
+- **无需手动检查**：不再使用 `wx.getPrivacySetting` 或 `wx.onNeedPrivacyAuthorization` 手动管理隐私流程
+- **隐私错误统一处理**：`app.showPrivacyError(err)` 识别 errCode 103/104，统一提示"需要同意隐私协议后才能使用此功能"
+- **协议页面**：`/pages/agreement/index` 作为 `wx.openPrivacyContract` 的降级方案
 
-**权限声明**：
-
-| 权限 | 用途说明 |
-|------|---------|
-| scope.camera | 拍照、录制视频 |
-| scope.writePhotosAlbum | 保存图片到相册 |
-
----
-
-## 9. 安全与隐私
-
-### 9.1 隐私授权
-
-- **隐私政策弹窗**：首页 onLoad 时通过 `wx.getPrivacySetting` 检查是否需要授权
-- **协议页面**：`/pages/agreement/index` 含隐私政策和服务协议
-- **隐私监听**：`wx.onNeedPrivacyAuthorization` 处理运行时隐私授权需求
-- **相册权限拒绝处理**：编辑页头像选择时，权限拒绝会引导用户去系统设置开启
-
-### 9.2 数据安全
+### 11.2 数据安全
 
 1. **HTTPS 传输**：所有网络请求通过微信云开发 API 加密传输
-2. **访问控制**：名片数据按用户隔离，通过云函数确保权限
-3. **自己访问过滤**：visits 记录中不记录自己访问自己的名片
-4. **敏感信息**：手机号码、邮箱为可选项，用户自主决定是否填写
+2. **用户隔离**：名片数据按 `_openid` 隔离，首页/名片夹均按当前用户过滤
+3. **自访过滤**：visits 记录中不记录自己访问自己的名片
+4. **所有权校验**：删除名片时在云函数端校验 `_openid === 调用者 openid`
+5. **云存储 ACL**：`resolveCloudUrls` 云函数以管理员身份代理文件访问，绕开"仅创建者可读写"限制
+6. **敏感信息可选**：手机号码、邮箱为选填项，用户自主决定
+
+### 11.3 权限处理
+
+- **相册权限**：编辑页头像/附件选择时，拒绝权限引导去系统设置开启
+- **通讯录权限**：保存通讯录时，拒绝权限给出明确提示
+- **剪贴板**：复制电话/邮箱/地址/链接时，隐私拒绝统一处理
+- **无额外权限声明**：app.json 未声明 `scope.camera` 或 `scope.writePhotosAlbum`
 
 ---
 
-## 10. 已知技术约束与解决方案
-
-| 问题 | 解决方案 |
-|------|---------|
-| babel 转译器 ES6+ 语法报错 | crop 页面全部使用 ES5 语法 |
-| movable-view 手势回弹 | 非受控模式：bindscale/bindchange 只更新内部变量 |
-| wx.getImageInfo 对临时文件不稳定 | 两阶段加载：独立 image bindload 获取尺寸 |
-| 小程序 WXSS keyframes 全局污染 | 裁切页动画类名加 `crop-` 前缀 |
-| URL 参数对 wxfile:// 编码不可靠 | 使用 app.globalData.cropImageSrc 传路径 |
-| visits 集合可能不存在 | 三级降级：云函数 → 直接查库 → 静默失败 |
-| 云函数未部署时前端报错 | .catch() 静默处理，不影响核心功能 |
-| 访客统计 30 分钟内重复 | 云函数 recordVisit 更新时间 + visitCount++ |
-
----
-
-## 11. 版本历史
+## 12. 版本历史
 
 | 版本 | 日期 | 更新内容 |
 |------|------|---------|
 | v1.0.0 | 2024-06 | 初始版本：基础名片功能 |
-| v1.1.0 | 2024-06 | 添加过往经历、附件、个人介绍、业务介绍模块 |
-| v1.1.1 | 2024-06 | 添加公众号链接、公司主页模块，公开/隐藏开关 |
-| v1.2.0 | 2024-06 | 添加裁切页、名片列表页、访客页；重构头像上传流程（移除拍照选项）；访客统计三级降级策略；recordVisit 记录机制 |
+| v1.0.1 | 2024-06 | 添加过往经历、附件、个人介绍、业务介绍模块 |
+| v1.0.2 | 2024-06 | 添加公众号链接、公司主页模块，公开/隐藏开关 |
+| v1.0.3 | 2024-06 | 添加名片夹页、访客页；访客统计三级降级策略；recordVisit 记录机制 |
+| v1.0.4 | 2024-06 | 移除裁切页（crop），头像直接上传；重构头像上传流程 |
+| v1.0.5 | 2025-01 | 添加 resolveCloudUrls 云函数，修复跨设备头像不可见问题 |
+| v1.0.6 | 2025-03 | 添加 deleteCard 云函数级联删除；三级访客身份识别（L1/L2/L3） |
+| v1.0.7 | 2025-06 | 分享卡片 Canvas 生成重构，支持 Promise 异步等待和后台预生成 |
+| v1.0.8 | 2025-12 | 匿名访客授权引导条；visitor_profiles 静默注册；官方隐私弹窗模式 |
+| v1.0.9 | 2026-06 | 添加 getQrCode 云函数；主题色/默认名片云端持久化；文档对齐实际代码 |
 
 ---
 
-**文档版本**: v2.0  
-**最后更新**: 2026年6月10日  
-**更新说明**: 基于实际代码重新扫描，修正页面路由、云函数列表、数据模型、头像上传流程等
+**文档版本**: v3.0
+**最后更新**: 2026年6月17日
+**更新说明**: 基于全部源文件重新扫描，修正页面路由、云函数列表、数据模型、app.js 方法签名、app.wxss 样式描述等，删除不存在的页面/组件/集合/权限引用

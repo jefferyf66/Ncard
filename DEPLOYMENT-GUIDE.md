@@ -92,9 +92,9 @@ wx.cloud.init({
 | 云函数 | 用途 | 需要部署 |
 |--------|------|----------|
 | `getOpenId` | 获取用户 OpenID | ✅ |
-| `getQrCode` | 生成小程序码 | ✅ |
-| `initVisits` | 访客记录读写 + 身份识别 | ✅ |
-| `deleteCard` | 级联删除名片（数据库 + 存储） | ✅ |
+| `getQrCode` | 生成名片小程序码并上传到云存储 | ✅ |
+| `initVisits` | 初始化 visits 集合并提供访客记录能力 | ✅ |
+| `deleteCard` | 级联删除名片（数据库 + 存储 + 关联数据） | ✅ |
 | `resolveCloudUrls` | 安全代理：cloud:// → HTTPS URL | ✅ |
 
 ### 3.2 部署方式
@@ -120,9 +120,9 @@ bash uploadCloudFunction.sh
 点击函数名称可查看调用日志，进行功能测试：
 
 ```javascript
-// 在云函数测试面板中测试 parseCard
-// 输入测试参数：
-{ "fileID": "cloud://xxx.png" }
+// 在云函数测试面板中测试 getOpenId
+// 无需输入参数
+{}
 ```
 
 ---
@@ -133,10 +133,11 @@ bash uploadCloudFunction.sh
 
 | 集合名称 | 用途 | 权限 |
 |----------|------|------|
-| `cards` | 名片信息 | 仅创建者可读写 |
-| `scans` | OCR 识别记录 | 仅创建者可读写 |
-| `visitors` | 访客记录 | 仅创建者可读写 |
-| `users` | 用户信息 | 仅创建者可读写 |
+| `cards` | 名片数据 | 仅创建者可读写 |
+| `visits` | 访客记录 | 仅创建者可读写 |
+| `user_save_cards` | 用户保存的名片关联 | 仅创建者可读写 |
+| `visitor_profiles` | 访客授权身份 | 仅创建者可读写 |
+| `config` | 全局配置（如分享卡片尺寸） | 仅创建者可读写 |
 
 ### 4.2 创建步骤
 
@@ -149,8 +150,9 @@ bash uploadCloudFunction.sh
 为提高查询性能，建议在云开发控制台为以下字段添加索引：
 
 - `cards` 集合：`_openid`（升序）、`createTime`（降序）
-- `scans` 集合：`_openid`（升序）、`createTime`（降序）
-- `visitors` 集合：`cardId`（升序）、`visitTime`（降序）
+- `visits` 集合：`cardId`（升序）、`visitTime`（降序）
+- `user_save_cards` 集合：`userOpenId`（升序）、`cardId`（升序）
+- `visitor_profiles` 集合：`visitorOpenId`（升序）
 
 ---
 
@@ -189,35 +191,15 @@ bash uploadCloudFunction.sh
 - 收集的用户信息类型：
   - [x] 手机号（名片填写）
   - [x] 头像和昵称（用户信息）
-  - [x] 相册（名片图片上传/扫描）
-  - [x] 位置信息（如需使用）
-- 信息使用目的：用于名片创建、识别和管理
+  - [x] 相册（名片图片上传）
+- 信息使用目的：用于名片创建、管理和分享
 - 第三方 SDK：无
 
-### 6.2 权限声明
-
-在 `miniprogram/app.json` 中添加所需权限：
-
-```json
-{
-  "permission": {
-    "scope.userLocation": {
-      "desc": "用于在名片中显示您的位置信息"
-    },
-    "scope.writePhotosAlbum": {
-      "desc": "用于保存名片二维码到相册"
-    }
-  }
-}
-```
-
-> ⚠️ 权限描述必须具体、清晰，否则审核可能被拒。
-
-### 6.3 隐私弹窗要求
+### 6.2 隐私弹窗要求
 
 从 2023年9月15日起，微信要求小程序在调用隐私相关 API 前，必须展示隐私弹窗。
 
-本项目已使用 `wx.requirePrivacyAuthorize` 相关基础库能力（3.0.0+），确保基础库版本 ≥ 3.0.0。
+本项目已适配隐私授权机制（`__usePrivacyCheck__: true`），确保基础库版本 ≥ 3.0.0。在 `app.js` 中已配置隐私错误处理，当用户拒绝隐私授权后会自动提示。
 
 ---
 
@@ -229,11 +211,9 @@ bash uploadCloudFunction.sh
 
 - [ ] 所有页面可正常打开，无白屏或报错
 - [ ] 名片创建/编辑/删除功能正常
-- [ ] OCR 扫描识别功能正常
 - [ ] 名片预览和分享功能正常
 - [ ] 访客记录功能正常
 - [ ] 个人中心/主题切换功能正常
-- [ ] TabBar 导航切换正常
 
 ### 7.2 性能检查
 
@@ -324,7 +304,7 @@ bash uploadCloudFunction.sh
 | 配置功能页面 | 选择至少一个页面（如 `pages/index/index`） |
 | 标题 | 科博名片 |
 | 所在服务类目 | 工具 > 信息查询 |
-| 标签 | 名片, 扫描, OCR |
+| 标签 | 名片, 访客追踪 |
 
 6. 提交
 
@@ -359,7 +339,7 @@ bash uploadCloudFunction.sh
 在微信公众平台 → 数据分析 查看：
 
 | 指标 | 关注点 |
-|------|--------|
+|------|------|
 | 访问人数 | 日活/周活 |
 | 打开次数 | 用户粘性 |
 | 访问来源 | 搜索/分享/公众号 |
@@ -418,4 +398,4 @@ bash uploadCloudFunction.sh
 
 ---
 
-> 📝 最后更新：2026年6月1日 | 项目：科博名片 Ncard | AppID：`wxd15d78bd1a5b75ef`
+> 📝 最后更新：2026年6月17日 | 项目：科博名片 Ncard | AppID：`wxd15d78bd1a5b75ef`

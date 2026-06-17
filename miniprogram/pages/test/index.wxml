@@ -1,0 +1,30 @@
+<!-- pages/test/index.wxml -->
+<view class="test-container">
+  <view class="test-header">
+    <text class="test-title">🧪 分享流程测试</text>
+    <text class="test-status">{{testStatus}}</text>
+  </view>
+
+  <view class="test-section">
+    <text class="section-title">单元测试</text>
+    <button class="test-btn" bindtap="runUnitTest">▶ 运行 shareCard 单元测试</button>
+  </view>
+
+  <view class="test-section">
+    <text class="section-title">集成测试</text>
+    <button class="test-btn" bindtap="runIntegrationTest">▶ 运行分享流程集成测试</button>
+  </view>
+
+  <view class="test-section">
+    <text class="section-title">端到端模拟</text>
+    <button class="test-btn primary" bindtap="simulateRealClick">🎯 模拟点击首页"发名片"按钮</button>
+    <button class="test-btn" bindtap="runAllTests">🚀 一键运行所有测试</button>
+  </view>
+
+  <view class="test-tips">
+    <text class="tips-title">📋 测试说明</text>
+    <text class="tips-item">1. 点击上方按钮运行测试</text>
+    <text class="tips-item">2. 打开微信开发者工具的"Console"面板查看测试日志</text>
+    <text class="tips-item">3. 测试覆盖：标题生成 / Canvas 生成 / 缓存命中 / 错误降级 / 多场景切换</text>
+  </view>
+</view>

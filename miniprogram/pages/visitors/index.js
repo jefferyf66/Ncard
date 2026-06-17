@@ -38,26 +38,24 @@ Page({
 
     this.setData({ isLoading: true, isError: false })
 
-    var that = this
-
     // 先获取用户 openId（用于过滤统计和访客数据）
-    app.getOpenId().then(function (myOpenId) {
-      that._myOpenId = myOpenId
+    app.getOpenId().then((myOpenId) => {
+      this._myOpenId = myOpenId
 
       // 1. 名片数（统计 user_save_cards，与名片夹及首页数据源保持一致）
       wx.cloud.database().collection('user_save_cards').count()
-        .then(function (res) {
-          that.setData({ 'stats.newCards': res.total || 0 })
+        .then((res) => {
+          this.setData({ 'stats.newCards': res.total || 0 })
         })
-        .catch(function () {})
+        .catch(() => {})
 
       // 2. 访客统计（准确 count，与首页口径对齐）
       wx.cloud.callFunction({
         name: 'initVisits',
         data: { action: 'getMyVisitorStats', data: { cardOwnerId: myOpenId || '' } }
-      }).then(function (statsRes) {
+      }).then((statsRes) => {
         if (statsRes.result && statsRes.result.ok) {
-          that.setData({
+          this.setData({
             'stats.visitors': statsRes.result.visitors || 0,
             'stats.viewed': statsRes.result.viewed || 0
           })
@@ -70,26 +68,26 @@ Page({
             data: { cardOwnerId: myOpenId || '', limit: 50 }
           }
         })
-      }).then(function (res) {
+      }).then((res) => {
         if (res.result && res.result.ok) {
-          that._processVisitors(res.result.list || [])
+          this._processVisitors(res.result.list || [])
         } else {
-          that._loadVisitorsDirect()
+          this._loadVisitorsDirect()
         }
-      }).catch(function () {
-        that._loadVisitorsDirect()
+      }).catch(() => {
+        this._loadVisitorsDirect()
       })
-    }).catch(function () {
+    }).catch(() => {
       // 无法获取 openId → 降级（不过滤）
-      that._loadVisitorsDirect()
+      this._loadVisitorsDirect()
     })
   },
 
   _processVisitors(list) {
-    var visitors = (list || []).map(function (v) {
+    const visitors = (list || []).map((v) => {
       return {
         id: v._id,
-        visitorOpenId: v.visitorOpenId || '',   // 用于客户端聚合去重
+        visitorOpenId: v.visitorOpenId || '',
         name: v.visitorName || ('访客 #' + (v.visitorOpenId || '').slice(-4).toUpperCase()),
         phone: v.visitorPhone || '',
         position: v.visitorPosition || '',
@@ -99,14 +97,12 @@ Page({
         visitorLevel: v.visitorLevel || 1,
         actions: v.actions || [],
         lastVisit: app.formatTime(v.visitTime),
-        description: v.source ? '通过"' + v.source + '"查看了您' : '',
-        buttonText: v.visitorName ? '交换名片' : '请问是谁',
-        buttonType: v.visitorName ? 'primary' : 'secondary'
+        description: v.source ? '通过"' + v.source + '"查看了您' : ''
       }
     })
 
     // 客户端聚合：按 visitorOpenId 去重（与首页逻辑对齐）
-    var merged = this._mergeVisitorsByOpenId(visitors)
+    const merged = this._mergeVisitorsByOpenId(visitors)
 
     // 注意：stats.visitors / stats.viewed 已由 getMyVisitorStats 写入，
     // 此处只更新列表，不覆盖统计数字（避免受 limit:50 截断影响）
@@ -122,14 +118,12 @@ Page({
    * 与首页 _aggregateVisitors 逻辑保持一致
    */
   _mergeVisitorsByOpenId(visitors) {
-    var map = {}
-    visitors.forEach(function (v) {
-      // 按 visitorOpenId 去重；无 openId 时退化为按 _id 唯一
-      var key = v.visitorOpenId || ('anon_' + v.id)
+    const map = {}
+    visitors.forEach((v) => {
+      const key = v.visitorOpenId || ('anon_' + v.id)
       if (!map[key]) {
-        map[key] = Object.assign({}, v)
+        map[key] = { ...v }
       } else {
-        // 合并：累加访问次数（visitCount 在 visits 文档里已是累计值，这里做保护性求和）
         map[key].visitCount = (map[key].visitCount || 1) + (v.visitCount || 1)
       }
     })
@@ -137,39 +131,38 @@ Page({
   },
 
   _loadVisitorsDirect() {
-    var db = wx.cloud.database()
-    var _ = db.command
-    var myOpenId = this._myOpenId || ''
-    var that = this
+    const db = wx.cloud.database()
+    const _ = db.command
+    const myOpenId = this._myOpenId || ''
 
     // 构建查询条件：按 cardOwnerId 过滤
-    var baseWhere = myOpenId ? { cardOwnerId: myOpenId } : {}
+    const baseWhere = myOpenId ? { cardOwnerId: myOpenId } : {}
 
     // 统计：访客总数
-    var query = db.collection('visits')
+    let query = db.collection('visits')
     if (myOpenId) query = query.where(baseWhere)
     query.count()
-      .then(function (res) {
-        that.setData({ 'stats.visitors': res.total || 0 })
+      .then((res) => {
+        this.setData({ 'stats.visitors': res.total || 0 })
         // 多次来访
-        var repeatWhere = myOpenId
+        const repeatWhere = myOpenId
           ? { cardOwnerId: myOpenId, visitCount: _.gt(1) }
           : { visitCount: _.gt(1) }
         return db.collection('visits').where(repeatWhere).count()
       })
-      .then(function (res) {
-        that.setData({ 'stats.viewed': res.total || 0 })
+      .then((res) => {
+        this.setData({ 'stats.viewed': res.total || 0 })
         // 加载列表
-        var listQuery = db.collection('visits')
+        let listQuery = db.collection('visits')
         if (myOpenId) listQuery = listQuery.where(baseWhere)
         return listQuery.orderBy('visitTime', 'desc').limit(50).get()
       })
-      .then(function (res) {
-        that._processVisitors(res.data || [])
+      .then((res) => {
+        this._processVisitors(res.data || [])
       })
-      .catch(function (err) {
+      .catch((err) => {
         console.warn('[Visitors] visits 集合不存在或查询失败:', err)
-        that.setData({
+        this.setData({
           visitors: [],
           'stats.visitors': 0,
           'stats.viewed': 0,
@@ -177,17 +170,6 @@ Page({
           isEmpty: true
         })
       })
-  },
-
-  handleAction(e) {
-    const item = e.currentTarget.dataset.item
-    const buttonText = item.buttonText
-    
-    if (buttonText === '交换名片') {
-      wx.showToast({ title: '已发送交换请求', icon: 'success' })
-    } else if (buttonText === '请问是谁') {
-      wx.showToast({ title: '已发送询问', icon: 'none' })
-    }
   },
 
   goToProfile(e) {

@@ -2,6 +2,71 @@
 
 ---
 
+## v1.1.0 (2026-06-17)
+
+### 🏥 深度审核修复（12 项）
+
+基于代码深度诊断审核，全面修复阻塞上线和影响代码质量的问题。
+
+#### P0 阻塞上线（3 项）
+
+| # | 问题 | 修复 |
+|---|------|------|
+| 1 | `getQrCode` 云函数代码缺失 | 评估后确认无前端消费场景，**删除整个云函数** |
+| 2 | `index.wxml` empty-state 重复渲染节点 | 删除第31-34行裸露重复子元素 |
+| 3 | `initVisits`/`deleteCard` 缺少 `wx-server-sdk` 依赖 | package.json 补充 `dependencies` |
+
+#### P1 上线前修复（4 项）
+
+| # | 问题 | 修复 |
+|---|------|------|
+| 4 | `selectDefaultCard` 选择未持久化 | cards 集合 `isDefault` 字段云端持久化 + 本地缓存双写 |
+| 5 | `DOCUMENTATION.md` 10+ 处与代码不一致 | 全面重写，对齐当前代码实际状态 |
+| 6 | `DEPLOYMENT-GUIDE.md` 集合/功能/权限描述错误 | 修订集合名、移除 OCR/TabBar 过时引用 |
+| 7 | `profile.loadCardList` 无显式 `_openid` 过滤 | 添加 `.where({ _openid: myOpenId })` |
+
+#### P2 上线后优化（5 项）
+
+| # | 问题 | 修复 |
+|---|------|------|
+| 8 | 主题选择仅本地存储，换设备丢失 | visitor_profiles 增加 `themeColor` 字段云同步 |
+| 9 | 首页/访客页空壳操作按钮 | WXML 中移除 `visitor-button` 元素 |
+| 10 | `visitors/index.js` ES5/ES6 混用 | 全面改写为 ES6（const/let + 箭头函数 + 展开运算符） |
+| 11 | `sitemap.json` 默认全允许 | preview/visitors/list/profile 禁止搜索引擎收录 |
+| 12 | `edit` 页 crop 页面死代码 | chooseAvatar 改为直接上传，删除 `onCropResult` |
+
+### 📊 变更统计
+
+```
+修改文件：
+- miniprogram/pages/index/index.wxml          (重复节点删除 + visitor-button 移除)
+- miniprogram/pages/visitors/index.wxml        (visitor-button 移除)
+- miniprogram/pages/visitors/index.js           (ES5→ES6 全面改写)
+- miniprogram/pages/profile/index.js           (默认名片云持久化 + 主题云同步 + loadCardList 过滤)
+- miniprogram/pages/profile/index.wxml          (版本号 v1.0.6 → v1.0.9)
+- miniprogram/pages/edit/index.js              (chooseAvatar 直接上传 + 删除 onCropResult)
+- miniprogram/sitemap.json                     (隐私页面禁止收录)
+- cloudfunctions/initVisits/package.json        (补充 wx-server-sdk 依赖)
+- cloudfunctions/deleteCard/package.json        (补充 wx-server-sdk 依赖)
+- DOCUMENTATION.md                             (全面重写)
+- DEPLOYMENT-GUIDE.md                          (修订过时内容)
+
+删除文件：
+- cloudfunctions/getQrCode/                    (整目录删除，无消费场景)
+```
+
+### ⚠️ 部署检查清单
+
+- [ ] 部署 4 个云函数到生产环境（getOpenId / initVisits / deleteCard / resolveCloudUrls）
+- [ ] 云控制台确认 `visitor_profiles` 集合存在（新增 themeColor 字段需要此集合）
+- [ ] 云控制台确认 `cards` 集合支持 `isDefault` 字段写入
+- [ ] MP 后台配置隐私保护指引（勾选「收集你选中的照片或视频文件」+「获取你的相机权限」）
+- [ ] 提交微信审核
+- [ ] 云控制台 → 存储权限 → 改为「仅创建者可读写」
+- [ ] 删除云存储中的孤儿目录（avatar/、avartar/、scans/、cards/）
+
+---
+
 ## v1.0.9 (2026-06-16)
 
 ### 🎨 分享卡片 v8 重构：5:4 比例规范导出
