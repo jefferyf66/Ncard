@@ -13,7 +13,7 @@
 - 云函数：getOpenId、initVisits（含三级访客身份识别 enrichment）、deleteCard（级联删除）、resolveCloudUrls（cloud:// → HTTPS URL 安全代理）
 - 云存储路径：avatars/（头像）、attachments/（附件）
 - 云存储权限：推荐「仅创建者可读写」— 跨用户头像访问通过 resolveCloudUrls 云函数代理
-- 已移除：scan 页面、crop 页面、parseCard 云函数、test 页面（无扫描名片需求，测试页不上线）、getQrCode 云函数（v1.1.0 删除，无前端消费场景）
+- 已移除：scan 页面、crop 页面、parseCard 云函数、test 页面（无扫描名片需求，测试页不上线）、getQrCode 云函数（v1.1.0 删除，无前端消费场景）、crop 页面目录（v1.1.0 后清理）、test/测试目录
 
 ## 版本发布约定
 - 打 tag 时**必须同时更新** `RELEASE_NOTES.md` 和 `README.md`（版本历史 + 功能特性同步）

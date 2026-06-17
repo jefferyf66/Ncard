@@ -6,7 +6,8 @@
     "pages/visitors/index",
     "pages/agreement/index",
     "pages/list/index",
-    "pages/profile/index"
+    "pages/profile/index",
+    "pages/crop/index"
   ],
   "window": {
     "backgroundTextStyle": "light",

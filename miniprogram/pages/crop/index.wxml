@@ -1,0 +1,80 @@
+<!-- 裁切页：先加载图获取尺寸，再显示裁切 UI -->
+<view class="crop-page">
+
+  <!-- ===== 加载阶段：独立 image 获取原始尺寸 ===== -->
+  <!-- 关键：不在 movable-view 内，不在屏幕外，bindload 100% 可靠 -->
+  <view class="crop-loading-phase" wx:if="{{isLoading}}">
+    <image
+      class="crop-load-image"
+      src="{{previewSrc}}"
+      mode="widthFix"
+      bindload="onImageLoad"
+      binderror="onImageError"
+    ></image>
+    <view class="crop-loading-spinner"></view>
+    <text class="crop-loading-text">图片加载中...</text>
+  </view>
+
+  <!-- ===== 裁切阶段 ===== -->
+  <block wx:else>
+    <view class="crop-canvas-area">
+      <!-- movable-area -->
+      <movable-area class="crop-movable-area" scale-area>
+        <movable-view
+          class="crop-movable-view"
+          direction="all"
+          scale
+          scale-min="{{minScale}}"
+          scale-max="{{maxScale}}"
+          x="{{moveX}}"
+          y="{{moveY}}"
+          scale-value="{{currentScale}}"
+          bindscale="onScale"
+          bindchange="onMove"
+          style="width: {{imgDisplayW}}px; height: {{imgDisplayH}}px;"
+        >
+          <image
+            class="crop-image"
+            src="{{previewSrc}}"
+            mode="aspectFill"
+            style="width: {{imgDisplayW}}px; height: {{imgDisplayH}}px;"
+          ></image>
+        </movable-view>
+      </movable-area>
+
+      <!-- 正方形遮罩：box-shadow 镂空 + 白色边框 -->
+      <view
+        class="crop-square-mask"
+        style="width: {{cropSize}}px; height: {{cropSize}}px;"
+      ></view>
+
+      <!-- 九宫格辅助线（视觉引导构图） -->
+      <view
+        class="crop-grid"
+        style="width: {{cropSize}}px; height: {{cropSize}}px;"
+      >
+        <view class="crop-grid-h"></view>
+        <view class="crop-grid-h"></view>
+        <view class="crop-grid-v"></view>
+        <view class="crop-grid-v"></view>
+      </view>
+    </view>
+
+    <view class="crop-hint">
+      <text>双指缩放，单指移动图片</text>
+    </view>
+
+    <view class="crop-bottom-bar">
+      <view class="crop-btn cancel" bindtap="onCancel">
+        <text>取消</text>
+      </view>
+      <view class="crop-btn confirm" bindtap="onConfirm">
+        <text>确定</text>
+      </view>
+    </view>
+  </block>
+</view>
+
+<!-- 隐藏 canvas 用于最终裁切 -->
+<canvas type="2d" id="cropCanvas" class="crop-canvas-hidden"
+  style="width: {{outputSize}}px; height: {{outputSize}}px;"></canvas>
