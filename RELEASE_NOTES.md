@@ -2,6 +2,33 @@
 
 ---
 
+## v1.1.1 (2026-06-17)
+
+### 🐛 首页编译错误修复 + UX 优化 + crop 页面恢复
+
+**紧急修复**：
+- `index.wxml` UTF-8 编码损坏导致 WXML 编译 `unexpected end` 错误（10 行中文截断），从 git 历史恢复干净版本
+
+**UX 优化**：
+- 无名片时隐藏右下角新增名片悬浮按钮（`wx:if="{{!isEmpty}}"`），避免空白区域出现无意义按钮
+- 空状态提示文案更新："点击右上角创建您的第一张名片" → "点击按钮创建您的第一张名片"
+- 悬浮按钮与名片列表数据联动：创建第一张名片后自动恢复显示
+
+**crop 头像裁切恢复**：
+- 从 git 历史恢复 `miniprogram/pages/crop/` 完整功能（movable-area 缩放 + Canvas 400×400 裁切 + 九宫格辅助线）
+- `app.json` 注册 `pages/crop/index`
+- edit 页恢复 `chooseAvatar → globalData.cropImageSrc → crop → onCropResult → _uploadAvatar` 完整调用链
+
+**首页 CSS 补全**：
+- 补全约 20 个缺失的 CSS 类（loading-state、stat-divider、visitor-list/content、view-all-btn、agreement-footer 等）
+- 纯 CSS 图标实现（icon-card/users/eye/add/user）
+
+**死代码清理**：
+- 删除 `wx.addFavorite` 非法 API 调用、`handleVisitorAction` 死代码、`_loadRecentVisitors` 废弃方法
+- 删除 `crop` 和 `test` 页面目录（crop 已恢复并重新注册）
+
+---
+
 ## v1.1.0 (2026-06-17)
 
 ### 🏥 深度审核修复（12 项）

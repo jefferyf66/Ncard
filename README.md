@@ -163,6 +163,13 @@
 
 ## 版本历史
 
+### v1.1.1 (2026-06-17)
+- 🐛 紧急修复 index.wxml UTF-8 编码损坏导致 WXML 编译错误
+- ✨ 无名片时隐藏右下角新增名片悬浮按钮，空状态提示文案优化
+- ✨ 恢复 crop 头像裁切页完整功能（缩放 + Canvas 裁切 + 九宫格线）
+- 🎨 首页约 20 个缺失 CSS 类补全，纯 CSS 图标实现
+- 🧹 删除 wx.addFavorite 非法 API、handleVisitorAction 等死代码
+
 ### v1.1.0 (2026-06-17)
 - 深度审核修复 12 项：删除无用 getQrCode 云函数、修复 WXML 重复渲染、补充云函数依赖声明
 - selectDefaultCard 云端持久化（cards 集合 isDefault 字段）
