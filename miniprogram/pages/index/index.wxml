@@ -24,7 +24,7 @@
         <view class="icon-card"></view>
       </view>
       <text class="empty-title">暂无名片</text>
-      <text class="empty-desc">点击右上角创建您的第一张名片</text>
+      <text class="empty-desc">点击按钮创建您的第一张名片</text>
       <view class="empty-btn" bindtap="goToEdit">创建名片</view>
     </view>
   </view>
@@ -176,8 +176,8 @@
     </view>
   </view>
 
-  <!-- 新增名片悬浮按钮 -->
-  <view class="add-btn" bindtap="goToEdit">
+  <!-- 新增名片悬浮按钮：无名片时隐藏，创建第一张后自动恢复 -->
+  <view class="add-btn" wx:if="{{!isEmpty}}" bindtap="goToEdit">
     <text class="add-btn-text">新增名片</text>
   </view>
 
