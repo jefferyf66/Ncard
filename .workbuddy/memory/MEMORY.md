@@ -10,10 +10,10 @@
 ## 技术栈
 - 微信小程序原生 + 微信云开发（DYNAMIC_CURRENT_ENV）
 - 云数据库集合：cards（名片）、visits（访客记录）、user_save_cards（用户保存的名片关联）、visitor_profiles（访客授权身份）
-- 云函数：getOpenId、getQrCode、initVisits（含三级访客身份识别 enrichment）、deleteCard（级联删除）、resolveCloudUrls（cloud:// → HTTPS URL 安全代理）
-- 云存储路径：avatars/（头像）、attachments/（附件）、qrcodes/（小程序码）
+- 云函数：getOpenId、initVisits（含三级访客身份识别 enrichment）、deleteCard（级联删除）、resolveCloudUrls（cloud:// → HTTPS URL 安全代理）
+- 云存储路径：avatars/（头像）、attachments/（附件）
 - 云存储权限：推荐「仅创建者可读写」— 跨用户头像访问通过 resolveCloudUrls 云函数代理
-- 已移除：scan 页面、crop 页面、parseCard 云函数、test 页面（无扫描名片需求，测试页不上线）
+- 已移除：scan 页面、crop 页面、parseCard 云函数、test 页面（无扫描名片需求，测试页不上线）、getQrCode 云函数（v1.1.0 删除，无前端消费场景）
 
 ## 版本发布约定
 - 打 tag 时**必须同时更新** `RELEASE_NOTES.md` 和 `README.md`（版本历史 + 功能特性同步）
@@ -100,7 +100,7 @@
 - [x] 在 `app.json` 中启用 `"__usePrivacyCheck__": true`
 - [ ] MP 后台配置隐私保护指引（勾选「收集你选中的照片或视频文件」+「获取你的相机权限」）
 - [ ] 提交微信审核 → 审核通过后发布（隐私指引随版本一同生效）
-- [ ] 部署全部 5 个云函数到生产环境（getOpenId/getQrCode/initVisits/deleteCard/resolveCloudUrls）
+- [ ] 部署全部 4 个云函数到生产环境（getOpenId/initVisits/deleteCard/resolveCloudUrls）
 - [ ] 云开发控制台 → 存储权限 → 改为「仅创建者可读写」
 - [ ] 删除云存储中的孤儿目录（avatar/、avartar/、scans/、cards/）
 
@@ -111,10 +111,10 @@
   - P2 上线后优化 5 项：主题无云同步、空壳操作按钮、ES5/ES6 混用、sitemap.json 未配置、crop 页面死代码
   - 用户审核确认后执行修复
 
-## 2026-06-17 修复执行
-- 全部 12 项修复已完成
+## 2026-06-17 修复执行 + v1.1.0 发布
+- 全部 12 项修复已完成，git tag v1.1.0
 - 用户决策：selectDefaultCard 用方案B（云端持久化 isDefault 字段）、空壳按钮隐藏、主题同步本次加
-- 新增：getQrCode 云函数（index.js + package.json）
+- 删除：getQrCode 云函数（评估后确认无前端消费场景，线下扫码需求未来再实现）
 - 修改：profile/index.js 重写（默认名片云端持久化 + 主题云同步 + loadCardList _openid 过滤 + 版本号修正）
 - 修改：index.wxml 删除重复 empty-state 节点 + 隐藏 visitor-button
 - 修改：visitors/index.wxml 隐藏 visitor-button
@@ -123,6 +123,7 @@
 - 修改：sitemap.json 配置隐私页面禁止收录
 - 修改：initVisits/package.json + deleteCard/package.json 补充 wx-server-sdk 依赖
 - 修改：DOCUMENTATION.md 全面重写、DEPLOYMENT-GUIDE.md 修订（agent 完成）
+- 修改：RELEASE_NOTES.md + README.md 同步更新 v1.1.0
 
 ## 已知数据问题
 审计日期 2026-06-11，P0 全部已修复，详见 `artifacts/data-audit-report.md`。

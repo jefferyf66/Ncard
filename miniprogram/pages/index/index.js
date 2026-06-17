@@ -262,28 +262,6 @@ Page({
   },
 
   /**
-   * 加载最近访客并聚合去重（客户端聚合：按 visitorOpenId 归并）
-   * 展示结构：L3 卡片用户 → 真名+头像 / L2 已授权 → 昵称+头像 / L1 匿名 → "访客 #XXXX"
-   * @deprecated 已被 _processRecentVisitors 替代，保留向后兼容
-   */
-  _loadRecentVisitors(cardOwnerId) {
-    var db = wx.cloud.database()
-    var that = this
-    var query = db.collection('visits')
-    if (cardOwnerId) {
-      query = query.where({ cardOwnerId: cardOwnerId })
-    }
-    query
-      .orderBy('visitTime', 'desc')
-      .limit(20)
-      .get()
-      .then(function (res) {
-        that._processRecentVisitors(res.data)
-      })
-      .catch(function () {})
-  },
-
-  /**
    * 客户端聚合：按 visitorOpenId 去重合并
    * @param {Array} visits - 原始 visits 记录
    * @returns {Array} 去重后的访客列表，按最近访问时间排序
@@ -815,42 +793,16 @@ Page({
     wx.showToast({ title: `查看 ${item.name} 的信息`, icon: 'none' })
   },
 
-  handleVisitorAction(e) {
-    const item = e.currentTarget.dataset.item
-    const buttonText = item.buttonText
-
-    if (buttonText === '交换名片') {
-      wx.showToast({ title: '已发送交换请求', icon: 'success' })
-    } else if (buttonText === '请问是谁') {
-      wx.showToast({ title: '已发送询问', icon: 'none' })
-    }
-  },
-
+  /**
+   * 添加到桌面指引
+   */
   addToDesktop() {
-    if (wx.addFavorite) {
-      wx.addFavorite({
-        title: '科博名片',
-        imgUrl: '',
-        success: () => {
-          app.showSuccess('已添加收藏')
-        },
-        fail: () => {
-          wx.showModal({
-            title: '添加到桌面',
-            content: '请点击右上角 "..." 按钮，选择"添加到桌面"即可将科博名片添加到手机桌面',
-            showCancel: false,
-            confirmText: '我知道了'
-          })
-        }
-      })
-    } else {
-      wx.showModal({
-        title: '添加到桌面',
-        content: '请点击右上角 "..." 按钮，选择"添加到桌面"即可将科博名片添加到手机桌面',
-        showCancel: false,
-        confirmText: '我知道了'
-      })
-    }
+    wx.showModal({
+      title: '添加到桌面',
+      content: '请点击右上角 "..." 按钮，选择"添加到桌面"即可将科博名片添加到手机桌面',
+      showCancel: false,
+      confirmText: '我知道了'
+    })
   },
 
   /**
