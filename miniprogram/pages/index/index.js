@@ -485,6 +485,8 @@ Page({
     const card = this.data.cards.find(c => c._id === id)
     if (!card) return
 
+    console.log('[Share] onShareButtonTap 触发, id:', id, 'name:', card.name, 'avatar:', (card.avatar || '').substring(0, 40))
+
     // 初始化缓存对象
     if (!this._shareImageCache) {
       this._shareImageCache = {}
@@ -527,7 +529,7 @@ Page({
       cardKey: cardId,
       pageContext: this
     }).then(function (res) {
-      console.log('[Index] 分享卡片生成成功:', res.tempFilePath)
+      console.log('[Share] Canvas 生成成功:', (res.tempFilePath || '').substring(0, 60))
       if (!that._shareImageCache) that._shareImageCache = {}
       that._shareImageCache[cardId] = res.tempFilePath
       that._shareImagePath = res.tempFilePath
@@ -550,7 +552,7 @@ Page({
       }
 
       that._generatingCards[cardId] = false
-      console.error('[Index] 分享卡片生成失败:', msg)
+      console.error('[Share] 生成失败(' + retryCount + ' retries):', msg)
       throw err
     })
 
@@ -625,7 +627,13 @@ Page({
     var title = shareUtil.buildShareTitle(card)
     var that = this
 
-    // 用完即弃，避免下次分享复用旧数据
+    console.log('[Share] onShareAppMessage 触发, id:', id,
+      'title:', title,
+      'hasActive:', !!this._activeShare,
+      'hasPromise:', !!this._activeSharePromise,
+      'hasCache:', !!(this._shareImageCache && this._shareImageCache[id]))
+
+    // 用完即弃
     this._activeShare = null
 
     // 快速路径：缓存命中
@@ -639,28 +647,31 @@ Page({
     this._activeSharePromise = null
 
     if (genPromise) {
-      console.log('[Index] 等待生成 Promise, cardId:', id)
+      console.log('[Share] 等待生成 Promise, cardId:', id)
       return genPromise.then(function (res) {
+        console.log('[Share] Promise 成功，imageUrl:', (res.tempFilePath || '').substring(0, 60))
         return { title: title, path: path, imageUrl: res.tempFilePath }
-      }).catch(function () {
-        // 生成失败 → 降级到 HTTPS 头像
-        console.warn('[Index] 生成失败，降级使用头像')
+      }).catch(function (err) {
+        console.warn('[Share] Promise 失败，降级头像:', (err && err.message) || 'unknown')
         return that._resolveAvatarUrl(card.avatar).then(function (url) {
+          console.log('[Share] 头像降级结果:', url ? url.substring(0, 60) : '(空)')
           return { title: title, path: path, imageUrl: url }
         })
       })
     }
 
-    // 兜底：右上角菜单分享 / 无预生成 → 触发生成 + 轮询等待
+    // 兜底：右上角菜单分享 / 无预生成
     if (id && card._id && !(that._generatingCards && that._generatingCards[id])) {
-      console.log('[Index] 冷启动: 触发生成, cardId:', id)
+      console.log('[Share] 冷启动触发生成, cardId:', id)
       genPromise = that._generateShareCardSync(card, id)
     }
 
     if (genPromise) {
       return genPromise.then(function (res) {
+        console.log('[Share] 冷启动生成成功, imageUrl:', (res.tempFilePath || '').substring(0, 60))
         return { title: title, path: path, imageUrl: res.tempFilePath }
-      }).catch(function () {
+      }).catch(function (err) {
+        console.warn('[Share] 冷启动生成失败:', (err && err.message) || 'unknown')
         return that._resolveAvatarUrl(card.avatar).then(function (url) {
           return { title: title, path: path, imageUrl: url }
         })
@@ -679,6 +690,8 @@ Page({
     var id = active.id || this.data.shareCardId || ''
     var title = shareUtil.buildShareTitle(card)
     var that = this
+
+    console.log('[Share] onShareTimeline 触发, id:', id, 'title:', title)
 
     // 快速路径：缓存命中
     if (this._shareImageCache && this._shareImageCache[id]) {
