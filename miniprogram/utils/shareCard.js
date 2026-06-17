@@ -537,8 +537,7 @@ function _getDpr() {
 }
 
 // =========================================================================
-// Canvas 导出 — 将临时文件持久化到用户目录，确保 onShareAppMessage 可用
-// wxfile:// 临时文件在分享时可能被系统清理，saveFile 持久化避免竞态
+// Canvas 导出 — 使用原始 temp 路径，微信框架直接读取并上传到聊天 CDN
 // =========================================================================
 
 function _exportAndResolve(canvas, versionedKey, now, layout, resolve, reject) {
@@ -549,43 +548,16 @@ function _exportAndResolve(canvas, versionedKey, now, layout, resolve, reject) {
     width: exportW, height: layout.totalH,
     destWidth: exportW, destHeight: layout.totalH,
     fileType: 'png',
-    quality: 1.0,
+    quality: 0.8,
     success: function (tempRes) {
-      console.log('[shareCard] 图片导出成功, key:', versionedKey)
-      var tempPath = tempRes.tempFilePath
-
-      // 持久化：saveFile 将临时文件保存到用户目录，避免被系统清理
-      var fs = wx.getFileSystemManager()
-      try {
-        fs.saveFile({
-          tempFilePath: tempPath,
-          success: function (saveRes) {
-            var persistentPath = saveRes.savedFilePath
-            console.log('[shareCard] 文件已持久化:', persistentPath.substring(0, 60))
-            if (ENABLE_SHARE_CACHE) {
-              _imageCache[versionedKey] = {
-                tempFilePath: persistentPath,
-                expireAt: now + CACHE_TTL
-              }
-            }
-            resolve({ tempFilePath: persistentPath })
-          },
-          fail: function () {
-            // saveFile 失败 → 降级用临时路径
-            console.warn('[shareCard] saveFile 失败，降级使用临时路径')
-            if (ENABLE_SHARE_CACHE) {
-              _imageCache[versionedKey] = { tempFilePath: tempPath, expireAt: now + CACHE_TTL }
-            }
-            resolve({ tempFilePath: tempPath })
-          }
-        })
-      } catch (e) {
-        console.warn('[shareCard] FileSystemManager 不可用，降级使用临时路径')
-        if (ENABLE_SHARE_CACHE) {
-          _imageCache[versionedKey] = { tempFilePath: tempPath, expireAt: now + CACHE_TTL }
+      console.log('[shareCard] 图片导出成功, path:', (tempRes.tempFilePath || '').substring(0, 60))
+      if (ENABLE_SHARE_CACHE) {
+        _imageCache[versionedKey] = {
+          tempFilePath: tempRes.tempFilePath,
+          expireAt: now + CACHE_TTL
         }
-        resolve({ tempFilePath: tempPath })
       }
+      resolve({ tempFilePath: tempRes.tempFilePath })
     },
     fail: function (err) {
       console.error('[shareCard] canvasToTempFilePath 失败, key:', versionedKey, 'error:', err)

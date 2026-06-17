@@ -529,7 +529,14 @@ Page({
       cardKey: cardId,
       pageContext: this
     }).then(function (res) {
-      console.log('[Share] Canvas 生成成功:', (res.tempFilePath || '').substring(0, 60))
+      var tgtPath = res.tempFilePath
+      console.log('[Share] Canvas 生成完成, path length:', (tgtPath || '').length, 'chars')
+      // 验证文件存在且非空
+      try {
+        wx.getFileSystemManager().getFileInfo({ filePath: tgtPath, success: function (info) {
+          console.log('[Share] 文件 size = ' + info.size + ' bytes')
+        }, fail: function (e) { console.error('[Share] 文件不可达:', JSON.stringify(e)) } })
+      } catch (e2) { console.warn('[Share] getFileInfo 调用异常:', e2) }
       if (!that._shareImageCache) that._shareImageCache = {}
       that._shareImageCache[cardId] = res.tempFilePath
       that._shareImagePath = res.tempFilePath
