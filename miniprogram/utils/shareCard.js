@@ -537,7 +537,8 @@ function _getDpr() {
 }
 
 // =========================================================================
-// Canvas 导出
+// Canvas 导出 → 上传云存储 → 返回 HTTPS URL
+// 修复：wxfile:// 临时文件对方设备不可访问，必须上传到云端
 // =========================================================================
 
 function _exportAndResolve(canvas, versionedKey, now, layout, resolve, reject) {
@@ -551,13 +552,54 @@ function _exportAndResolve(canvas, versionedKey, now, layout, resolve, reject) {
     quality: 1.0,
     success: function (tempRes) {
       console.log('[shareCard] 图片导出成功, key:', versionedKey)
-      if (ENABLE_SHARE_CACHE) {
-        _imageCache[versionedKey] = {
-          tempFilePath: tempRes.tempFilePath,
-          expireAt: now + CACHE_TTL
+      var localPath = tempRes.tempFilePath
+
+      // 上传到云存储，拿到 HTTPS 地址（对方才能看到）
+      var cloudPath = 'sharecards/export_' + Date.now() + '.png'
+      wx.cloud.uploadFile({
+        cloudPath: cloudPath,
+        filePath: localPath,
+        success: function (uploadRes) {
+          wx.cloud.getTempFileURL({
+            fileList: [uploadRes.fileID],
+            success: function (urlRes) {
+              var httpsUrl = (urlRes.fileList && urlRes.fileList[0] && urlRes.fileList[0].tempFileURL) || ''
+              if (httpsUrl) {
+                console.log('[shareCard] 云端 URL:', httpsUrl.substring(0, 80))
+                if (ENABLE_SHARE_CACHE) {
+                  _imageCache[versionedKey] = {
+                    tempFilePath: httpsUrl,
+                    cloudFileID: uploadRes.fileID,
+                    expireAt: now + CACHE_TTL
+                  }
+                }
+                resolve({ tempFilePath: httpsUrl })
+              } else {
+                // getTempFileURL 失败，降级用本地路径（不理想但聊胜于无）
+                console.warn('[shareCard] getTempFileURL 失败，降级本地路径')
+                if (ENABLE_SHARE_CACHE) {
+                  _imageCache[versionedKey] = { tempFilePath: localPath, expireAt: now + CACHE_TTL }
+                }
+                resolve({ tempFilePath: localPath })
+              }
+            },
+            fail: function () {
+              console.warn('[shareCard] getTempFileURL 失败，降级本地路径')
+              if (ENABLE_SHARE_CACHE) {
+                _imageCache[versionedKey] = { tempFilePath: localPath, expireAt: now + CACHE_TTL }
+              }
+              resolve({ tempFilePath: localPath })
+            }
+          })
+        },
+        fail: function (err) {
+          console.error('[shareCard] 云端上传失败', err)
+          if (ENABLE_SHARE_CACHE) {
+            _imageCache[versionedKey] = { tempFilePath: localPath, expireAt: now + CACHE_TTL }
+          }
+          resolve({ tempFilePath: localPath })
         }
-      }
-      resolve({ tempFilePath: tempRes.tempFilePath })
+      })
     },
     fail: function (err) {
       console.error('[shareCard] canvasToTempFilePath 失败, key:', versionedKey, 'error:', err)
