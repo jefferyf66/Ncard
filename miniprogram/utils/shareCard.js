@@ -554,7 +554,8 @@ function _exportAndResolve(canvas, versionedKey, now, layout, resolve, reject) {
       console.log('[shareCard] 图片导出成功, path length:', (tempRes.tempFilePath || '').length)
       var localPath = tempRes.tempFilePath
 
-      // 读取 temp 文件为 base64
+      // 主路径：readFile(base64) → 云函数上传 → HTTPS
+      // 备用路径：writeFile to USER_DATA_PATH（部分设备只认这个路径）
       var fs = wx.getFileSystemManager()
       fs.readFile({
         filePath: localPath,
@@ -562,7 +563,16 @@ function _exportAndResolve(canvas, versionedKey, now, layout, resolve, reject) {
         success: function (readRes) {
           var base64 = readRes.data
           console.log('[shareCard] base64 length:', (base64 || '').length)
-          // 调用云函数以管理员身份上传，返回 HTTPS URL
+
+          // 同时写一份到 USER_DATA_PATH 作为备用
+          var persistPath = ''
+          try {
+            persistPath = wx.env.USER_DATA_PATH + '/sharecard_' + Date.now() + '.png'
+            fs.writeFileSync(persistPath, base64, 'base64')
+            console.log('[shareCard] USER_DATA 备用路径:', persistPath.substring(0, 60))
+          } catch (e) { console.warn('[shareCard] USER_DATA 写入失败:', e) }
+
+          // 主路径：云函数上传
           wx.cloud.callFunction({
             name: 'uploadShareImage',
             data: { imageData: base64 }
@@ -575,22 +585,25 @@ function _exportAndResolve(canvas, versionedKey, now, layout, resolve, reject) {
               }
               resolve({ tempFilePath: r.url })
             } else {
-              console.warn('[shareCard] 云函数上传失败:', r.message || 'unknown')
+              // 云函数失败 → 降级到 USER_DATA 路径
+              console.warn('[shareCard] 云函数失败:', r.message || 'unknown')
+              var fallback = persistPath || localPath
               if (ENABLE_SHARE_CACHE) {
-                _imageCache[versionedKey] = { tempFilePath: localPath, expireAt: now + CACHE_TTL }
+                _imageCache[versionedKey] = { tempFilePath: fallback, expireAt: now + CACHE_TTL }
               }
-              resolve({ tempFilePath: localPath })
+              resolve({ tempFilePath: fallback })
             }
           }).catch(function (e) {
             console.warn('[shareCard] 云函数调用失败:', e && e.message)
+            var fallback = persistPath || localPath
             if (ENABLE_SHARE_CACHE) {
-              _imageCache[versionedKey] = { tempFilePath: localPath, expireAt: now + CACHE_TTL }
+              _imageCache[versionedKey] = { tempFilePath: fallback, expireAt: now + CACHE_TTL }
             }
-            resolve({ tempFilePath: localPath })
+            resolve({ tempFilePath: fallback })
           })
         },
         fail: function () {
-          console.warn('[shareCard] readFile base64 失败，降级本地路径')
+          console.warn('[shareCard] readFile 失败，降级本地路径')
           if (ENABLE_SHARE_CACHE) {
             _imageCache[versionedKey] = { tempFilePath: localPath, expireAt: now + CACHE_TTL }
           }
