@@ -531,13 +531,22 @@ Page({
     }).then(function (res) {
       var tgtPath = res.tempFilePath
       console.log('[Share] Canvas 生成完成, path length:', (tgtPath || '').length, 'chars')
-      // 验证文件存在且非空
       try {
         wx.getFileSystemManager().getFileInfo({ filePath: tgtPath, success: function (info) {
           console.log('[Share] 文件 size = ' + info.size + ' bytes')
         }, fail: function (e) { console.error('[Share] 文件不可达:', JSON.stringify(e)) } })
       } catch (e2) { console.warn('[Share] getFileInfo 调用异常:', e2) }
-      if (!that._shareImageCache) that._shareImageCache = {}
+
+      // 【关键】将本地路径转为 HTTPS URL 后再缓存
+      return that._convertToShareUrl(tgtPath, cardId).then(function (httpsUrl) {
+        console.log('[Share] 最终 imageUrl:', (httpsUrl || '').substring(0, 80))
+        if (!that._shareImageCache) that._shareImageCache = {}
+        that._shareImageCache[cardId] = httpsUrl
+        that._shareImagePath = httpsUrl
+        that._shareImageCardId = cardId
+        that._generatingCards[cardId] = false
+        return { tempFilePath: httpsUrl }
+      })
       that._shareImageCache[cardId] = res.tempFilePath
       that._shareImagePath = res.tempFilePath
       that._shareImageCardId = cardId
@@ -565,6 +574,50 @@ Page({
 
     this._generatingCards[cardId] = genPromise
     return genPromise
+  },
+
+  /**
+   * 本地路径 → 云函数上传 → HTTPS URL
+   * @param {string} localPath - wxfile:// 或 USER_DATA_PATH 本地路径
+   * @param {string} cardId - 用于日志
+   * @returns {Promise<string>} HTTPS URL，失败降级返回原路径
+   */
+  _convertToShareUrl(localPath, cardId) {
+    var that = this
+    var fs = wx.getFileSystemManager()
+
+    return new Promise(function (resolve) {
+      fs.readFile({
+        filePath: localPath,
+        encoding: 'base64',
+        success: function (readRes) {
+          var base64 = readRes.data
+          console.log('[Share] base64 length:', (base64 || '').length)
+
+          // 尝试云函数上传
+          wx.cloud.callFunction({
+            name: 'uploadShareImage',
+            data: { imageData: base64 }
+          }).then(function (callRes) {
+            var r = callRes.result || {}
+            if (r.ok && r.url) {
+              console.log('[Share] 云端 URL:', r.url.substring(0, 80))
+              resolve(r.url)
+            } else {
+              console.warn('[Share] 云函数失败，降级本地:', r.message || 'unknown')
+              resolve(localPath)
+            }
+          }).catch(function (e) {
+            console.warn('[Share] 云函数异常:', e && e.message)
+            resolve(localPath)
+          })
+        },
+        fail: function () {
+          console.warn('[Share] readFile 失败')
+          resolve(localPath)
+        }
+      })
+    })
   },
 
   /**
