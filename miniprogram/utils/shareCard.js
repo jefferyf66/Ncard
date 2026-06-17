@@ -537,8 +537,8 @@ function _getDpr() {
 }
 
 // =========================================================================
-// Canvas 导出 → 上传云存储 → 返回 HTTPS URL
-// 修复：wxfile:// 临时文件对方设备不可访问，必须上传到云端
+// Canvas 导出 — 将临时文件持久化到用户目录，确保 onShareAppMessage 可用
+// wxfile:// 临时文件在分享时可能被系统清理，saveFile 持久化避免竞态
 // =========================================================================
 
 function _exportAndResolve(canvas, versionedKey, now, layout, resolve, reject) {
@@ -552,54 +552,40 @@ function _exportAndResolve(canvas, versionedKey, now, layout, resolve, reject) {
     quality: 1.0,
     success: function (tempRes) {
       console.log('[shareCard] 图片导出成功, key:', versionedKey)
-      var localPath = tempRes.tempFilePath
+      var tempPath = tempRes.tempFilePath
 
-      // 上传到云存储，拿到 HTTPS 地址（对方才能看到）
-      var cloudPath = 'sharecards/export_' + Date.now() + '.png'
-      wx.cloud.uploadFile({
-        cloudPath: cloudPath,
-        filePath: localPath,
-        success: function (uploadRes) {
-          wx.cloud.getTempFileURL({
-            fileList: [uploadRes.fileID],
-            success: function (urlRes) {
-              var httpsUrl = (urlRes.fileList && urlRes.fileList[0] && urlRes.fileList[0].tempFileURL) || ''
-              if (httpsUrl) {
-                console.log('[shareCard] 云端 URL:', httpsUrl.substring(0, 80))
-                if (ENABLE_SHARE_CACHE) {
-                  _imageCache[versionedKey] = {
-                    tempFilePath: httpsUrl,
-                    cloudFileID: uploadRes.fileID,
-                    expireAt: now + CACHE_TTL
-                  }
-                }
-                resolve({ tempFilePath: httpsUrl })
-              } else {
-                // getTempFileURL 失败，降级用本地路径（不理想但聊胜于无）
-                console.warn('[shareCard] getTempFileURL 失败，降级本地路径')
-                if (ENABLE_SHARE_CACHE) {
-                  _imageCache[versionedKey] = { tempFilePath: localPath, expireAt: now + CACHE_TTL }
-                }
-                resolve({ tempFilePath: localPath })
+      // 持久化：saveFile 将临时文件保存到用户目录，避免被系统清理
+      var fs = wx.getFileSystemManager()
+      try {
+        fs.saveFile({
+          tempFilePath: tempPath,
+          success: function (saveRes) {
+            var persistentPath = saveRes.savedFilePath
+            console.log('[shareCard] 文件已持久化:', persistentPath.substring(0, 60))
+            if (ENABLE_SHARE_CACHE) {
+              _imageCache[versionedKey] = {
+                tempFilePath: persistentPath,
+                expireAt: now + CACHE_TTL
               }
-            },
-            fail: function () {
-              console.warn('[shareCard] getTempFileURL 失败，降级本地路径')
-              if (ENABLE_SHARE_CACHE) {
-                _imageCache[versionedKey] = { tempFilePath: localPath, expireAt: now + CACHE_TTL }
-              }
-              resolve({ tempFilePath: localPath })
             }
-          })
-        },
-        fail: function (err) {
-          console.error('[shareCard] 云端上传失败', err)
-          if (ENABLE_SHARE_CACHE) {
-            _imageCache[versionedKey] = { tempFilePath: localPath, expireAt: now + CACHE_TTL }
+            resolve({ tempFilePath: persistentPath })
+          },
+          fail: function () {
+            // saveFile 失败 → 降级用临时路径
+            console.warn('[shareCard] saveFile 失败，降级使用临时路径')
+            if (ENABLE_SHARE_CACHE) {
+              _imageCache[versionedKey] = { tempFilePath: tempPath, expireAt: now + CACHE_TTL }
+            }
+            resolve({ tempFilePath: tempPath })
           }
-          resolve({ tempFilePath: localPath })
+        })
+      } catch (e) {
+        console.warn('[shareCard] FileSystemManager 不可用，降级使用临时路径')
+        if (ENABLE_SHARE_CACHE) {
+          _imageCache[versionedKey] = { tempFilePath: tempPath, expireAt: now + CACHE_TTL }
         }
-      })
+        resolve({ tempFilePath: tempPath })
+      }
     },
     fail: function (err) {
       console.error('[shareCard] canvasToTempFilePath 失败, key:', versionedKey, 'error:', err)
