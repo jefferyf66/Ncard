@@ -490,78 +490,72 @@ Page({
       this._shareImageCache = {}
     }
 
-    // 【修复】清除过时缓存：卡片可能已被修改，强制重新生成
+    // 清除过时缓存
     delete this._shareImageCache[id]
-
-    // 清除旧的分享图片引用
     this._shareImagePath = ''
     this._shareImageCardId = ''
 
-    this.setData({
-      shareCardId: id,
-      shareCardData: card
-    })
+    // 用实例变量（零延迟），不依赖 setData 异步
+    this._activeShare = { id: id, card: card }
 
-    this._preGenerateShareCardWithKey(card, id)
+    // 同步兼容 setData（被其他方法读取）
+    this.setData({ shareCardId: id, shareCardData: card })
+
+    // 启动生成，承诺返回 Promise
+    this._activeSharePromise = this._generateShareCardSync(card, id)
   },
 
-  _preGenerateShareCardWithKey(card, cardId, retryCount) {
-    // 按卡片 ID 独立锁定，避免全局锁阻塞不同卡片的并行生成
-    if (!this._generatingCards) {
-      this._generatingCards = {}
-    }
+  /**
+   * 生成分享卡片并返回 Promise（替代旧的 _preGenerateShareCardWithKey）
+   * 返回 Promise<{tempFilePath}>，失败时 reject
+   */
+  _generateShareCardSync(card, cardId, retryCount) {
+    if (!this._generatingCards) this._generatingCards = {}
     if (this._generatingCards[cardId]) {
-      console.log('[Index] 该卡片正在生成中，跳过重复请求:', cardId)
-      return
+      console.log('[Index] 该卡片正在生成中，复用现有 Promise:', cardId)
+      return this._generatingCards[cardId]  // 返回正在进行的 Promise
     }
 
     retryCount = retryCount || 0
     var MAX_RETRIES = 3
-    var RETRY_DELAYS = [100, 300, 600]  // 退避延迟 (ms)
+    var RETRY_DELAYS = [100, 300, 600]
     var that = this
 
-    this._generatingCards[cardId] = true
-    console.log('[Index] 开始生成分享卡片, id:', cardId, 'retry:', retryCount, 'name:', card.name)
+    if (that._shareImageCache) delete that._shareImageCache[cardId]
 
-    // 【修复】清除过时缓存：卡片数据可能已被编辑，强制重新生成
-    if (that._shareImageCache) {
-      delete that._shareImageCache[cardId]
-    }
-
-    shareCard.generate('#shareCanvas', card, {
+    var genPromise = shareCard.generate('#shareCanvas', card, {
       cardKey: cardId,
-      pageContext: this  // 【修复】传入页面作用域，确保真机 type="2d" canvas 可查询
+      pageContext: this
     }).then(function (res) {
       console.log('[Index] 分享卡片生成成功:', res.tempFilePath)
+      if (!that._shareImageCache) that._shareImageCache = {}
+      that._shareImageCache[cardId] = res.tempFilePath
       that._shareImagePath = res.tempFilePath
       that._shareImageCardId = cardId
-
-      if (!that._shareImageCache) {
-        that._shareImageCache = {}
-      }
-      that._shareImageCache[cardId] = res.tempFilePath
-
       that._generatingCards[cardId] = false
-      console.log('[Index] 分享卡片已生成并缓存:', res.tempFilePath)
+      return res
     }).catch(function (err) {
       var msg = (err && err.message) || ''
 
-      // Canvas 节点未就绪 → 退避重试
       if (msg.indexOf('Canvas 节点未找到') >= 0 && retryCount < MAX_RETRIES) {
         var delay = RETRY_DELAYS[retryCount] || 600
-        console.log('[Index] Canvas 节点未就绪，', delay + 'ms 后重试 (',
-          (retryCount + 1) + '/' + MAX_RETRIES + '), id:', cardId)
+        console.log('[Index] Canvas 重试 (' + (retryCount + 1) + '/' + MAX_RETRIES + '):', cardId)
         that._generatingCards[cardId] = false
-        setTimeout(function () {
-          that._preGenerateShareCardWithKey(card, cardId, retryCount + 1)
-        }, delay)
-        return
+        return new Promise(function (resolve, reject) {
+          setTimeout(function () {
+            that._generateShareCardSync(card, cardId, retryCount + 1)
+              .then(resolve, reject)
+          }, delay)
+        })
       }
 
-      // 已达最大重试次数或其它错误 → 放弃
       that._generatingCards[cardId] = false
-      console.error('[Index] 分享卡片生成失败 (' + retryCount + ' retries):', msg)
+      console.error('[Index] 分享卡片生成失败:', msg)
+      throw err
     })
+
+    this._generatingCards[cardId] = genPromise
+    return genPromise
   },
 
   /**
@@ -587,7 +581,7 @@ Page({
         // 延迟错开避免并发 canvas 操作冲突
         ;(function (c, cId, delay) {
           setTimeout(function () {
-            that._preGenerateShareCardWithKey(c, cId)
+            that._generateShareCardSync(c, cId)
           }, delay)
         })(card, cardId, i * 400)
       }
@@ -607,144 +601,121 @@ Page({
     })
   },
 
+  /**
+   * 解析头像 URL：cloud:// → https://，降级失败返回空字符串
+   * 独立封装，供 onShareAppMessage 时间线降级共用
+   */
+  _resolveAvatarUrl(avatar) {
+    if (!avatar) return Promise.resolve('')
+    if (avatar.indexOf('https://') === 0) return Promise.resolve(avatar)
+    if (avatar.indexOf('cloud://') === 0) {
+      return app.resolveCloudFileIDs([avatar]).then(function (map) {
+        return map[avatar] || ''
+      }).catch(function () { return '' })
+    }
+    return Promise.resolve('')
+  },
+
   onShareAppMessage() {
-    const card = this.data.shareCardData || {}
-    const id = this.data.shareCardId || ''
-    const path = id ? `/pages/preview/index?id=${id}&source=share` : '/pages/index/index'
-
-    // 【重构】使用公共模块生成标题
-    const title = shareUtil.buildShareTitle(card)
-
-    // 【修复 Bug #2】Canvas 生成是异步的，onShareAppMessage 触发时图片很可能尚未就绪
-    // → 返回 Promise，微信框架会显示加载指示器等待 resolve
+    // 优先使用实例变量（onShareButtonTap 同步写入，零延迟）
+    var active = this._activeShare || {}
+    var card = active.card || this.data.shareCardData || {}
+    var id = active.id || this.data.shareCardId || ''
+    var path = id ? '/pages/preview/index?id=' + id + '&source=share' : '/pages/index/index'
+    var title = shareUtil.buildShareTitle(card)
     var that = this
 
-    // 快速路径：缓存已命中 → 直接返回（同步 Object）
+    // 用完即弃，避免下次分享复用旧数据
+    this._activeShare = null
+
+    // 快速路径：缓存命中
     if (this._shareImageCache && this._shareImageCache[id]) {
-      console.log('[Index] 分享图片缓存命中, 直接返回:', id)
-      return {
-        title: title,
-        path: path,
-        imageUrl: this._shareImageCache[id]
-      }
+      console.log('[Index] 分享图片缓存命中:', id)
+      return { title: title, path: path, imageUrl: this._shareImageCache[id] }
     }
 
-    // 慢速路径：等待 Canvas 异步生成完成
-    // 微信基础库 2.11.3+ 支持 onShareAppMessage 返回 Promise
-    console.log('[Index] 分享图片未就绪，启动异步等待, cardId:', id)
+    // 如果有正在进行的生成 Promise，等它完成（远比轮询高效）
+    var genPromise = this._activeSharePromise
+    this._activeSharePromise = null
 
-    // 兜底：如果还未触发预生成（例如用户通过右上角菜单分享），主动触发
+    if (genPromise) {
+      console.log('[Index] 等待生成 Promise, cardId:', id)
+      return genPromise.then(function (res) {
+        return { title: title, path: path, imageUrl: res.tempFilePath }
+      }).catch(function () {
+        // 生成失败 → 降级到 HTTPS 头像
+        console.warn('[Index] 生成失败，降级使用头像')
+        return that._resolveAvatarUrl(card.avatar).then(function (url) {
+          return { title: title, path: path, imageUrl: url }
+        })
+      })
+    }
+
+    // 兜底：右上角菜单分享 / 无预生成 → 触发生成 + 轮询等待
     if (id && card._id && !(that._generatingCards && that._generatingCards[id])) {
-      console.log('[Index] 异步等待: 触发预生成, cardId:', id)
-      that._preGenerateShareCardWithKey(card, id)
+      console.log('[Index] 冷启动: 触发生成, cardId:', id)
+      genPromise = that._generateShareCardSync(card, id)
     }
 
-    return new Promise(function (resolve) {
-      var startTime = Date.now()
-      var MAX_WAIT = 8000   // 最多等待 8 秒
+    if (genPromise) {
+      return genPromise.then(function (res) {
+        return { title: title, path: path, imageUrl: res.tempFilePath }
+      }).catch(function () {
+        return that._resolveAvatarUrl(card.avatar).then(function (url) {
+          return { title: title, path: path, imageUrl: url }
+        })
+      })
+    }
 
-      function tryResolve() {
-        // 优先：当前卡片专属缓存
-        var imageUrl = ''
-        if (that._shareImageCache && that._shareImageCache[id]) {
-          imageUrl = that._shareImageCache[id]
-          console.log('[Index] 异步等待命中缓存:', id)
-        }
-
-        if (!imageUrl && that._shareImagePath && that._shareImageCardId === id) {
-          imageUrl = that._shareImagePath
-          console.log('[Index] 异步等待命中最新图片:', id)
-        }
-
-        if (imageUrl) {
-          resolve({ title: title, path: path, imageUrl: imageUrl })
-          return true
-        }
-        return false
-      }
-
-      function poll() {
-        if (tryResolve()) return
-
-        if (Date.now() - startTime > MAX_WAIT) {
-          // 超时 → 降级到头像，避免微信截取页面截图
-          console.warn('[Index] 分享图片生成超时，降级使用头像')
-          var avatar = card.avatar || ''
-          var fallbackUrl = avatar.indexOf('https://') === 0 ? avatar : ''
-          resolve({ title: title, path: path, imageUrl: fallbackUrl })
-          return
-        }
-
-        setTimeout(poll, 150)
-      }
-
-      poll()
+    // 最终兜底：无卡片无生成 → 直接用头像
+    return that._resolveAvatarUrl(card.avatar).then(function (url) {
+      return { title: title, path: path, imageUrl: url }
     })
   },
 
   onShareTimeline() {
-    const card = this.data.shareCardData || {}
-    const id = this.data.shareCardId || ''
-
-    // 生成标题：姓名-公司名称，限制20个字符
-    var name = card.name || ''
-    var company = card.company || ''
-    var title = name
-    if (company) {
-      title = name + '-' + company
-    }
-    if (title.length > 20) {
-      title = title.substring(0, 17) + '...'
-    }
-
+    var active = this._activeShare || {}
+    var card = active.card || this.data.shareCardData || {}
+    var id = active.id || this.data.shareCardId || ''
+    var title = shareUtil.buildShareTitle(card)
     var that = this
 
     // 快速路径：缓存命中
     if (this._shareImageCache && this._shareImageCache[id]) {
-      return {
-        title: title,
-        query: id ? 'id=' + id : '',
-        imageUrl: this._shareImageCache[id]
-      }
+      return { title: title, query: id ? 'id=' + id : '', imageUrl: this._shareImageCache[id] }
     }
 
-    // 兜底：触发预生成
+    // 有正在进行的生成 Promise → 等它
+    var genPromise = this._activeSharePromise
+    this._activeSharePromise = null
+
+    if (genPromise) {
+      return genPromise.then(function (res) {
+        return { title: title, query: id ? 'id=' + id : '', imageUrl: res.tempFilePath }
+      }).catch(function () {
+        return that._resolveAvatarUrl(card.avatar).then(function (url) {
+          return { title: title, query: id ? 'id=' + id : '', imageUrl: url }
+        })
+      })
+    }
+
+    // 兜底：触发生成
     if (id && card._id && !(that._generatingCards && that._generatingCards[id])) {
-      that._preGenerateShareCardWithKey(card, id)
+      genPromise = that._generateShareCardSync(card, id)
     }
 
-    // 慢速路径：Promise 等待
-    return new Promise(function (resolve) {
-      var startTime = Date.now()
-      var MAX_WAIT = 8000
+    if (genPromise) {
+      return genPromise.then(function (res) {
+        return { title: title, query: id ? 'id=' + id : '', imageUrl: res.tempFilePath }
+      }).catch(function () {
+        return that._resolveAvatarUrl(card.avatar).then(function (url) {
+          return { title: title, query: id ? 'id=' + id : '', imageUrl: url }
+        })
+      })
+    }
 
-      function tryResolve() {
-        var imageUrl = ''
-        if (that._shareImageCache && that._shareImageCache[id]) {
-          imageUrl = that._shareImageCache[id]
-        }
-        if (!imageUrl && that._shareImagePath && that._shareImageCardId === id) {
-          imageUrl = that._shareImagePath
-        }
-        if (imageUrl) {
-          resolve({ title: title, query: id ? 'id=' + id : '', imageUrl: imageUrl })
-          return true
-        }
-        return false
-      }
-
-      function poll() {
-        if (tryResolve()) return
-        if (Date.now() - startTime > MAX_WAIT) {
-          var avatar = card.avatar || ''
-          var fallbackUrl = avatar.indexOf('https://') === 0 ? avatar : ''
-          resolve({ title: title, query: id ? 'id=' + id : '', imageUrl: fallbackUrl })
-          return
-        }
-        setTimeout(poll, 150)
-      }
-
-      poll()
+    return that._resolveAvatarUrl(card.avatar).then(function (url) {
+      return { title: title, query: id ? 'id=' + id : '', imageUrl: url }
     })
   },
 
