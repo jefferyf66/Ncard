@@ -531,13 +531,8 @@ Page({
     }).then(function (res) {
       var tgtPath = res.tempFilePath
       console.log('[Share] Canvas 生成完成, path length:', (tgtPath || '').length, 'chars')
-      try {
-        wx.getFileSystemManager().getFileInfo({ filePath: tgtPath, success: function (info) {
-          console.log('[Share] 文件 size = ' + info.size + ' bytes')
-        }, fail: function (e) { console.error('[Share] 文件不可达:', JSON.stringify(e)) } })
-      } catch (e2) { console.warn('[Share] getFileInfo 调用异常:', e2) }
 
-      // 【关键】将本地路径转为 HTTPS URL 后再缓存
+      // 转为 HTTPS URL 后缓存
       return that._convertToShareUrl(tgtPath, cardId).then(function (httpsUrl) {
         console.log('[Share] 最终 imageUrl:', (httpsUrl || '').substring(0, 80))
         if (!that._shareImageCache) that._shareImageCache = {}

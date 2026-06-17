@@ -537,8 +537,7 @@ function _getDpr() {
 }
 
 // =========================================================================
-// Canvas 导出 → base64 → cloud function 上传 → HTTPS URL
-// 云函数以管理员身份上传，绕过「仅创建者可读写」ACL，对方设备可下载
+// Canvas 导出 — 本地 temp 路径，由 index.js 的 _convertToShareUrl 转为 HTTPS
 // =========================================================================
 
 function _exportAndResolve(canvas, versionedKey, now, layout, resolve, reject) {
@@ -552,64 +551,13 @@ function _exportAndResolve(canvas, versionedKey, now, layout, resolve, reject) {
     quality: 0.8,
     success: function (tempRes) {
       console.log('[shareCard] 图片导出成功, path length:', (tempRes.tempFilePath || '').length)
-      var localPath = tempRes.tempFilePath
-
-      // 主路径：readFile(base64) → 云函数上传 → HTTPS
-      // 备用路径：writeFile to USER_DATA_PATH（部分设备只认这个路径）
-      var fs = wx.getFileSystemManager()
-      fs.readFile({
-        filePath: localPath,
-        encoding: 'base64',
-        success: function (readRes) {
-          var base64 = readRes.data
-          console.log('[shareCard] base64 length:', (base64 || '').length)
-
-          // 同时写一份到 USER_DATA_PATH 作为备用
-          var persistPath = ''
-          try {
-            persistPath = wx.env.USER_DATA_PATH + '/sharecard_' + Date.now() + '.png'
-            fs.writeFileSync(persistPath, base64, 'base64')
-            console.log('[shareCard] USER_DATA 备用路径:', persistPath.substring(0, 60))
-          } catch (e) { console.warn('[shareCard] USER_DATA 写入失败:', e) }
-
-          // 主路径：云函数上传
-          wx.cloud.callFunction({
-            name: 'uploadShareImage',
-            data: { imageData: base64 }
-          }).then(function (callRes) {
-            var r = callRes.result || {}
-            if (r.ok && r.url) {
-              console.log('[shareCard] 云端 URL:', r.url.substring(0, 80))
-              if (ENABLE_SHARE_CACHE) {
-                _imageCache[versionedKey] = { tempFilePath: r.url, expireAt: now + CACHE_TTL }
-              }
-              resolve({ tempFilePath: r.url })
-            } else {
-              // 云函数失败 → 降级到 USER_DATA 路径
-              console.warn('[shareCard] 云函数失败:', r.message || 'unknown')
-              var fallback = persistPath || localPath
-              if (ENABLE_SHARE_CACHE) {
-                _imageCache[versionedKey] = { tempFilePath: fallback, expireAt: now + CACHE_TTL }
-              }
-              resolve({ tempFilePath: fallback })
-            }
-          }).catch(function (e) {
-            console.warn('[shareCard] 云函数调用失败:', e && e.message)
-            var fallback = persistPath || localPath
-            if (ENABLE_SHARE_CACHE) {
-              _imageCache[versionedKey] = { tempFilePath: fallback, expireAt: now + CACHE_TTL }
-            }
-            resolve({ tempFilePath: fallback })
-          })
-        },
-        fail: function () {
-          console.warn('[shareCard] readFile 失败，降级本地路径')
-          if (ENABLE_SHARE_CACHE) {
-            _imageCache[versionedKey] = { tempFilePath: localPath, expireAt: now + CACHE_TTL }
-          }
-          resolve({ tempFilePath: localPath })
+      if (ENABLE_SHARE_CACHE) {
+        _imageCache[versionedKey] = {
+          tempFilePath: tempRes.tempFilePath,
+          expireAt: now + CACHE_TTL
         }
-      })
+      }
+      resolve({ tempFilePath: tempRes.tempFilePath })
     },
     fail: function (err) {
       console.error('[shareCard] canvasToTempFilePath 失败', err)
