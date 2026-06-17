@@ -1,8 +1,8 @@
-﻿<view class="container">
+<view class="container">
   <view class="header">
     <view class="header-content">
       <text class="title">我的名片</text>
-      <text class="subtitle" wx:if="{{!isLoading && !isError}}">{{cards.length}} 张名�?/text>
+      <text class="subtitle" wx:if="{{!isLoading && !isError}}">{{cards.length}} 张名片</text>
     </view>
     <view class="header-actions">
       <view class="header-btn" bindtap="addToDesktop">
@@ -15,33 +15,33 @@
 
   <view class="loading-state" wx:if="{{isLoading}}">
     <view class="loading-spinner"></view>
-    <text class="loading-text">加载�?..</text>
+    <text class="loading-text">加载中...</text>
   </view>
 
-    <view class="empty-state" wx:elif="{{isEmpty}}">
+  <view class="empty-state" wx:elif="{{isEmpty}}">
     <view class="empty-content">
       <view class="empty-icon">
         <view class="icon-card"></view>
       </view>
-      <text class="empty-title">开始创建您的电子名片</text>
-      <text class="empty-desc">数字化管理您的商务人脉，让名片交换更高效</text>
-      <view class="empty-btn" bindtap="goToEdit">立即创建名片</view>
+      <text class="empty-title">暂无名片</text>
+      <text class="empty-desc">点击右上角创建您的第一张名片</text>
+      <view class="empty-btn" bindtap="goToEdit">创建名片</view>
     </view>
   </view>
 
   <view class="card-list" wx:else>
-    <view 
-      wx:for="{{cards}}" 
-      wx:key="_id" 
+    <view
+      wx:for="{{cards}}"
+      wx:key="_id"
       class="card-item"
     >
       <!-- 优化后卡片布局：参考设计稿 -->
       <view class="card-wrapper">
         <view class="card-top">
           <view class="card-avatar-wrapper">
-            <image 
-              class="card-avatar" 
-              src="{{item.avatar || '../../images/avatar.png'}}" 
+            <image
+              class="card-avatar"
+              src="{{item.avatar || '../../images/avatar.png'}}"
               mode="aspectFill"
               lazy-load
               binderror="onAvatarError"
@@ -49,7 +49,7 @@
             ></image>
           </view>
           <view class="card-header-info">
-            <text class="card-name">{{item.name || '未命�?}}</text>
+            <text class="card-name">{{item.name || '未命名'}}</text>
             <text class="card-position" wx:if="{{item.position}}">{{item.position}}</text>
           </view>
         </view>
@@ -70,7 +70,7 @@
         </view>
         <view class="card-footer">
           <button class="footer-btn send-card-btn" open-type="share" data-id="{{item._id}}" bindtap="onShareButtonTap">
-            <text class="footer-btn-text">发名�?/text>
+            <text class="footer-btn-text">发名片</text>
           </button>
           <view class="footer-divider"></view>
           <view class="footer-btn detail-card-btn" catchtap="goToPreview" data-id="{{item._id}}">
@@ -87,7 +87,7 @@
       </view>
     </view>
     <view class="no-more" wx:elif="{{!hasMore && cards.length > 0}}">
-      <text>�?已加载全�?�?/text>
+      <text>— 已加载全部 —</text>
     </view>
   </view>
 
@@ -95,7 +95,7 @@
     <view class="section-header">
       <text class="section-title">名片数据</text>
       <view class="section-arrow" bindtap="goToVisitors">
-        <text>查看更多 �?/text>
+        <text>查看更多 ›</text>
       </view>
     </view>
 
@@ -126,28 +126,28 @@
         </view>
         <view class="stat-info">
           <text class="stat-value">{{visitorStats.newCards}}</text>
-          <text class="stat-label">名片�?/text>
+          <text class="stat-label">名片数</text>
         </view>
       </view>
     </view>
 
     <view class="section-header">
-      <text class="section-title">最近访�?/text>
+      <text class="section-title">最近访客</text>
     </view>
 
     <view class="visitor-list">
-      <view 
-        class="visitor-item" 
-        wx:for="{{recentVisitors}}" 
+      <view
+        class="visitor-item"
+        wx:for="{{recentVisitors}}"
         wx:key="id"
         bindtap="goToVisitorDetail"
         data-item="{{item}}"
       >
         <view class="visitor-avatar">
-          <image 
+          <image
             wx:if="{{item.avatar}}"
-            class="visitor-avatar-img" 
-            src="{{item.avatar}}" 
+            class="visitor-avatar-img"
+            src="{{item.avatar}}"
             mode="aspectFill"
             binderror="onVisitorAvatarError"
             data-index="{{index}}"
@@ -164,7 +164,7 @@
           </view>
           <text class="visitor-position" wx:if="{{item.position}}">{{item.position}}</text>
           <view class="visitor-tags">
-            <text class="tag visit-count-tag" wx:if="{{item.visitCount > 1}}">访问 {{item.visitCount}} �?/text>
+            <text class="tag visit-count-tag" wx:if="{{item.visitCount > 1}}">访问 {{item.visitCount}} 次</text>
             <text class="tag" wx:for="{{item.actions}}" wx:key="index">{{item}}</text>
           </view>
         </view>
@@ -189,6 +189,6 @@
   </view>
 </view>
 
-<!-- 隐藏 Canvas 用于生成分享卡片（尺寸由 cardStyle 统一配置�?-->
+<!-- 隐藏 Canvas 用于生成分享卡片（尺寸由 cardStyle 统一配置） -->
 <canvas type="2d" id="shareCanvas" class="share-canvas-hidden"
   style="width: {{canvasWidth}}px; height: {{canvasHeight}}px;"></canvas>
