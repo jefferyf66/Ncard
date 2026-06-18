@@ -473,7 +473,6 @@ Page({
 
   initShareMenu() {
     wx.showShareMenu({
-      withShareTicket: true,
       menus: ['shareAppMessage', 'shareTimeline'],
       success: () => console.log('[Index] 分享菜单初始化成功'),
       fail: (err) => console.warn('[Index] 分享菜单初始化失败:', err)
