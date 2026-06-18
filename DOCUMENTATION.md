@@ -15,7 +15,7 @@
 | 框架 | 微信小程序 | 原生（style: v2） |
 | 后端 | 微信云开发 | DYNAMIC_CURRENT_ENV |
 | 数据库 | 云开发 NoSQL | 5 个活跃集合 |
-| 云函数 | Node.js (wx-server-sdk) | 5 个云函数 |
+| 云函数 | Node.js (wx-server-sdk) | 3 个云函数 |
 | 基础库 | 3.16.0 | project.config.json 配置 |
 | 隐私 | 官方弹窗模式 | `__usePrivacyCheck__: true` |
 
@@ -50,13 +50,13 @@
 │                    微信云开发平台                            │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐          │
 │  │  云数据库    │ │  云函数      │ │  云存储      │          │
-│  │ (5 集合)    │ │ (5 函数)    │ │ (3 目录)    │          │
+│  │ (5 集合)    │ │ (3 函数)    │ │ (2 目录)    │          │
 │  │ cards       │ │ getOpenId   │ │ avatars/    │          │
 │  │ visits      │ │ initVisits  │ │ attachments/│          │
-│  │ user_save_  │ │ deleteCard  │ │ qrcodes/    │          │
-│  │ cards       │ │ resolve     │ │             │          │
-│  │ visitor_    │ │ CloudUrls   │ │             │          │
-│  │ profiles    │ │ getQrCode   │ │             │          │
+│  │ user_save_  │ │ deleteCard  │ │             │          │
+│  │ cards       │ │             │ │             │          │
+│  │ visitor_    │ │             │ │             │          │
+│  │ profiles    │ │             │ │             │          │
 │  │ config      │ │             │ │             │          │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -88,16 +88,9 @@ Ncard/
 │   │   └── index.js
 │   ├── deleteCard/                # 级联删除名片
 │   │   └── index.js
-│   ├── resolveCloudUrls/          # cloud:// → HTTPS URL 转换
-│   │   └── index.js
-│   ├── getQrCode/                 # 生成小程序码
-│   │   └── index.js
-│   ├── parseCard/                 # （旧版，未激活）
-│   └── quickstartFunctions/       # （模板生成，未激活）
 ├── miniprogram/                   # 小程序源码
 │   ├── config/                    # 配置模块
-│   │   ├── cardStyle.js           # 名片样式/Canvas 绘制参数
-│   │   └── cardStyle.test.js      # cardStyle 单元测试
+│   │   └── cardStyle.js           # 名片样式/Canvas 绘制参数
 │   ├── images/                    # 静态资源
 │   │   ├── avatar.png             # 默认头像
 │   │   └── icons/                 # 应用图标
@@ -318,72 +311,20 @@ Ncard/
 }
 ```
 
-### 5.4 resolveCloudUrls
-
-**功能**：批量将 `cloud://` 文件 ID 转换为 HTTPS URL，绕开云存储 ACL 权限限制
-
-**入口参数**：`fileIDs`（string 数组）
-
-**处理流程**：
-
-1. **Step 1**：批量 `getTempFileURL`（对当前用户有权限的文件直接获取临时 URL）
-2. **Step 2**：对 Step 1 失败的文件（ACL 拒绝），降级 `downloadFile`（管理员权限） → base64 data URL
-
-**内存缓存机制**：
-- 缓存结构：`fileID → { tempFileURL, expireAt }`
-- 临时 URL 有效期 2h，缓存 115 分钟
-- 至少剩余 1 分钟才复用缓存
-
-**返回值**：
-
-```javascript
-{
-  urls: {                    // fileID → URL 映射
-    "cloud://xxx": "https://...",     // getTempFileURL 成功
-    "cloud://yyy": "data:image/..."   // downloadFile 降级
-  }
-}
-```
-
-### 5.5 getQrCode
-
-**功能**：生成名片小程序码，上传到云存储
-
-**入口参数**：
-
-| 参数 | 类型 | 含义 |
-|------|------|------|
-| cardId | string | 名片 ID（作为 scene 参数，最长 32 字符） |
-| page | string | 落地页路径，默认 `pages/preview/index` |
-
-**处理流程**：
-
-1. 调用 `cloud.openapi.wxacode.getUnlimited()` 生成小程序码
-2. 根据 `contentType` 确定扩展名（jpg/png）
-3. 上传到云存储 `qrcodes/{cardId}.{ext}`
-4. 返回 fileID
-
-**返回值**：
-
-```javascript
-{ fileID: string }   // 成功
-{ error: string }    // 失败
-```
-
 ---
 
 ## 6. 云存储路径
+
+**权限说明**：所有用户可读，仅创建者可读写。
 
 | 路径 | 用途 | 上传方 |
 |------|------|--------|
 | `avatars/` | 用户头像 | edit 页（`chooseAvatar` → `_uploadAvatar`） |
 | `attachments/` | 名片附件图片 | edit 页（`chooseAttachment`） |
-| `qrcodes/` | 名片小程序码 | getQrCode 云函数 |
 
 **文件命名规则**：
 - 头像：`avatars/{timestamp}.jpg`
 - 附件：`attachments/attachment_{timestamp}.jpg`
-- 小程序码：`qrcodes/{cardId}.{ext}`
 
 **清理策略**：
 - 头像更换时自动删除旧文件（`_uploadAvatar` 中 `wx.cloud.deleteFile`）
@@ -494,7 +435,7 @@ Ncard/
 
 1. **名片详情展示** — 头像、姓名、职位、公司、联系方式、介绍、经历等
 2. **访客记录** — 访问他人名片时自动记录（含三级身份识别）
-3. **cloud:// 头像解析** — 通过 `resolveCloudFileIDs` 将云文件 ID 转为 HTTPS URL
+3. **cloud:// 头像解析** — 直接从 cloud:// fileID 构建永久 HTTPS URL（不依赖云函数）
 4. **保存/移除名片** — 保存他人名片到名片夹（user_save_cards）
 5. **保存通讯录** — 调用 `wx.addPhoneContact` 保存到手机通讯录
 6. **联系方式操作** — 电话（拨打/复制）、邮箱（复制）、地址（复制）
@@ -519,7 +460,7 @@ loadCard(id) → 数据就绪后 → recordVisit(id, options)
 
 ```
 _resolveCardAvatar(card)
-  ├── cloud:// 头像 → app.resolveCloudFileIDs() → 替换为 HTTPS URL
+  ├── cloud:// 头像 → 直接构建永久 HTTPS URL → 替换
   └── 解析失败 → 兜底为 /images/avatar.png
 ```
 
@@ -664,6 +605,7 @@ _loadSettings()
   → _preGenerateShareCardWithKey(card, cardId)
      ├── shareCard.generate('#shareCanvas', card, options)
      │     └── Canvas 2D 绘制名片卡片图
+     ├── Canvas 导出 → 客户端上传到云存储（永久公开 URL）
      ├── 成功 → 缓存到 _shareImageCache[cardId]
      └── Canvas 未就绪 → 退避重试（最多 3 次）
 
@@ -736,7 +678,7 @@ _loadSettings()
 | `formatTime` | `formatTime(date)` → `'YYYY-MM-DD'` | 格式化日期 |
 | `getOpenId` | `getOpenId()` → `Promise<string>` | 获取用户 OpenID（带 globalData._openId 缓存） |
 | `showPrivacyError` | `showPrivacyError(err)` → boolean | 识别隐私授权拒绝（errCode 103/104），统一提示 |
-| `resolveCloudFileIDs` | `resolveCloudFileIDs(fileIDs)` → `Promise<Object>` | 批量将 cloud:// ID 转为 HTTPS URL（调用 resolveCloudUrls 云函数，失败降级 getTempFileURL） |
+| `resolveCloudFileIDs` | `resolveCloudFileIDs(fileIDs)` → `Promise<Object>` | 直接从 cloud:// fileID 构建永久 HTTPS URL（不调用云函数） |
 
 ---
 
@@ -786,7 +728,7 @@ _loadSettings()
 2. **用户隔离**：名片数据按 `_openid` 隔离，首页/名片夹均按当前用户过滤
 3. **自访过滤**：visits 记录中不记录自己访问自己的名片
 4. **所有权校验**：删除名片时在云函数端校验 `_openid === 调用者 openid`
-5. **云存储 ACL**：`resolveCloudUrls` 云函数以管理员身份代理文件访问，绕开"仅创建者可读写"限制
+5. **云存储 ACL**：所有用户可读，仅创建者可读写
 6. **敏感信息可选**：手机号码、邮箱为选填项，用户自主决定
 
 ### 11.3 权限处理
@@ -807,11 +749,10 @@ _loadSettings()
 | v1.0.2 | 2024-06 | 添加公众号链接、公司主页模块，公开/隐藏开关 |
 | v1.0.3 | 2024-06 | 添加名片夹页、访客页；访客统计三级降级策略；recordVisit 记录机制 |
 | v1.0.4 | 2024-06 | 移除裁切页（crop），头像直接上传；重构头像上传流程 |
-| v1.0.5 | 2025-01 | 添加 resolveCloudUrls 云函数，修复跨设备头像不可见问题 |
 | v1.0.6 | 2025-03 | 添加 deleteCard 云函数级联删除；三级访客身份识别（L1/L2/L3） |
 | v1.0.7 | 2025-06 | 分享卡片 Canvas 生成重构，支持 Promise 异步等待和后台预生成 |
 | v1.0.8 | 2025-12 | 匿名访客授权引导条；visitor_profiles 静默注册；官方隐私弹窗模式 |
-| v1.0.9 | 2026-06 | 添加 getQrCode 云函数；主题色/默认名片云端持久化；文档对齐实际代码 |
+| v1.0.9 | 2026-06 | 主题色/默认名片云端持久化；文档对齐实际代码 |
 
 ---
 

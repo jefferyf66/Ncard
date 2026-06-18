@@ -14,8 +14,6 @@
  */
 
 
-const app = getApp()
-
 // =========================================================================
 // 统一样式配置（与首页 WXML 共用）
 // =========================================================================
@@ -473,55 +471,24 @@ function _putAvatarCache(key, image) {
 }
 
 // =========================================================================
-// cloud:// → HTTPS 转换（三级降级）
+// cloud:// → HTTPS 转换（云存储已设为所有用户可读，直接拼永久 URL）
 // =========================================================================
 
 function _resolveToHttps(src) {
   if (!src) return Promise.resolve('')
 
   if (src.indexOf('https://') === 0) {
-    console.log('[shareCard] 头像已是 HTTPS，直接使用')
     return Promise.resolve(src)
   }
 
   if (src.indexOf('cloud://') === 0) {
-    console.log('[shareCard] 头像为 cloud:// 格式，调用 resolveCloudUrls 云函数转换')
-    return app.resolveCloudFileIDs([src]).then(function (urlMap) {
-      var httpsUrl = urlMap[src]
-      if (httpsUrl) {
-        console.log('[shareCard] resolveCloudUrls 成功:', httpsUrl.substring(0, 80))
-        return httpsUrl
-      }
-      console.warn('[shareCard] resolveCloudUrls 返回空结果，尝试降级 getTempFileURL')
-      return _resolveViaTempFileURL(src)
-    }).catch(function (err) {
-      console.warn('[shareCard] resolveCloudUrls 调用失败:', err && err.message)
-      return _resolveViaTempFileURL(src)
-    })
+    var STORAGE_BASE = 'https://636c-cloudbase-d0gqgpu422d7e544f-1432712671.tcb.qcloud.la'
+    var path = src.replace('cloud://', '').split('/').slice(1).join('/')
+    var url = STORAGE_BASE + '/' + path
+    return Promise.resolve(url)
   }
 
   return Promise.resolve(src)
-}
-
-function _resolveViaTempFileURL(fileID) {
-  return new Promise(function (resolve) {
-    wx.cloud.getTempFileURL({
-      fileList: [fileID],
-      success: function (res) {
-        var url = (res.fileList && res.fileList[0] && res.fileList[0].tempFileURL) || ''
-        if (url) {
-          console.log('[shareCard] getTempFileURL 降级成功:', url.substring(0, 80))
-        } else {
-          console.warn('[shareCard] getTempFileURL 降级也失败: 无有效 URL')
-        }
-        resolve(url)
-      },
-      fail: function (err) {
-        console.error('[shareCard] getTempFileURL 降级失败:', err)
-        resolve('')
-      }
-    })
-  })
 }
 
 // =========================================================================
@@ -537,7 +504,7 @@ function _getDpr() {
 }
 
 // =========================================================================
-// Canvas 导出 — 本地 temp 路径，由 index.js 的 _convertToShareUrl 转为 HTTPS
+// Canvas 导出 — 本地 temp 路径，由 index.js 直接用作 imageUrl
 // =========================================================================
 
 function _exportAndResolve(canvas, versionedKey, now, layout, resolve, reject) {
@@ -547,10 +514,10 @@ function _exportAndResolve(canvas, versionedKey, now, layout, resolve, reject) {
     x: 0, y: 0,
     width: exportW, height: layout.totalH,
     destWidth: exportW, destHeight: layout.totalH,
-    fileType: 'png',
-    quality: 0.8,
+    fileType: 'jpg',       // PNG 易超 128KB 被微信丢弃；JPEG 可控制在 30-60KB
+    quality: 0.7,          // 0.7 画质对文字卡片足够，远低于 128KB 限制
     success: function (tempRes) {
-      console.log('[shareCard] 图片导出成功, path length:', (tempRes.tempFilePath || '').length)
+      console.log('[shareCard] 图片导出成功, size:', (tempRes.tempFilePath || '').length)
       if (ENABLE_SHARE_CACHE) {
         _imageCache[versionedKey] = {
           tempFilePath: tempRes.tempFilePath,

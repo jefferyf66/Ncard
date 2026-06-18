@@ -3,6 +3,14 @@
   background: linear-gradient(175deg, #FAFBFC 0%, #FEFCF9 30%, #F6F8FC 100%);
 }
 
+/* 分享卡片 Canvas（隐藏，仅用于保存时生成分享图） */
+.share-canvas {
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+  pointer-events: none;
+}
+
 .page-content {
   padding: 24rpx;
   padding-bottom: 180rpx;

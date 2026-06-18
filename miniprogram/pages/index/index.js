@@ -1,5 +1,4 @@
 const app = getApp()
-var shareCard = require('../../utils/shareCard')
 var shareUtil = require('../../utils/share')
 var cardStyle = require('../../config/cardStyle')
 
@@ -123,24 +122,9 @@ Page({
     
     if (!lastUpdate || now - lastUpdate > 300000) {
       this.loadCards(true)
-    } else {
-      // 清除分享图片缓存：卡片可能在编辑页被修改
-      // 防止转发时使用过时数据
-      this._clearShareImageCache()
     }
+    // 分享卡片缓存自带版本号机制，卡片数据变化自动失效，无需手动清除
     this.loadVisitorData()
-  },
-
-  /**
-   * 清除分享图片缓存（页面级 + shareCard 模块级）
-   */
-  _clearShareImageCache() {
-    if (this._shareImageCache) {
-      this._shareImageCache = {}
-      console.log('[Index] 分享图片缓存已清除')
-    }
-    this._shareImagePath = ''
-    this._shareImageCardId = ''
   },
 
   loadVisitorData() {
@@ -432,11 +416,6 @@ Page({
         app.setCache('lastCardUpdate', Date.now())
 
         if (callback) callback()
-
-        // 【新增】后台预生成分享卡片（避免用户点击分享时图片未就绪）
-        // 先清除旧的页面级缓存，确保使用最新数据
-        this._clearShareImageCache()
-        this._preGenerateVisibleCards(cards)
       })
       .catch(err => {
         clearTimeout(timer)
@@ -481,168 +460,11 @@ Page({
   onShareButtonTap(e) {
     const id = e.currentTarget.dataset.id
     if (!id) return
-
     const card = this.data.cards.find(c => c._id === id)
     if (!card) return
-
-    console.log('[Share] onShareButtonTap 触发, id:', id, 'name:', card.name, 'avatar:', (card.avatar || '').substring(0, 40))
-
-    // 初始化缓存对象
-    if (!this._shareImageCache) {
-      this._shareImageCache = {}
-    }
-
-    // 清除过时缓存
-    delete this._shareImageCache[id]
-    this._shareImagePath = ''
-    this._shareImageCardId = ''
-
-    // 用实例变量（零延迟），不依赖 setData 异步
+    console.log('[Share] onShareButtonTap, id:', id, 'hasShareImage:', !!card.shareImageUrl)
     this._activeShare = { id: id, card: card }
-
-    // 同步兼容 setData（被其他方法读取）
     this.setData({ shareCardId: id, shareCardData: card })
-
-    // 启动生成，承诺返回 Promise
-    this._activeSharePromise = this._generateShareCardSync(card, id)
-  },
-
-  /**
-   * 生成分享卡片并返回 Promise（替代旧的 _preGenerateShareCardWithKey）
-   * 返回 Promise<{tempFilePath}>，失败时 reject
-   */
-  _generateShareCardSync(card, cardId, retryCount) {
-    if (!this._generatingCards) this._generatingCards = {}
-    if (this._generatingCards[cardId]) {
-      console.log('[Index] 该卡片正在生成中，复用现有 Promise:', cardId)
-      return this._generatingCards[cardId]  // 返回正在进行的 Promise
-    }
-
-    retryCount = retryCount || 0
-    var MAX_RETRIES = 3
-    var RETRY_DELAYS = [100, 300, 600]
-    var that = this
-
-    if (that._shareImageCache) delete that._shareImageCache[cardId]
-
-    var genPromise = shareCard.generate('#shareCanvas', card, {
-      cardKey: cardId,
-      pageContext: this
-    }).then(function (res) {
-      var tgtPath = res.tempFilePath
-      console.log('[Share] Canvas 生成完成, path length:', (tgtPath || '').length, 'chars')
-
-      // 转为 HTTPS URL 后缓存
-      return that._convertToShareUrl(tgtPath, cardId).then(function (httpsUrl) {
-        console.log('[Share] 最终 imageUrl:', (httpsUrl || '').substring(0, 80))
-        if (!that._shareImageCache) that._shareImageCache = {}
-        that._shareImageCache[cardId] = httpsUrl
-        that._shareImagePath = httpsUrl
-        that._shareImageCardId = cardId
-        that._generatingCards[cardId] = false
-        return { tempFilePath: httpsUrl }
-      })
-      that._shareImageCache[cardId] = res.tempFilePath
-      that._shareImagePath = res.tempFilePath
-      that._shareImageCardId = cardId
-      that._generatingCards[cardId] = false
-      return res
-    }).catch(function (err) {
-      var msg = (err && err.message) || ''
-
-      if (msg.indexOf('Canvas 节点未找到') >= 0 && retryCount < MAX_RETRIES) {
-        var delay = RETRY_DELAYS[retryCount] || 600
-        console.log('[Index] Canvas 重试 (' + (retryCount + 1) + '/' + MAX_RETRIES + '):', cardId)
-        that._generatingCards[cardId] = false
-        return new Promise(function (resolve, reject) {
-          setTimeout(function () {
-            that._generateShareCardSync(card, cardId, retryCount + 1)
-              .then(resolve, reject)
-          }, delay)
-        })
-      }
-
-      that._generatingCards[cardId] = false
-      console.error('[Share] 生成失败(' + retryCount + ' retries):', msg)
-      throw err
-    })
-
-    this._generatingCards[cardId] = genPromise
-    return genPromise
-  },
-
-  /**
-   * 本地路径 → 云函数上传 → HTTPS URL
-   * @param {string} localPath - wxfile:// 或 USER_DATA_PATH 本地路径
-   * @param {string} cardId - 用于日志
-   * @returns {Promise<string>} HTTPS URL，失败降级返回原路径
-   */
-  _convertToShareUrl(localPath, cardId) {
-    var that = this
-    var fs = wx.getFileSystemManager()
-
-    return new Promise(function (resolve) {
-      fs.readFile({
-        filePath: localPath,
-        encoding: 'base64',
-        success: function (readRes) {
-          var base64 = readRes.data
-          console.log('[Share] base64 length:', (base64 || '').length)
-
-          // 尝试云函数上传
-          wx.cloud.callFunction({
-            name: 'uploadShareImage',
-            data: { imageData: base64 }
-          }).then(function (callRes) {
-            var r = callRes.result || {}
-            if (r.ok && r.url) {
-              console.log('[Share] 云端 URL:', r.url.substring(0, 80))
-              resolve(r.url)
-            } else {
-              console.warn('[Share] 云函数失败，降级本地:', r.message || 'unknown')
-              resolve(localPath)
-            }
-          }).catch(function (e) {
-            console.warn('[Share] 云函数异常:', e && e.message)
-            resolve(localPath)
-          })
-        },
-        fail: function () {
-          console.warn('[Share] readFile 失败')
-          resolve(localPath)
-        }
-      })
-    })
-  },
-
-  /**
-   * 后台预生成分享卡片（加载完成后调用，避免用户首次分享时图片未就绪）
-   * @param {Array} cards - 当前页面的名片列表
-   */
-  _preGenerateVisibleCards(cards) {
-    if (!cards || cards.length === 0) return
-    var that = this
-
-    // 延迟 600ms 等页面渲染完成，Canvas 节点挂载后再生成
-    setTimeout(function () {
-      var count = Math.min(cards.length, 2)
-      console.log('[Index] 后台预生成分享卡片, 数量:', count)
-
-      for (var i = 0; i < count; i++) {
-        var card = cards[i]
-        var cardId = card._id
-        if (!cardId) continue
-
-        if (that._shareImageCache && that._shareImageCache[cardId]) continue
-
-        // 延迟错开避免并发 canvas 操作冲突
-        ;(function (c, cId, delay) {
-          setTimeout(function () {
-            that._generateShareCardSync(c, cId)
-          }, delay)
-        })(card, cardId, i * 400)
-      }
-    }, 600)
   },
 
   stopPropagation() {
@@ -659,132 +481,166 @@ Page({
   },
 
   /**
-   * 解析头像 URL：cloud:// → https://，降级失败返回空字符串
-   * 独立封装，供 onShareAppMessage 时间线降级共用
+   * 解析分享图片 URL（cloud:// / https:// / 空）— 纯同步，不返回 Promise
+   * 微信基础库 2.8.1+ 原生支持 cloud:// 作为 imageUrl
+   * 用作 onShareAppMessage 的同步降级路径
    */
   _resolveAvatarUrl(avatar) {
-    if (!avatar) return Promise.resolve('')
-    if (avatar.indexOf('https://') === 0) return Promise.resolve(avatar)
-    if (avatar.indexOf('cloud://') === 0) {
-      return app.resolveCloudFileIDs([avatar]).then(function (map) {
-        return map[avatar] || ''
-      }).catch(function () { return '' })
-    }
-    return Promise.resolve('')
+    if (!avatar) return ''
+    if (avatar.indexOf('cloud://') === 0) return avatar
+    if (avatar.indexOf('https://') === 0) return avatar
+    return ''
   },
 
-  onShareAppMessage() {
-    // 优先使用实例变量（onShareButtonTap 同步写入，零延迟）
-    var active = this._activeShare || {}
-    var card = active.card || this.data.shareCardData || {}
-    var id = active.id || this.data.shareCardId || ''
-    var path = id ? '/pages/preview/index?id=' + id + '&source=share' : '/pages/index/index'
-    var title = shareUtil.buildShareTitle(card)
-    var that = this
+  /**
+   * onShareAppMessage — 微信分享入口
+   *
+   * 【关键约束】
+   * - 基础库 < 2.12.0 不支持返回 Promise，必须同步 return
+   * - 基础库 ≥ 2.12.0 支持 return Promise，但同步返回更可靠
+   * - 策略：优先同步路径（预存图 / 头像降级），仅实时 Canvas 生成走异步
+   *
+   * options 参数（基础库 2.12.0+）：
+   *   options.from === 'button' → open-type="share" 按钮触发
+   *   options.target.dataset.id → data-id="{{item._id}}" 值
+   */
+  onShareAppMessage(options) {
+    var id, card, path, title
+    var self = this
 
-    console.log('[Share] onShareAppMessage 触发, id:', id,
+    try {
+
+    // ================================================================
+    // 1. 解析卡片 ID（四级优先级，确保任意版本都能拿到）
+    // ================================================================
+    // (a) options.target.dataset — 基础库 2.12.0+
+    if (options && options.from === 'button' && options.target && options.target.dataset) {
+      id = options.target.dataset.id
+    }
+    // (b) bindtap → onShareButtonTap 预设的 _activeShare
+    if (!id) {
+      var active = self._activeShare || {}
+      id = active.id || ''
+    }
+    // (c) this.data.shareCardId（setData 同步写入）
+    if (!id) {
+      id = self.data.shareCardId || ''
+    }
+
+    // ================================================================
+    // 2. 根据 ID 查找完整卡片数据
+    // ================================================================
+    if (id && self.data.cards && self.data.cards.length > 0) {
+      card = self.data.cards.find(function (c) { return c._id === id })
+    }
+    if (!card || !card.name) {
+      card = (self._activeShare && self._activeShare.card) || self.data.shareCardData || {}
+    }
+
+    // ================================================================
+    // 3. 构建分享参数
+    // ================================================================
+    path = id ? '/pages/preview/index?id=' + id + '&source=share' : '/pages/index/index'
+    title = shareUtil.buildShareTitle(card)
+
+    console.log('[Share] onShareAppMessage',
+      'from:', options && options.from,
+      'id:', id,
+      'hasName:', !!(card && card.name),
+      'hasShareImage:', !!(card && card.shareImageUrl),
+      'shareImageUrl:', (card && card.shareImageUrl) ? (card.shareImageUrl.substring(0, 80) + '...') : '(empty)',
       'title:', title,
-      'hasActive:', !!this._activeShare,
-      'hasPromise:', !!this._activeSharePromise,
-      'hasCache:', !!(this._shareImageCache && this._shareImageCache[id]))
+      'path:', path,
+      'cardsCount:', self.data.cards.length,
+      'shareCardId:', self.data.shareCardId
+    )
 
-    // 用完即弃
-    this._activeShare = null
+    // 清理共享状态
+    self._activeShare = null
 
-    // 快速路径：缓存命中
-    if (this._shareImageCache && this._shareImageCache[id]) {
-      console.log('[Index] 分享图片缓存命中:', id)
-      return { title: title, path: path, imageUrl: this._shareImageCache[id] }
+    // ================================================================
+    // 4. 分享图获取（同步优先，异步兜底）
+    // ================================================================
+
+    // 4a. 已有预存分享图 → 同步返回 ✅
+    if (card.shareImageUrl) {
+      var imageUrl = card.shareImageUrl
+      // cloud:// → HTTPS 转换
+      if (imageUrl.indexOf('cloud://') === 0) {
+        var STORAGE_BASE = 'https://636c-cloudbase-d0gqgpu422d7e544f-1432712671.tcb.qcloud.la'
+        var filePath = imageUrl.replace('cloud://', '').split('/').slice(1).join('/')
+        imageUrl = STORAGE_BASE + '/' + filePath + '?ts=' + Date.now()
+      }
+      console.log('[Share] 4a 返回, finalUrl:', imageUrl)
+      return { title: title, path: path, imageUrl: imageUrl }
     }
 
-    // 如果有正在进行的生成 Promise，等它完成（远比轮询高效）
-    var genPromise = this._activeSharePromise
-    this._activeSharePromise = null
+    // 4b. 无预存但有有效名片 → 同步返回头像，后台异步 Canvas 生成
+    if (card && card.name && id) {
+      var fallbackUrl = self._resolveAvatarUrl(card.avatar)
 
-    if (genPromise) {
-      console.log('[Share] 等待生成 Promise, cardId:', id)
-      return genPromise.then(function (res) {
-        console.log('[Share] Promise 成功，imageUrl:', (res.tempFilePath || '').substring(0, 60))
-        return { title: title, path: path, imageUrl: res.tempFilePath }
-      }).catch(function (err) {
-        console.warn('[Share] Promise 失败，降级头像:', (err && err.message) || 'unknown')
-        return that._resolveAvatarUrl(card.avatar).then(function (url) {
-          console.log('[Share] 头像降级结果:', url ? url.substring(0, 60) : '(空)')
-          return { title: title, path: path, imageUrl: url }
+      // 启动异步 Canvas 生成（fire-and-forget，不阻塞本次分享）
+      try {
+        var shareCard = require('../../utils/shareCard')
+        shareCard.generate('shareCanvas', card, {
+          cardKey: id,
+          pageContext: self
+        }).then(function (res) {
+          var cloudPath = 'sharecards/card_' + id + '.jpg'
+          wx.cloud.uploadFile({
+            cloudPath: cloudPath,
+            filePath: res.tempFilePath,
+          success: function (uploadRes) {
+            var cloudFileID = uploadRes.fileID
+            // 存 HTTPS URL（跨设备可靠），而非 cloud://
+            var STORAGE_BASE = 'https://636c-cloudbase-d0gqgpu422d7e544f-1432712671.tcb.qcloud.la'
+            var filePath = cloudFileID.replace('cloud://', '').split('/').slice(1).join('/')
+            var shareUrl = STORAGE_BASE + '/' + filePath
+            console.log('[Share] 后台已生成分享图:', shareUrl)
+            wx.cloud.database().collection('cards').doc(id).update({
+              data: { shareImageUrl: shareUrl }
+              }).then(function () {
+                console.log('[Share] shareImageUrl 已回写，下次分享直接用')
+              }).catch(function () {})
+            },
+            fail: function (err) {
+              console.warn('[Share] 后台上传失败:', err)
+            }
+          })
+        }).catch(function (err) {
+          console.warn('[Share] 后台生成失败:', err && err.message)
         })
-      })
+      } catch (e) {
+        console.warn('[Share] require shareCard 失败:', e)
+      }
+
+      // 立即同步返回头像 URL（本次分享用头像，下次分享用 cloud:// 分享图）
+      console.log('[Share] 路径 4b — 同步返回, fallbackUrl:', fallbackUrl)
+      return { title: title, path: path, imageUrl: fallbackUrl }
     }
 
-    // 兜底：右上角菜单分享 / 无预生成
-    if (id && card._id && !(that._generatingCards && that._generatingCards[id])) {
-      console.log('[Share] 冷启动触发生成, cardId:', id)
-      genPromise = that._generateShareCardSync(card, id)
-    }
+    // 4c. 无有效名片数据 → 同步返回
+    console.log('[Share] 路径 4c — 无有效名片, title:', title)
+    return { title: title, path: path, imageUrl: self._resolveAvatarUrl(card && card.avatar) }
 
-    if (genPromise) {
-      return genPromise.then(function (res) {
-        console.log('[Share] 冷启动生成成功, imageUrl:', (res.tempFilePath || '').substring(0, 60))
-        return { title: title, path: path, imageUrl: res.tempFilePath }
-      }).catch(function (err) {
-        console.warn('[Share] 冷启动生成失败:', (err && err.message) || 'unknown')
-        return that._resolveAvatarUrl(card.avatar).then(function (url) {
-          return { title: title, path: path, imageUrl: url }
-        })
-      })
+    } catch (e) {
+      console.error('[Share] onShareAppMessage 异常:', e)
+      return { title: title || '名片', path: path || '/pages/index/index', imageUrl: '' }
     }
-
-    // 最终兜底：无卡片无生成 → 直接用头像
-    return that._resolveAvatarUrl(card.avatar).then(function (url) {
-      return { title: title, path: path, imageUrl: url }
-    })
   },
 
   onShareTimeline() {
     var active = this._activeShare || {}
     var card = active.card || this.data.shareCardData || {}
     var id = active.id || this.data.shareCardId || ''
-    var title = shareUtil.buildShareTitle(card)
-    var that = this
+    var query = id ? 'id=' + id : ''
 
-    console.log('[Share] onShareTimeline 触发, id:', id, 'title:', title)
-
-    // 快速路径：缓存命中
-    if (this._shareImageCache && this._shareImageCache[id]) {
-      return { title: title, query: id ? 'id=' + id : '', imageUrl: this._shareImageCache[id] }
+    // 用预存分享图优先
+    if (card.shareImageUrl) {
+      return { title: shareUtil.buildShareTitle(card), query: query, imageUrl: card.shareImageUrl }
     }
-
-    // 有正在进行的生成 Promise → 等它
-    var genPromise = this._activeSharePromise
-    this._activeSharePromise = null
-
-    if (genPromise) {
-      return genPromise.then(function (res) {
-        return { title: title, query: id ? 'id=' + id : '', imageUrl: res.tempFilePath }
-      }).catch(function () {
-        return that._resolveAvatarUrl(card.avatar).then(function (url) {
-          return { title: title, query: id ? 'id=' + id : '', imageUrl: url }
-        })
-      })
-    }
-
-    // 兜底：触发生成
-    if (id && card._id && !(that._generatingCards && that._generatingCards[id])) {
-      genPromise = that._generateShareCardSync(card, id)
-    }
-
-    if (genPromise) {
-      return genPromise.then(function (res) {
-        return { title: title, query: id ? 'id=' + id : '', imageUrl: res.tempFilePath }
-      }).catch(function () {
-        return that._resolveAvatarUrl(card.avatar).then(function (url) {
-          return { title: title, query: id ? 'id=' + id : '', imageUrl: url }
-        })
-      })
-    }
-
-    return that._resolveAvatarUrl(card.avatar).then(function (url) {
-      return { title: title, query: id ? 'id=' + id : '', imageUrl: url }
-    })
+    // 无分享图时：朋友圈不支持 cloud:// 实时生成，直接不传 imageUrl
+    return { title: shareUtil.buildShareTitle(card), query: query, imageUrl: '' }
   },
 
   goToPreview(e) {

@@ -1,6 +1,0 @@
-{
-  "desc": "安全代理：将 cloud:// fileID 转为 HTTPS/base64 URL（绕过存储权限限制）",
-  "permissions": {
-    "openapi": []
-  }
-}

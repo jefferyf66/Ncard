@@ -2,6 +2,38 @@
 
 ---
 
+## v1.1.2 (2026-06-18)
+
+### 🐛 分享气泡卡片接收方不可见修复（P0，6 轮迭代）
+
+**问题**：分享名片到微信聊天后，发送方预览正常，但接收方气泡消息标题降级为小程序名、图片空白。
+
+**根因（三轮定位）**：
+1. **时序竞态**：`edit/index.js:_generateAndStoreShareImage()` 在 `navigateBack(1500ms)` 前未完成（Canvas+上传需 ~2800ms），页面销毁导致 shareImageUrl 从未成功写入 DB
+2. **cloud:// 不可跨设备**：微信文档宣称基础库 2.8.1+ 支持 cloud:// 作为 imageUrl，实测仅发送方可用，接收方无法解析
+3. **扩展名/格式不匹配**：`canvasToTempFilePath({ fileType: 'jpg' })` 但 `cloudPath` 使用 `.png` 扩展名 → 微信真机严格校验格式失败
+
+**修复**：
+
+| 文件 | 修改 |
+|------|------|
+| `pages/edit/index.js` | `saveCard` Promise 链等待分享图生成；`_generateAndStoreShareImage` 返回 Promise + 15s 超时；`cloud://` → HTTPS CDN URL 存储；`.png` → `.jpg` 扩展名 |
+| `pages/index/index.js` | `onShareAppMessage(options)` 利用 `options.target.dataset` 获取卡片 ID（不依赖 bindtap 时序）；全部路径同步返回；存量 `cloud://` 自动转 HTTPS + 缓存 busting 时间戳；Canvas 后台生成改为 fire-and-forget；空卡防护；try-catch 保护 |
+| `utils/shareCard.js` | `fileType: 'png'` → `'jpg'`，`quality: 0.7`（<128KB 微信硬限制） |
+
+**部署要求**：
+- MP 后台 → downloadFile合法域名 → 添加 `https://636c-cloudbase-d0gqgpu422d7e544f-1432712671.tcb.qcloud.la`
+- 存量卡片需编辑保存一次触发新分享图生成
+- 接收方可能需删除聊天记录清除微信客户端缓存
+
+### ⚠️ 部署检查清单
+
+- [ ] MP 后台 downloadFile 合法域名已配置（`tcb.qcloud.la` CDN 域名）
+- [ ] 存量卡片重新编辑保存生成 JPEG 分享图
+- [ ] 真机双端验证分享气泡显示
+
+---
+
 ## v1.1.1 (2026-06-17)
 
 ### 🐛 首页编译错误修复 + UX 优化 + crop 页面恢复
@@ -84,7 +116,7 @@
 
 ### ⚠️ 部署检查清单
 
-- [ ] 部署 4 个云函数到生产环境（getOpenId / initVisits / deleteCard / resolveCloudUrls）
+- [ ] 部署 3 个云函数到生产环境（getOpenId / initVisits / deleteCard）
 - [ ] 云控制台确认 `visitor_profiles` 集合存在（新增 themeColor 字段需要此集合）
 - [ ] 云控制台确认 `cards` 集合支持 `isDefault` 字段写入
 - [ ] MP 后台配置隐私保护指引（勾选「收集你选中的照片或视频文件」+「获取你的相机权限」）
@@ -240,8 +272,6 @@ getTempFileURL (批量)
 
 **客户端兜底**：`list/index.js` 新增 `_fallbackCloudAvatars()`，将未解析的 `cloud://` URL 替换为 `/images/avatar.png`。
 
-> ⚠️ 需重新部署 `resolveCloudUrls` 云函数，建议超时设为 **10 秒**。
-
 ---
 
 ### 🎨 UI 优化（自 v1.0.7 累积）
@@ -274,7 +304,6 @@ getTempFileURL (批量)
 
 ### ⚠️ 部署检查清单
 
-- [ ] 重新部署 `resolveCloudUrls` 云函数（超时 10s，云端安装依赖）
 - [ ] 确认云存储「仅创建者可读写」权限配置
 - [ ] 确认 `visitor_profiles` 集合索引：`openid`（唯一）、`createdAt`
 - [ ] 确认隐私协议在微信后台已配置

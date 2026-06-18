@@ -401,7 +401,7 @@ Page({
       : db.collection('cards').add({ data })
 
     promise
-      .then(() => {
+      .then((res) => {
         this.setData({ isSaving: false })
         app.showSuccess(this.data.isEdit ? '修改成功' : '创建成功')
 
@@ -413,12 +413,103 @@ Page({
         // 通知首页/预览页数据已变更，强制刷新
         app.setCache('lastCardUpdate', Date.now())
         app.setCache('cardsNeedRefresh', true)
-        setTimeout(() => wx.navigateBack(), 1500)
+
+        // 生成分享卡片图片：等待完成后再跳转（避免页面销毁导致 Canvas 中断）
+        var cardId = this.data.id || (res && res._id)
+        var cardData = Object.assign({}, data, { _id: cardId })
+        return this._generateAndStoreShareImage(cardData).then(
+          function () {
+            // 分享图生成完成，跳转回首页
+            setTimeout(function () { wx.navigateBack() }, 300)
+          },
+          function (err) {
+            // 生成失败也不阻塞用户返回
+            console.warn('[Edit] 分享图生成失败，跳过:', err && err.message)
+            setTimeout(function () { wx.navigateBack() }, 300)
+          }
+        )
       })
       .catch(() => {
         this.setData({ isSaving: false })
         app.showError('保存失败，请重试')
       })
+  },
+
+  /**
+   * 生成分享卡片图片 → 上传云存储 → 存入卡片 shareImageUrl
+   * 返回 Promise：成功 resolve(cloudFileID)，失败 reject(error)
+   * shareImageUrl 使用 cloud:// fileID 格式，微信自动做跨用户权限代理
+   * 最长等待 15 秒，超时 reject 但不阻塞用户操作
+   */
+  _generateAndStoreShareImage(cardData) {
+    var that = this
+    var cardId = cardData._id
+    var shareCard = require('../../utils/shareCard')
+    var GEN_TIMEOUT = 15000  // 15 秒总超时（Canvas + 上传 + DB）
+
+    return new Promise(function (resolve, reject) {
+      var settled = false
+      var timer = setTimeout(function () {
+        if (settled) return
+        settled = true
+        console.warn('[Edit] 分享图生成超时')
+        reject(new Error('timeout'))
+      }, GEN_TIMEOUT)
+
+      // 延迟等 Canvas 节点挂载（100ms 足够，之前 800ms 过度保守）
+      setTimeout(function () {
+        if (settled) return
+        shareCard.generate('shareCanvas', cardData, {
+          cardKey: cardId,
+          pageContext: that
+        }).then(function (res) {
+          if (settled) return
+          var cloudPath = 'sharecards/card_' + cardId + '.jpg'
+          wx.cloud.uploadFile({
+            cloudPath: cloudPath,
+            filePath: res.tempFilePath,
+            success: function (uploadRes) {
+              if (settled) return
+              // 使用 HTTPS CDN URL（存储为所有用户可读，跨设备可靠）
+              // cloud:// 格式在 WeChat 2.8.1+ 声称支持但实测接收方不可见
+              var cloudFileID = uploadRes.fileID
+              var STORAGE_BASE = 'https://636c-cloudbase-d0gqgpu422d7e544f-1432712671.tcb.qcloud.la'
+              var filePath = cloudFileID.replace('cloud://', '').split('/').slice(1).join('/')
+              var shareUrl = STORAGE_BASE + '/' + filePath
+              console.log('[Edit] 分享图已生成:', shareUrl)
+              wx.cloud.database().collection('cards').doc(cardId).update({
+                data: { shareImageUrl: shareUrl }
+              }).then(function () {
+                if (settled) return
+                settled = true
+                clearTimeout(timer)
+                console.log('[Edit] shareImageUrl 已存入卡片 (HTTPS)')
+                resolve(shareUrl)
+              }).catch(function (e) {
+                if (settled) return
+                settled = true
+                clearTimeout(timer)
+                console.warn('[Edit] shareImageUrl 更新失败:', e)
+                reject(new Error('db_update_failed'))
+              })
+            },
+            fail: function (e) {
+              if (settled) return
+              settled = true
+              clearTimeout(timer)
+              console.warn('[Edit] 分享图上传失败:', e)
+              reject(new Error('upload_failed'))
+            }
+          })
+        }).catch(function (err) {
+          if (settled) return
+          settled = true
+          clearTimeout(timer)
+          console.warn('[Edit] 分享图 Canvas 生成失败:', err && err.message)
+          reject(err || new Error('canvas_failed'))
+        })
+      }, 100)  // 短延迟，Canvas 节点已挂载
+    })
   },
 
   /**

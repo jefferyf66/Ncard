@@ -133,58 +133,27 @@ App({
   },
 
   /**
-   * 批量将云文件 cloud:// ID 转换为临时 HTTPS URL
-   * 通过云函数代理调用 getTempFileURL，以管理员身份绕过存储权限限制
-   * 云存储可设为「仅创建者可读写」，无需担心被分享者无法查看头像
+   * 批量将云文件 cloud:// ID 转换为永久 HTTPS URL
+   * 前提：云存储权限 =「所有用户可读，仅创建者可读写」
+   * cloud://env-id/path → https://STORAGE_BASE/path
    * @param {string[]} fileIDs - cloud:// 格式的文件 ID 列表
    * @returns {Promise<Object>} { originalID: 'https://...' } 的映射
    */
   resolveCloudFileIDs(fileIDs) {
-    return new Promise((resolve) => {
-      if (!fileIDs || fileIDs.length === 0 || !wx.cloud) {
-        resolve({})
-        return
-      }
+    var STORAGE_BASE = 'https://636c-cloudbase-d0gqgpu422d7e544f-1432712671.tcb.qcloud.la'
 
-      // 过滤出 cloud:// 格式的 ID
-      var cloudIDs = fileIDs.filter(function (id) {
-        return id && typeof id === 'string' && id.indexOf('cloud://') === 0
-      })
+    return Promise.resolve().then(function () {
+      if (!fileIDs || fileIDs.length === 0) return {}
 
-      if (cloudIDs.length === 0) {
-        resolve({})
-        return
-      }
-
-      wx.cloud.callFunction({
-        name: 'resolveCloudUrls',
-        data: { fileIDs: cloudIDs },
-        success: function (res) {
-          resolve((res.result && res.result.urls) || {})
-        },
-        fail: function (err) {
-          console.warn('[App] resolveCloudUrls 云函数未部署，降级使用 getTempFileURL')
-          // Fallback: 直接调用客户端 API（仅对当前用户有权限的云文件有效）
-          // 云存储设为「仅创建者可读写」时，跨用户头像可能无法解析
-          // 此时返回空映射，由调用方兜底为默认头像
-          wx.cloud.getTempFileURL({
-            fileList: cloudIDs,
-            success: function (res) {
-              var urlMap = {}
-              ;(res.fileList || []).forEach(function (item) {
-                if (item.tempFileURL) {
-                  urlMap[item.fileID] = item.tempFileURL
-                }
-              })
-              console.log('[App] getTempFileURL 降级解析:', Object.keys(urlMap).length + '/' + cloudIDs.length)
-              resolve(urlMap)
-            },
-            fail: function () {
-              resolve({})
-            }
-          })
+      var urlMap = {}
+      fileIDs.forEach(function (id) {
+        if (id && typeof id === 'string' && id.indexOf('cloud://') === 0) {
+          // cloud://env-id.storage-id/path/to/file → STORAGE_BASE/path/to/file
+          var path = id.replace('cloud://', '').split('/').slice(1).join('/')
+          urlMap[id] = STORAGE_BASE + '/' + path
         }
       })
+      return urlMap
     })
   }
 })

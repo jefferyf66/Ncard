@@ -49,6 +49,10 @@
 - 头像上传：`wx.authorize('scope.camera')` → `wx.chooseImage` → `wx.chooseMedia`（三级降级）
 
 ## 已知修复记录
+- 2026-06-17：分享卡片图片跨设备无法访问修复（共 3 轮迭代）
+  - **最终方案**：微信基础库 2.8.1+ 原生支持 `cloud://` 作为 `imageUrl`。改用客户端 `wx.cloud.uploadFile` 上传后直接返回 `cloud://` fileID，绕过 `getTempFileURL`
+  - 前两轮（云函数 getTempFileURL / 客户端 getTempFileURL）均因私密文件临时链接跨设备不可用而失败
+  - `uploadShareImage` 云函数保留但不再使用，`_convertToShareUrl` 从 25 行简化至 12 行
 - 2026-06-11：名片分享保存逻辑优化
   - 新增 `user_save_cards` 集合（cardId + cardOwnerOpenId + savedAt）
   - `app.js` 新增 `getOpenId()` 缓存方法
