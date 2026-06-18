@@ -2,6 +2,26 @@
 
 ---
 
+## v1.1.3 (2026-06-18)
+
+### 🐛 分享气泡卡片接收方不可见修复（已解决）
+
+**根因**：MP 后台「分享安全校验」开关开启 → 服务端验签失败 → 降级为默认卡片（小程序名+空白图）。非代码问题。
+
+**代码改进**（防御性优化，6 轮迭代）：
+
+| 文件 | 改进 |
+|------|------|
+| `pages/edit/index.js` | `saveCard` Promise 链等待分享图生成；`_generateAndStoreShareImage` 返回 Promise + 15s 超时 + `.jpg` 扩展名 + HTTPS CDN URL 存储 |
+| `pages/index/index.js` | `onShareAppMessage(options)` 利用 `options.target.dataset` 获取卡片 ID；三层降级（预存图→实时生成→头像）；`cloud://`自动转 HTTPS；同步返回 |
+| `utils/shareCard.js` | `fileType: 'jpg'` + `quality: 0.7`（控制 <128KB） |
+| `app.js` | `resolveCloudFileIDs` 简化为直接拼接 HTTPS URL |
+| `wx.showShareMenu` | 移除 `withShareTicket` 参数 |
+
+**部署备忘**：MP 后台 → 开发管理 → 开发设置 → 安全管理配置 → **分享安全校验** → 确保关闭
+
+---
+
 ## v1.1.2 (2026-06-18)
 
 ### 🐛 分享气泡卡片接收方不可见修复（P0，6 轮迭代）
