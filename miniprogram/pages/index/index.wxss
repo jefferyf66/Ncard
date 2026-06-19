@@ -71,27 +71,68 @@ page {
   gap: 16rpx;
 }
 
-.header-btn {
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: 50%;
-  background: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
-}
-
-.header-btn-icon {
-  font-size: 36rpx;
-  color: #64748B;
-}
-
 /* 头部按钮容器 */
 .header-actions {
   display: flex;
   align-items: center;
   gap: 16rpx;
+}
+
+/* 添加到桌面胶囊按钮 */
+.desktop-btn {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  height: 60rpx;
+  padding: 0 24rpx 0 18rpx;
+  border-radius: 30rpx;
+  background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
+  border: 2rpx solid rgba(59, 130, 246, 0.15);
+  box-shadow: 0 2rpx 10rpx rgba(59, 130, 246, 0.08);
+}
+
+.desktop-btn:active {
+  background: linear-gradient(135deg, #DBEAFE, #BFDBFE);
+  transform: scale(0.96);
+}
+
+.desktop-btn-icon {
+  width: 28rpx;
+  height: 28rpx;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.desktop-btn-icon::before {
+  content: '';
+  position: absolute;
+  top: 4rpx;
+  left: 4rpx;
+  right: 4rpx;
+  height: 16rpx;
+  border: 3rpx solid #3B82F6;
+  border-bottom: none;
+  border-radius: 4rpx 4rpx 0 0;
+}
+
+.desktop-btn-icon::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24rpx;
+  height: 4rpx;
+  background: #3B82F6;
+  border-radius: 2rpx;
+}
+
+.desktop-btn-text {
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #3B82F6;
+  white-space: nowrap;
+  line-height: 1;
 }
 
 /* 头部按钮图标包装 */
@@ -414,6 +455,21 @@ page {
   background: #F8FAFC;
 }
 
+.stat-icon {
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12rpx;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .stat-value {
   font-size: 40rpx;
   font-weight: 700;
@@ -635,8 +691,8 @@ page {
 }
 
 .icon-users {
-  width: 44rpx;
-  height: 44rpx;
+  width: 40rpx;
+  height: 40rpx;
   position: relative;
 }
 
@@ -694,8 +750,8 @@ page {
 }
 
 .icon-add {
-  width: 36rpx;
-  height: 36rpx;
+  width: 40rpx;
+  height: 40rpx;
   position: relative;
 }
 
