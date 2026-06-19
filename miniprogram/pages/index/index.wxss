@@ -71,22 +71,6 @@ page {
   gap: 16rpx;
 }
 
-.header-btn {
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: 50%;
-  background: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
-}
-
-.header-btn-icon {
-  font-size: 36rpx;
-  color: #64748B;
-}
-
 /* 头部按钮容器 */
 .header-actions {
   display: flex;

@@ -5,10 +5,9 @@
       <text class="subtitle" wx:if="{{!isLoading && !isError}}">{{cards.length}} 张名片</text>
     </view>
     <view class="header-actions">
-      <view class="header-btn" bindtap="addToDesktop">
-        <view class="header-icon-wrapper small">
-          <view class="icon-desktop"></view>
-        </view>
+      <view class="desktop-btn" bindtap="addToDesktop">
+        <view class="desktop-btn-icon"></view>
+        <text class="desktop-btn-text">添加到桌面</text>
       </view>
     </view>
   </view>
