@@ -159,6 +159,8 @@
 
 ## 版本历史
 
+详见 [CHANGELOG.md](CHANGELOG.md)
+
 ### v1.1.3 (2026-06-18)
 - 🐛 分享气泡卡片接收方不可见修复（根因：MP后台分享安全校验开关；代码防御性优化：Promise链+JPEG<128KB+三层降级）
 
@@ -203,10 +205,6 @@
 - Canvas 分享卡片生成
 - 名片收藏功能
 - 完整隐私授权流程
-
-## Release Notes
-
-详细的版本发布说明请查看 [RELEASE_NOTES.md](RELEASE_NOTES.md)
 
 ## License
 

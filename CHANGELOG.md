@@ -1,72 +1,98 @@
 # 更新日志
 
-## v1.0.8 (2026-06-13) — 首页发名片按钮优化
+本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
-### ✨ 功能改进
+## [1.1.3] - 2026-06-18
 
-- **首页发名片按钮**：优化交互逻辑，与详情页保持一致
-- 使用微信原生 `open-type="share"` 按钮替代自定义按钮
-- 简化分享流程：点击直接唤起微信分享菜单，一步完成分享
-- 异步预生成分享卡片，不阻塞用户操作
+### Fixed
+- **分享气泡卡片接收方不可见**：根因为 MP 后台「分享安全校验」开关导致服务端验签失败。关闭开关即解决。
+  
+### Changed
+- `pages/edit/index.js`: `saveCard` 改为 Promise 链等待分享图生成；新增 `_generateAndStoreShareImage`（15s 超时 + `.jpg` 上传 + HTTPS CDN URL 存储）
+- `pages/index/index.js`: `onShareAppMessage(options)` 利用 `options.target.dataset` 获取卡片 ID；三层降级（预存图→实时生成→头像）；`cloud://`自动转 HTTPS；同步返回
+- `utils/shareCard.js`: `fileType: 'jpg'` + `quality: 0.7`（控制 <128KB）
+- `app.js`: `resolveCloudFileIDs` 简化为直接拼接 HTTPS URL
+- `wx.showShareMenu`: 移除 `withShareTicket` 参数
 
-### 🐛 Bug 修复
+### Removed
+- `cloudfunctions/resolveCloudUrls/` — 云函数不再需要
+- `miniprogram/config/cardStyle.test.js` — 测试文件
 
-- 修复首页发名片按钮点击后跳转到预览页的问题
-- 修复事件冒泡阻止失效问题
+## [1.1.2] - 2026-06-18
 
-### 🔧 工程改进
+### Fixed
+- 分享气泡卡片接收方不可见（6 轮代码迭代：时序竞态 + cloud:// 跨设备 + 扩展名格式 + downloadFile 域名 + 缓存 busting）
 
-- 首页分享回调与详情页保持一致
-- 移除冗余的分享选项弹窗逻辑
+## [1.1.1] - 2026-06-17
 
----
+### Fixed
+- `index.wxml` UTF-8 编码损坏导致 WXML 编译 `unexpected end` 错误
+- 首页约 20 个缺失 CSS 类补全，纯 CSS 图标实现
 
-## v1.0.0 (2026-06-01) — 首次发布
+### Changed
+- 无名片时隐藏右下角新增名片悬浮按钮，空状态提示文案优化
+- 恢复 `pages/crop/` 头像裁切页完整功能（movable-area 缩放 + Canvas 400×400 裁切 + 九宫格辅助线）
 
-### ✨ 新功能
+### Removed
+- `wx.addFavorite` 非法 API 调用、`handleVisitorAction` 死代码、`_loadRecentVisitors` 废弃方法
 
-- **名片管理**：创建、编辑、删除个人名片，支持头像上传、多条经验/附件
-- **OCR 扫描识别**：拍照或上传名片图片，云函数自动识别姓名、电话、公司、职位等信息
-- **名片预览**：品牌蓝渐变卡片预览，一键复制联系方式，生成小程序码分享
-- **保存至通讯录**：将名片信息一键写入手机系统通讯录
-- **访客记录**：查看谁浏览了你的名片，浏览时间统计
-- **数据概览**：首页展示名片数、访客数、扫描数
-- **个人中心**：
-  - 头像/昵称获取
-  - 主题色切换（品牌蓝/深邃黑/优雅金）
-  - 默认名片选择
-- **底部 TabBar**：名片（首页）、扫描、我的，三 Tab 导航
+## [1.1.0] - 2026-06-17
 
-### 🎨 UI 设计
+### Fixed
+- **P0**: 删除无消费场景的 `getQrCode` 云函数
+- **P0**: `index.wxml` 重复渲染节点删除
+- **P0**: `initVisits`/`deleteCard` 补充 `wx-server-sdk` 依赖
+- **P1**: `selectDefaultCard` 改为 `cards.isDefault` 云端持久化 + 本地缓存双写
+- **P1**: `profile.loadCardList` 添加 `_openid` 过滤
+- **P1**: `DOCUMENTATION.md`/`DEPLOYMENT-GUIDE.md` 过时引用修正
 
-- 全面采用 **品牌蓝 #3B82F6** 作为主色调，替代旧版 #165DFF
-- 导航栏统一：白色背景 + 黑色标题文字
-- 编辑器字体钮形（2-4rpx 圆角）+ 暖调渐变背景
-- CSS 纯图标方案，无额外图片依赖（TabBar 图标除外）
-- 空状态/加载态/错误态完整覆盖
+### Changed
+- `visitors/index.js` ES5→ES6 全面改写
+- `sitemap.json` 隐私页面禁止收录
+- `profile/index.js` 主题色切换增加到 `visitor_profiles.themeColor` 云同步
 
-### 🐛 Bug 修复
+### Removed
+- 首页/访客页空壳操作按钮
 
-- 修复「保存到通讯录」按钮 WXML 绑定名与方法名不匹配的问题
-- 修复部分页面导航栏仍显示旧蓝 #165DFF 的问题
-- 清理 24 个同步冲突残留文件（miniprogram + cloudfunctions）
-- 修复个人中心主题切换器缺少方法实现的问题
+## [1.0.9] - 2026-06-16
 
-### 🔧 工程改进
+### Added
+- 分享卡片 Canvas 生成器 v8：精确 5:4 比例（600×480），Banner 触顶 + 间隙居中布局
+- Canvas 序列化锁（`_canvasLock`）防止多卡片并发生成竞态
+- 编辑页保存后 `cardsNeedRefresh` 联动首页刷新
+- `cardStyle.js` 统一样式数据源
 
-- `app.json` 注册全部 8 个页面，拒绝白屏
-- 启用 `lazyCodeLoading: "requiredComponents"` 按需加载
-- 扫描页、列表页启用下拉刷新
-- 新增 `permission` 隐私权限声明
-- 生成 6 枚 TabBar 图标（品牌蓝渐变 + 灰态）
+### Fixed
+- 分享卡片右侧截断（非 5:4 被微信裁剪）
+- 多卡片并发生成时第二张名片头像降级
+- 编辑后首页/预览页数据不刷新
 
-### 📋 待办
+## [1.0.8] - 2026-06-16
 
-- [ ] 真实设备完整测试（iOS + Android）
-- [ ] 云开发环境创建与云函数部署
-- [ ] 隐私保护指引填写
-- [ ] 提交微信审核
+### Added
+- 三级匿名访客身份识别（L1 注册→L2 授权→L3 卡片用户）
+- `getMyVisitorDashboard` 云函数合并三路查询
+- 非阻断式授权引导条（当天冷却期）
 
----
+### Changed
+- 自定义隐私弹窗 → 微信官方隐私弹窗（`__usePrivacyCheck__: true`）
+- 云函数增加 `downloadFile`→base64 降级路径修复跨用户头像访问
 
-_格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。_
+### Fixed
+- 云存储「仅创建者可读写」时跨用户头像 `STORAGE_EXCEED_AUTHORITY`
+
+## [1.0.8] - 2026-06-13
+
+### Changed
+- 首页发名片按钮使用微信原生 `open-type="share"`，异步预生成分享卡片
+
+### Fixed
+- 首页发名片按钮点击后跳转到预览页
+- 事件冒泡阻止失效
+
+## [1.0.0] - 2026-06-01
+
+### Added
+- 初始发布：名片 CRUD、OCR 扫描、名片预览、访客记录、数据概览、个人中心
+- 品牌蓝设计系统（#3B82F6 主色 + 编辑器字体钮形 + 暖调渐变背景）
+- 底部 TabBar 三页导航
