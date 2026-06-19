@@ -455,6 +455,21 @@ page {
   background: #F8FAFC;
 }
 
+.stat-icon {
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12rpx;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .stat-value {
   font-size: 40rpx;
   font-weight: 700;
@@ -676,8 +691,8 @@ page {
 }
 
 .icon-users {
-  width: 44rpx;
-  height: 44rpx;
+  width: 40rpx;
+  height: 40rpx;
   position: relative;
 }
 
@@ -735,8 +750,8 @@ page {
 }
 
 .icon-add {
-  width: 36rpx;
-  height: 36rpx;
+  width: 40rpx;
+  height: 40rpx;
   position: relative;
 }
 
