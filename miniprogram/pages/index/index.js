@@ -688,15 +688,75 @@ Page({
   },
 
   /**
-   * 添加到桌面指引
+   * 添加到桌面
+   * - Android: 调用 wx.showAddToDesktop() 一键添加（基础库 ≥ 2.10.3）
+   * - iOS: 不支持 API，引导手动操作
+   * - 低版本微信: 降级为文字引导
    */
   addToDesktop() {
-    wx.showModal({
-      title: '添加到桌面',
-      content: '请点击右上角 "..." 按钮，选择"添加到桌面"即可将科博名片添加到手机桌面',
-      showCancel: false,
-      confirmText: '我知道了'
+    var self = this
+    var info = wx.getSystemInfoSync()
+    var platform = (info.platform || info.system || '').toLowerCase()
+    var sdkVersion = info.SDKVersion || '0.0.0'
+
+    // iOS 不支持 API
+    if (platform.indexOf('ios') >= 0) {
+      wx.showModal({
+        title: '添加到桌面',
+        content: 'iOS 暂不支持一键添加。请点击右上角「...」→「分享」→「添加到主屏幕」',
+        showCancel: false,
+        confirmText: '知道了'
+      })
+      return
+    }
+
+    // 检查基础库版本
+    if (self._compareVersion(sdkVersion, '2.10.3') < 0) {
+      wx.showModal({
+        title: '添加到桌面',
+        content: '当前微信版本较低，请点击右上角「...」→「添加到桌面」',
+        showCancel: false,
+        confirmText: '知道了'
+      })
+      return
+    }
+
+    // Android: 调用官方 API
+    wx.showAddToDesktop({
+      success: function () {
+        wx.showToast({ title: '已发起添加，请按提示完成', icon: 'none', duration: 2500 })
+      },
+      fail: function (err) {
+        console.warn('[Index] 添加桌面失败:', err)
+        var errMsg = (err && err.errMsg) || ''
+        if (errMsg.indexOf('cancel') >= 0 || errMsg.indexOf('canceled') >= 0) {
+          // 用户取消，不提示
+          return
+        }
+        wx.showModal({
+          title: '添加失败',
+          content: '请确认微信「桌面快捷方式」权限已开启（设置→应用→微信→权限），且小程序已正式上线',
+          showCancel: false,
+          confirmText: '知道了'
+        })
+      }
     })
+  },
+
+  /**
+   * 版本号比较: 返回 1(v1>v2) / 0(相等) / -1(v1<v2)
+   */
+  _compareVersion(v1, v2) {
+    var a = v1.split('.')
+    var b = v2.split('.')
+    var len = Math.max(a.length, b.length)
+    for (var i = 0; i < len; i++) {
+      var n1 = parseInt(a[i] || '0', 10)
+      var n2 = parseInt(b[i] || '0', 10)
+      if (n1 > n2) return 1
+      if (n1 < n2) return -1
+    }
+    return 0
   },
 
   /**
