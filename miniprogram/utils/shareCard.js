@@ -18,6 +18,7 @@
 // 统一样式配置（与首页 WXML 共用）
 // =========================================================================
 var cardStyle = require('../config/cardStyle')
+var storage = require('../config/storage')
 var CARD = cardStyle.CARD
 var rpxToCanvas = cardStyle.rpxToCanvas
 var fitToBubbleSize = cardStyle.fitToBubbleSize
@@ -482,10 +483,7 @@ function _resolveToHttps(src) {
   }
 
   if (src.indexOf('cloud://') === 0) {
-    var STORAGE_BASE = 'https://636c-cloudbase-d0gqgpu422d7e544f-1432712671.tcb.qcloud.la'
-    var path = src.replace('cloud://', '').split('/').slice(1).join('/')
-    var url = STORAGE_BASE + '/' + path
-    return Promise.resolve(url)
+    return Promise.resolve(storage.resolveCloudUrl(src))
   }
 
   return Promise.resolve(src)
@@ -497,7 +495,7 @@ function _resolveToHttps(src) {
 
 function _getDpr() {
   try {
-    return wx.getSystemInfoSync().pixelRatio || 2
+    return (wx.getWindowInfo ? wx.getWindowInfo() : {}).pixelRatio || 2
   } catch (e) {
     return 2
   }

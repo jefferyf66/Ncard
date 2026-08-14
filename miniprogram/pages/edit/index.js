@@ -1,4 +1,5 @@
 const app = getApp()
+var storage = require('../../config/storage')
 
 Page({
   data: {
@@ -473,9 +474,7 @@ Page({
               // 使用 HTTPS CDN URL（存储为所有用户可读，跨设备可靠）
               // cloud:// 格式在 WeChat 2.8.1+ 声称支持但实测接收方不可见
               var cloudFileID = uploadRes.fileID
-              var STORAGE_BASE = 'https://636c-cloudbase-d0gqgpu422d7e544f-1432712671.tcb.qcloud.la'
-              var filePath = cloudFileID.replace('cloud://', '').split('/').slice(1).join('/')
-              var shareUrl = STORAGE_BASE + '/' + filePath
+              var shareUrl = storage.resolveCloudUrl(cloudFileID)
               console.log('[Edit] 分享图已生成:', shareUrl)
               wx.cloud.database().collection('cards').doc(cardId).update({
                 data: { shareImageUrl: shareUrl }

@@ -187,7 +187,7 @@ Page({
 
         var canvas = res[0].node
         var ctx = canvas.getContext('2d')
-        var dpr = wx.getSystemInfoSync().pixelRatio
+        var dpr = (wx.getWindowInfo ? wx.getWindowInfo() : {}).pixelRatio || 2
 
         canvas.width = outputSize * dpr
         canvas.height = outputSize * dpr

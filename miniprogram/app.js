@@ -1,7 +1,11 @@
+var storage = require('./config/storage')
+
 App({
   globalData: {
     userInfo: null,
-    systemInfo: null
+    systemInfo: null,
+    // 应用版本号（关于页等展示用，唯一真源）
+    version: '1.1.3'
   },
 
   onLaunch() {
@@ -135,22 +139,18 @@ App({
   /**
    * 批量将云文件 cloud:// ID 转换为永久 HTTPS URL
    * 前提：云存储权限 =「所有用户可读，仅创建者可读写」
-   * cloud://env-id/path → https://STORAGE_BASE/path
+   * 转换逻辑见 config/storage.js 的 resolveCloudUrl（单一真源）
    * @param {string[]} fileIDs - cloud:// 格式的文件 ID 列表
    * @returns {Promise<Object>} { originalID: 'https://...' } 的映射
    */
   resolveCloudFileIDs(fileIDs) {
-    var STORAGE_BASE = 'https://636c-cloudbase-d0gqgpu422d7e544f-1432712671.tcb.qcloud.la'
-
     return Promise.resolve().then(function () {
       if (!fileIDs || fileIDs.length === 0) return {}
 
       var urlMap = {}
       fileIDs.forEach(function (id) {
         if (id && typeof id === 'string' && id.indexOf('cloud://') === 0) {
-          // cloud://env-id.storage-id/path/to/file → STORAGE_BASE/path/to/file
-          var path = id.replace('cloud://', '').split('/').slice(1).join('/')
-          urlMap[id] = STORAGE_BASE + '/' + path
+          urlMap[id] = storage.resolveCloudUrl(id)
         }
       })
       return urlMap

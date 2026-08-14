@@ -1,6 +1,7 @@
 const app = getApp()
 var shareUtil = require('../../utils/share')
 var cardStyle = require('../../config/cardStyle')
+var storage = require('../../config/storage')
 
 Page({
   data: {
@@ -566,9 +567,7 @@ Page({
       var imageUrl = card.shareImageUrl
       // cloud:// → HTTPS 转换
       if (imageUrl.indexOf('cloud://') === 0) {
-        var STORAGE_BASE = 'https://636c-cloudbase-d0gqgpu422d7e544f-1432712671.tcb.qcloud.la'
-        var filePath = imageUrl.replace('cloud://', '').split('/').slice(1).join('/')
-        imageUrl = STORAGE_BASE + '/' + filePath + '?ts=' + Date.now()
+        imageUrl = storage.resolveCloudUrl(imageUrl) + '?ts=' + Date.now()
       }
       console.log('[Share] 4a 返回, finalUrl:', imageUrl)
       return { title: title, path: path, imageUrl: imageUrl }
@@ -592,9 +591,7 @@ Page({
           success: function (uploadRes) {
             var cloudFileID = uploadRes.fileID
             // 存 HTTPS URL（跨设备可靠），而非 cloud://
-            var STORAGE_BASE = 'https://636c-cloudbase-d0gqgpu422d7e544f-1432712671.tcb.qcloud.la'
-            var filePath = cloudFileID.replace('cloud://', '').split('/').slice(1).join('/')
-            var shareUrl = STORAGE_BASE + '/' + filePath
+            var shareUrl = storage.resolveCloudUrl(cloudFileID)
             console.log('[Share] 后台已生成分享图:', shareUrl)
             wx.cloud.database().collection('cards').doc(id).update({
               data: { shareImageUrl: shareUrl }
@@ -695,9 +692,10 @@ Page({
    */
   addToDesktop() {
     var self = this
-    var info = wx.getSystemInfoSync()
-    var platform = (info.platform || info.system || '').toLowerCase()
-    var sdkVersion = info.SDKVersion || '0.0.0'
+    var deviceInfo = wx.getDeviceInfo ? wx.getDeviceInfo() : {}
+    var appBaseInfo = wx.getAppBaseInfo ? wx.getAppBaseInfo() : {}
+    var platform = (deviceInfo.platform || deviceInfo.system || '').toLowerCase()
+    var sdkVersion = appBaseInfo.SDKVersion || '0.0.0'
 
     // iOS 不支持 API
     if (platform.indexOf('ios') >= 0) {

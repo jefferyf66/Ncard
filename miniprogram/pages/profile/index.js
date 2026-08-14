@@ -120,9 +120,10 @@ Page({
   },
 
   showAbout() {
+    var version = (app.globalData && app.globalData.version) || '1.1.3'
     wx.showModal({
       title: '关于科博名片',
-      content: '科博名片 v1.0.9\n\n一款专业的电子名片管理工具\n\n© 2024-2026 科博名片',
+      content: '科博名片 v' + version + '\n\n一款专业的电子名片管理工具\n\n© 2024-2026 科博名片',
       showCancel: false,
       confirmText: '知道了'
     })
