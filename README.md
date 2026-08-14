@@ -161,6 +161,12 @@
 
 详见 [CHANGELOG.md](CHANGELOG.md)
 
+### v1.1.4 (2026-08-14)
+- ♻️ 新增 `config/storage.js` 作为云存储 HTTPS 基址单一真源，移除 4 文件 5 处硬编码
+- ♻️ 替换 `crop` / `shareCard` / `index` 三处弃用 `wx.getSystemInfoSync()` 为官方推荐 API
+- 📄 新增团队租户功能设计方案 v0.4 与微信 openid 快速登录机制设计方案 v0.2（已对照官方文档核验）
+- 🧹 `.gitignore` 纳入 `.workbuddy/`，内部产物不再进版本库
+
 ### v1.1.3 (2026-06-18)
 - 🐛 分享气泡卡片接收方不可见修复（根因：MP后台分享安全校验开关；代码防御性优化：Promise链+JPEG<128KB+三层降级）
 

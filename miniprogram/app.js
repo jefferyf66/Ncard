@@ -5,7 +5,7 @@ App({
     userInfo: null,
     systemInfo: null,
     // 应用版本号（关于页等展示用，唯一真源）
-    version: '1.1.3'
+    version: '1.1.4'
   },
 
   onLaunch() {
