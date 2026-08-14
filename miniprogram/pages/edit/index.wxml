@@ -5,6 +5,10 @@
   </view>
 
   <view wx:else class="page-content">
+    <view class="managed-banner" wx:if="{{hasManagedFields}}">
+      <view class="lock-icon-sm"></view>
+      <text class="managed-banner-text">部分组织字段由你所在的团队管理，不可编辑</text>
+    </view>
     <view class="avatar-section">
       <view class="avatar-wrapper" catchtap="chooseAvatar" hover-class="avatar-wrapper-hover">
         <image 
@@ -53,8 +57,13 @@
             placeholder="请输入职位" 
             value="{{position}}" 
             bindinput="onPositionInput" 
+            disabled="{{managedFieldMap.position}}"
             maxlength="30"
           ></input>
+        </view>
+        <view class="managed-hint" wx:if="{{managedFieldMap.position}}">
+          <view class="lock-icon-sm"></view>
+          <text>由「{{managedFieldMap.position}}」管理</text>
         </view>
       </view>
 
@@ -71,10 +80,15 @@
             placeholder="请输入公司名称" 
             value="{{company}}" 
             bindinput="onCompanyInput" 
+            disabled="{{managedFieldMap.company}}"
             maxlength="50"
           ></input>
         </view>
         <view class="form-error" wx:if="{{errors.company}}">{{errors.company}}</view>
+        <view class="managed-hint" wx:if="{{managedFieldMap.company}}">
+          <view class="lock-icon-sm"></view>
+          <text>由「{{managedFieldMap.company}}」管理</text>
+        </view>
       </view>
 
       <view class="form-divider"></view>
@@ -268,7 +282,7 @@
         </view>
         <view class="form-item">
           <text class="form-label">网站地址</text>
-          <input class="form-input" placeholder="https://..." value="{{companyWebsite.url}}" bindinput="onWebsiteInput" data-field="url" />
+          <input class="form-input" placeholder="https://..." value="{{companyWebsite.url}}" bindinput="onWebsiteInput" data-field="url" disabled="{{managedFieldMap.companyWebsite}}" />
         </view>
         <view class="form-item">
           <text class="form-label">网站描述</text>
@@ -302,8 +316,23 @@
           <view class="empty-tip" wx:if="{{attachments.length === 0}}">暂无附件，点击上方添加</view>
         </view>
       </view>
+
+      <view class="form-divider"></view>
+
+      <view class="form-group team-join-block">
+        <view class="form-header">
+          <text class="form-title">加入团队</text>
+          <view class="header-right">
+            <text class="add-btn" bindtap="goToTeamList">我的团队 ›</text>
+          </view>
+        </view>
+        <text class="join-tip">粘贴邀请码，将当前名片关联到团队；团队可托管你的组织字段</text>
+        <view class="join-row">
+          <input class="join-input" placeholder="输入邀请码" value="{{inviteCode}}" bindinput="onInviteCodeInput" maxlength="8" />
+          <view class="join-btn {{isJoining ? 'disabled' : ''}}" bindtap="joinTeam">{{isJoining ? '加入中...' : '加入'}}</view>
+        </view>
+      </view>
     </view>
-  </view>
 
   <view class="bottom-bar">
     <view class="save-btn" bindtap="saveCard">

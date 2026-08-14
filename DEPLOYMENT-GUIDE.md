@@ -93,6 +93,7 @@ wx.cloud.init({
 | `getOpenId` | 获取用户 OpenID | ✅ |
 | `initVisits` | 初始化 visits 集合并提供访客记录能力 | ✅ |
 | `deleteCard` | 级联删除名片（数据库 + 存储 + 关联数据） | ✅ |
+| `teamManager` | 团队租户（创建/邀请/成员管理/退出/跨用户读） | ✅ |
 
 ### 3.2 部署方式
 
@@ -136,6 +137,13 @@ bash uploadCloudFunction.sh
 | `user_save_cards` | 用户保存的名片关联 | 仅创建者可读写 |
 | `visitor_profiles` | 访客授权身份 | 仅创建者可读写 |
 | `config` | 全局配置（如分享卡片尺寸） | 仅创建者可读写 |
+| `teams` | 团队主记录（架构 §2.1：shortId/name/ownerOpenId/memberCount…） | 仅创建者可读写 |
+| `team_members` | 成员关系 + 组织字段覆盖层（架构 §2.2：teamId/memberOpenId/cardId/role/status/managedFields…） | 仅创建者可读写 |
+| `team_invites` | 邀请凭证（架构 §2.3：code/token/createdBy/expiresAt/usedCount…） | 仅创建者可读写 |
+
+> ⚠️ **集合权限统一为「仅创建者可读写」**，所有团队读写一律经 `teamManager` 云函数（admin 上下文）完成，客户端不直接写库。云函数内 `add` 不自动注入 `_openid`，故 `teams._openid`/`team_members._openid`/`team_invites._openid` 均显式写入创建者/成员 openid（与 `getOpenId.ensureUser` 一致）。
+>
+> 📌 **`cards` 集合新增可选字段 `teamIds: string[]`**（冗余，默认 []，非破坏性）：加入团队时由 `teamManager` 云函数写入 `_.push(teamId)`，退出/移除时 `_.pull(teamId)`。旧名片无该字段仍可正常展示（teamIds 缺省视为空）。团队真实归属仍以 `team_members` 为准。
 
 ### 4.2 创建步骤
 
@@ -152,6 +160,10 @@ bash uploadCloudFunction.sh
 - `user_save_cards` 集合：`userOpenId`（升序）、`cardId`（升序）
 - `visitor_profiles` 集合：`visitorOpenId`（升序）
 - `users` 集合：`_openid`（升序，**建议设唯一索引**，作为 ensureUser 先查后写在极端并发下的兜底）
+- `teams` 集合：`shortId`（**唯一索引**）、`nameNorm`（升序，L1/L2 查重）、`ownerOpenId`+`nameNorm`（**复合索引**，L1 本人同名硬拦截）、`_id`（默认）
+- `team_members` 集合：`teamId`+`memberOpenId`（**复合唯一索引**，一人一队一条）、`memberOpenId`（升序，查「我加入的团队」）、`cardId`（升序，按名片反查团队）
+- `team_invites` 集合：`code`（**唯一索引**）、`token`（**唯一索引**，分享卡片校验）、`teamId`（升序）
+- `cards` 集合：新增 `teamIds`（数组，冗余），可视查询需要建普通索引（v1 暂不强依赖）
 
 ---
 

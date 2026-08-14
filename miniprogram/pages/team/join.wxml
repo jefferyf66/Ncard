@@ -1,0 +1,39 @@
+<view class="container">
+  <view class="header">
+    <text class="header-title">加入团队</text>
+    <text class="header-sub">输入邀请码加入团队</text>
+  </view>
+
+  <!-- 分享卡片预填 -->
+  <view class="prefill-card" wx:if="{{prefillTeam}}">
+    <view class="prefill-logo">{{prefillTeam.name[0]}}</view>
+    <view class="prefill-info">
+      <text class="prefill-name">你被邀请加入</text>
+      <text class="prefill-team">{{prefillTeam.name}}</text>
+    </view>
+  </view>
+
+  <view class="form-card">
+    <view class="form-group">
+      <text class="form-label">邀请码</text>
+      <input
+        class="form-input code-input"
+        placeholder="请输入 6 位邀请码"
+        value="{{code}}"
+        bindinput="onCodeInput"
+        maxlength="8"
+      />
+    </view>
+  </view>
+
+  <view class="bottom-actions">
+    <view class="primary-btn {{isJoining ? 'disabled' : ''}}" bindtap="join">
+      {{isJoining ? '加入中...' : (token ? '确认加入' : '加入团队')}}
+    </view>
+  </view>
+
+  <view class="no-card-tip" wx:if="{{!prefillTeam}}">
+    <text class="tip-text">还没有个人名片？加入团队需先创建一张名片。</text>
+    <text class="tip-link" bindtap="goCreate">去创建名片</text>
+  </view>
+</view>

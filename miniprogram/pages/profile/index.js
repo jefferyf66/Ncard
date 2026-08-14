@@ -142,6 +142,10 @@ Page({
     wx.navigateTo({ url: '/pages/visitors/index' })
   },
 
+  goToTeam() {
+    wx.navigateTo({ url: '/pages/team/list' })
+  },
+
   showThemePicker() {
     this.setData({ showThemePicker: true })
   },

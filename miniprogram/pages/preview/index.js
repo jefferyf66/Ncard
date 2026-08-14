@@ -1,4 +1,5 @@
 const app = getApp()
+const team = require('../../utils/team')
 
 Page({
   data: {
@@ -10,7 +11,12 @@ Page({
     showDeleteConfirm: false,
     isOwner: false,
     isSaved: false,
-    showAuthBanner: false
+    showAuthBanner: false,
+    // 团队徽章（T12）：名片所属团队 + 托管字段覆盖层
+    teamBadges: [],
+    showTeamCard: false,
+    teamCardView: null,
+    teamCardName: ''
   },
 
   onLoad(options) {
@@ -130,6 +136,9 @@ Page({
 
           // 判断名片所有权和保存状态
           this._checkCardOwnership(id)
+
+          // 加载团队徽章（跨用户读，经 teamManager 云函数 admin 上下文）
+          this._loadTeamBadges(id)
         } else {
           this.setData({
             isLoading: false,
@@ -694,5 +703,37 @@ Page({
       wx.setStorageSync('auth_banner_dismissed_date',
         today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate())
     } catch (e) {}
+  },
+
+  /**
+   * 加载名片所属团队的徽章（跨用户读：经 teamManager 云函数 admin 上下文）
+   * 用于姓名下方一排轻量徽章；点击徽章查看「团队名片视图」（card + managedFields 覆盖层合并）
+   */
+  _loadTeamBadges(cardId) {
+    if (!cardId) return
+    team.callTeamManager('getCardTeams', { cardId }).then((res) => {
+      if (res.success && res.data.teams) {
+        this.setData({ teamBadges: res.data.teams })
+      }
+    }).catch(function () {})
+  },
+
+  /**
+   * 打开「团队名片视图」：个人 card 为真相源 + team_members.managedFields 覆盖层合并
+   */
+  openTeamCard(e) {
+    const index = e.currentTarget.dataset.index
+    const badge = this.data.teamBadges[index]
+    if (!badge) return
+    const merged = team.mergeCardWithTeam(this.data.card, badge.managedFields)
+    this.setData({
+      showTeamCard: true,
+      teamCardView: merged,
+      teamCardName: (badge.team && badge.team.name) || '团队'
+    })
+  },
+
+  closeTeamCard() {
+    this.setData({ showTeamCard: false, teamCardView: null })
   }
 })

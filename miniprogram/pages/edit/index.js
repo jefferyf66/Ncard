@@ -1,5 +1,6 @@
 const app = getApp()
 var storage = require('../../config/storage')
+const team = require('../../utils/team')
 
 Page({
   data: {
@@ -30,7 +31,12 @@ Page({
     },
     errors: {},
     dragStartIndex: -1,
-    dragY: 0
+    dragY: 0,
+    // 团队托管字段（T12）：被团队管理的个人字段 → 锁定不可编辑
+    managedFieldMap: {},
+    hasManagedFields: false,
+    inviteCode: '',
+    isJoining: false
   },
 
   onLoad(options) {
@@ -40,6 +46,8 @@ Page({
     if (isEdit) {
       this.loadCard(id)
     }
+    // 团队页：确保用户存在后加载托管字段（幂等）
+    app.ensureUser().then(() => this._loadTeamManagedFields())
   },
 
   loadCard(id) {
@@ -544,5 +552,71 @@ Page({
           console.warn('[Edit] visitor_profiles 同步失败:', err)
         })
     }).catch(function () {})
+  },
+
+  /**
+   * 加载团队托管字段：判断哪些个人字段正被团队管理（锁定不可编辑）
+   * 数据来源 getMyTeams（已含 managedFields），仅判定
+   * company / position / companyWebsite 三类个人组织字段
+   */
+  _loadTeamManagedFields() {
+    team.callTeamManager('getMyTeams').then((res) => {
+      if (!res.success || !res.data.teams) return
+      const map = {}
+      res.data.teams.forEach((t) => {
+        const mf = t.managedFields || {}
+        // 仅个人名片存在的组织字段可被团队托管覆盖
+        if (mf.company) map.company = t.name
+        if (mf.position) map.position = t.name
+        if (mf.companyWebsite) map.companyWebsite = t.name
+      })
+      this.setData({
+        managedFieldMap: map,
+        hasManagedFields: Object.keys(map).length > 0
+      })
+    }).catch(function () {})
+  },
+
+  onInviteCodeInput(e) {
+    this.setData({ inviteCode: e.detail.value.replace(/\s/g, '').toUpperCase() })
+  },
+
+  /**
+   * 建卡时加入团队（路径 C）：粘贴邀请码 → joinByInvite
+   * 云函数按 _openid 自动定位名片（防伪造），将此名片关联团队
+   */
+  joinTeam() {
+    const code = (this.data.inviteCode || '').trim().toUpperCase()
+    if (!code) {
+      app.showError('请输入邀请码')
+      return
+    }
+    if (this.data.isJoining) return
+    this.setData({ isJoining: true })
+    app.showLoading('加入中...')
+    team.callTeamManager('joinByInvite', { code }).then((res) => {
+      app.hideLoading()
+      this.setData({ isJoining: false })
+      if (res.success) {
+        app.showSuccess('已加入团队')
+        this.setData({ inviteCode: '' })
+        this._loadTeamManagedFields()
+      } else {
+        if (res.error === 'NO_CARD') {
+          wx.showModal({
+            title: '需先保存名片',
+            content: '请先保存当前名片，再粘贴邀请码加入团队。',
+            showCancel: false,
+            confirmText: '知道了'
+          })
+          return
+        }
+        team.showTeamError(res.error)
+      }
+    })
+  },
+
+  goToTeamList() {
+    wx.navigateTo({ url: '/pages/team/list' })
   }
 })

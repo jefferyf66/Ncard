@@ -50,6 +50,13 @@
         <text class="menu-text">访客记录</text>
         <text class="menu-arrow">›</text>
       </view>
+      <view class="menu-item" bindtap="goToTeam">
+        <view class="menu-icon-wrap">
+          <view class="icon-team"></view>
+        </view>
+        <text class="menu-text">我的团队</text>
+        <text class="menu-arrow">›</text>
+      </view>
     </view>
   </view>
 

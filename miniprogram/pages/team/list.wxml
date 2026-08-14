@@ -1,0 +1,49 @@
+<view class="container">
+  <view class="header">
+    <text class="header-title">我的团队</text>
+    <text class="header-sub">创建或加入团队，关联你的组织身份</text>
+  </view>
+
+  <view class="loading-state" wx:if="{{isLoading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <view wx:elif="{{isEmpty}}" class="empty-state">
+    <view class="empty-icon"><view class="icon-team"></view></view>
+    <text class="empty-title">还没有加入任何团队</text>
+    <text class="empty-desc">创建你的第一个团队，或用邀请码加入</text>
+    <view class="empty-actions">
+      <view class="primary-btn" bindtap="goCreate">创建团队</view>
+      <view class="ghost-btn" bindtap="goJoin">用邀请码加入</view>
+    </view>
+  </view>
+
+  <view wx:else class="team-list">
+    <view
+      class="team-card"
+      wx:for="{{teamList}}"
+      wx:key="_id"
+      data-id="{{item._id}}"
+      bindtap="goDetail"
+      hover-class="team-card-hover"
+    >
+      <view class="team-logo">{{item.name[0]}}</view>
+      <view class="team-info">
+        <view class="team-name-row">
+          <text class="team-name">{{item.name}}</text>
+          <view class="role-badge {{item.myRole === 'owner' ? 'role-owner' : 'role-member'}}">
+            {{item.myRole === 'owner' ? '创始人' : '成员'}}
+          </view>
+        </view>
+        <text class="team-meta">团队ID：{{item.shortId}} · {{item.memberCount}} 人</text>
+      </view>
+      <view class="team-arrow">›</view>
+    </view>
+  </view>
+
+  <view class="bottom-actions" wx:if="{{!isLoading && !isEmpty}}">
+    <view class="ghost-btn full" bindtap="goJoin">用邀请码加入</view>
+    <view class="primary-btn full" bindtap="goCreate">创建团队</view>
+  </view>
+</view>

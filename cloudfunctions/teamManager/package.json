@@ -1,0 +1,9 @@
+{
+  "name": "teamManager",
+  "version": "1.0.0",
+  "description": "团队租户云函数（创建/邀请/成员管理/退出）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

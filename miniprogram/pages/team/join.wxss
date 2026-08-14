@@ -1,0 +1,47 @@
+/* 加入团队 */
+.container {
+  min-height: 100vh;
+  padding: 24rpx;
+  padding-bottom: 180rpx;
+  background: linear-gradient(175deg, #EFF6FF 0%, #F8FAFC 40%, #FEFCF7 100%);
+}
+.header { padding: 16rpx 8rpx 24rpx; }
+.header-title { font-size: 44rpx; font-weight: 700; color: #0F172A; }
+.header-sub { display: block; margin-top: 8rpx; font-size: 26rpx; color: #64748B; }
+
+.prefill-card {
+  display: flex; align-items: center; background: #fff; border-radius: 20rpx;
+  padding: 28rpx; margin-bottom: 24rpx; border: 2rpx solid #E2E8F0;
+  box-shadow: 0 2rpx 12rpx rgba(29, 78, 216, 0.04);
+}
+.prefill-logo {
+  width: 88rpx; height: 88rpx; border-radius: 16rpx;
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: #fff;
+  font-size: 40rpx; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-right: 20rpx;
+}
+.prefill-info { flex: 1; }
+.prefill-name { font-size: 24rpx; color: #94A3B8; display: block; }
+.prefill-team { font-size: 34rpx; font-weight: 700; color: #0F172A; display: block; margin-top: 4rpx; }
+
+.form-card {
+  background: #fff; border-radius: 20rpx; padding: 12rpx 28rpx;
+  box-shadow: 0 2rpx 12rpx rgba(29, 78, 216, 0.04); border: 2rpx solid #E2E8F0;
+}
+.form-group { padding: 24rpx 0; }
+.form-label { font-size: 28rpx; font-weight: 600; color: #334155; }
+.code-input {
+  margin-top: 16rpx; height: 96rpx; background: #F8FAFC; border: 2rpx solid #E2E8F0;
+  border-radius: 12rpx; padding: 0 24rpx; font-size: 40rpx; font-weight: 700;
+  letter-spacing: 8rpx; color: #1F2937; text-align: center;
+}
+
+.bottom-actions { position: fixed; left: 24rpx; right: 24rpx; bottom: 28rpx; }
+.primary-btn {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: #fff;
+  font-size: 30rpx; font-weight: 600; text-align: center; padding: 24rpx 0; border-radius: 16rpx;
+}
+.primary-btn.disabled { opacity: 0.6; }
+
+.no-card-tip { margin-top: 28rpx; display: flex; flex-direction: column; align-items: center; gap: 8rpx; }
+.tip-text { font-size: 24rpx; color: #94A3B8; }
+.tip-link { font-size: 26rpx; color: #3B82F6; font-weight: 600; }

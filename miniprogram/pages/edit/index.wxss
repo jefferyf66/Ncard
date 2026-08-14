@@ -611,3 +611,46 @@
   font-size: 28rpx;
   color: #94A3B8;
 }
+
+/* ===== 团队托管字段（T12） ===== */
+.managed-banner {
+  display: flex;
+  align-items: center;
+  background: #FFFBEB;
+  border: 2rpx solid #FDE68A;
+  border-radius: 14rpx;
+  padding: 16rpx 20rpx;
+  margin-bottom: 20rpx;
+}
+.managed-banner-text { font-size: 24rpx; color: #B45309; margin-left: 12rpx; line-height: 1.5; }
+
+.managed-hint {
+  display: flex;
+  align-items: center;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: #B45309;
+}
+.lock-icon-sm {
+  width: 22rpx; height: 22rpx; margin-right: 8rpx;
+  border: 3rpx solid #B45309; border-radius: 4rpx; position: relative;
+}
+.lock-icon-sm::before {
+  content: ''; position: absolute; left: 50%; top: -10rpx; transform: translateX(-50%);
+  width: 12rpx; height: 10rpx; border: 3rpx solid #B45309; border-bottom: none;
+  border-radius: 8rpx 8rpx 0 0;
+}
+
+.team-join-block { padding: 24rpx 0; }
+.join-tip { display: block; font-size: 24rpx; color: #94A3B8; margin: 12rpx 0 16rpx; line-height: 1.5; }
+.join-row { display: flex; align-items: center; gap: 16rpx; }
+.join-input {
+  flex: 1; height: 80rpx; background: #F8FAFC; border: 2rpx solid #E2E8F0;
+  border-radius: 12rpx; padding: 0 20rpx; font-size: 32rpx; font-weight: 700;
+  letter-spacing: 4rpx; color: #1F2937;
+}
+.join-btn {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: #fff;
+  font-size: 28rpx; font-weight: 600; padding: 20rpx 32rpx; border-radius: 12rpx;
+}
+.join-btn.disabled { opacity: 0.6; }

@@ -144,6 +144,25 @@
 .icon-users::before { left: 0; }
 .icon-users::after { right: 0; }
 
+.icon-team {
+  width: 40rpx;
+  height: 40rpx;
+  border: 2rpx solid #3B82F6;
+  border-radius: 6rpx;
+  position: relative;
+}
+.icon-team::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 8rpx;
+  transform: translateX(-50%);
+  width: 14rpx;
+  height: 14rpx;
+  border: 2rpx solid #3B82F6;
+  border-radius: 50%;
+}
+
 .icon-camera {
   width: 40rpx;
   height: 36rpx;

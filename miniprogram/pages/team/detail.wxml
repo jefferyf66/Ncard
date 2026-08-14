@@ -1,0 +1,80 @@
+<view class="container">
+  <view class="loading-state" wx:if="{{isLoading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <block wx:elif="{{team}}">
+    <!-- 团队头部 -->
+    <view class="team-header">
+      <view class="team-logo">{{team.name[0]}}</view>
+      <view class="team-head-info">
+        <text class="team-name">{{team.name}}</text>
+        <text class="team-meta">团队ID：{{team.shortId}} · {{team.memberCount}} 人</text>
+      </view>
+      <view class="role-tag {{isOwner ? 'owner' : 'member'}}">{{isOwner ? '创始人' : '成员'}}</view>
+    </view>
+
+    <view class="card-block" wx:if="{{team.description}}">
+      <text class="block-text">{{team.description}}</text>
+    </view>
+
+    <!-- 邀请入口（owner） -->
+    <view class="card-block" wx:if="{{isOwner}}">
+      <view class="block-action" bindtap="onInvite">
+        <view class="action-icon"><view class="icon-invite"></view></view>
+        <view class="action-text">
+          <text class="action-title">邀请成员</text>
+          <text class="action-sub">生成邀请码 / 分享邀请卡片</text>
+        </view>
+        <text class="action-arrow">›</text>
+      </view>
+    </view>
+
+    <!-- 成员列表 -->
+    <view class="section-card">
+      <view class="section-header">
+        <text class="section-title">成员（{{members.length}}）</text>
+      </view>
+      <view class="member-item" wx:for="{{members}}" wx:key="_id">
+        <view class="member-avatar">{{item.isMe ? '我' : item.maskedId[2]}}</view>
+        <view class="member-info">
+          <view class="member-name-row">
+            <text class="member-name">{{item.isMe ? '我' : item.maskedId}}</text>
+            <view class="role-badge {{item.role === 'owner' ? 'role-owner' : 'role-member'}}">
+              {{item.role === 'owner' ? '创始人' : '成员'}}
+            </view>
+          </view>
+        </view>
+        <view class="member-actions" wx:if="{{isOwner && !item.isMe}}">
+          <text class="act-edit" catchtap="editMember" data-id="{{item.memberOpenId}}">编辑</text>
+          <text class="act-remove" catchtap="removeMember" data-id="{{item.memberOpenId}}">移除</text>
+        </view>
+      </view>
+      <view class="empty-members" wx:if="{{members.length === 0}}">暂无成员</view>
+    </view>
+
+    <!-- 退出（成员，非 owner） -->
+    <view class="bottom-actions" wx:if="{{!isOwner}}">
+      <view class="danger-btn" bindtap="onLeave">退出团队</view>
+    </view>
+    <view class="owner-tip" wx:if="{{isOwner}}">
+      <text class="owner-tip-text">你是团队创始人，不能退出。如需离开，请先转让或解散团队。</text>
+    </view>
+  </block>
+
+  <!-- 邀请弹窗 -->
+  <view class="modal-overlay" wx:if="{{showInviteModal}}" catchtap="closeInvite">
+    <view class="modal-content" catchtap="stopPropagation">
+      <view class="modal-title">邀请成员</view>
+      <view class="code-box">
+        <text class="code-label">邀请码</text>
+        <text class="code-value">{{inviteCode}}</text>
+        <view class="copy-btn" bindtap="copyInviteCode">复制</view>
+      </view>
+      <text class="modal-tip">把邀请码发给好友，或点击下方按钮分享邀请卡片。</text>
+      <button class="share-btn" open-type="share">分享邀请卡片</button>
+      <view class="modal-close" bindtap="closeInvite">关闭</view>
+    </view>
+  </view>
+</view>

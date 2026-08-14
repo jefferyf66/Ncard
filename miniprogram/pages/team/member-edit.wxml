@@ -1,0 +1,37 @@
+<view class="container">
+  <view class="header">
+    <text class="header-title">编辑成员信息</text>
+    <text class="header-sub">仅可编辑团队托管的组织字段</text>
+  </view>
+
+  <view class="member-card">
+    <text class="member-label">成员</text>
+    <text class="member-id">{{maskedMember}}</text>
+    <text class="member-team" wx:if="{{teamName}}">· {{teamName}}</text>
+  </view>
+
+  <view class="form-card">
+    <view class="form-group" wx:for="{{fields}}" wx:key="key">
+      <text class="form-label">{{item.label}}</text>
+      <input
+        class="form-input"
+        placeholder="{{item.placeholder}}"
+        value="{{form[item.key]}}"
+        data-key="{{item.key}}"
+        bindinput="onFieldInput"
+        maxlength="100"
+      />
+      <view class="form-divider" wx:if="{{index !== fields.length - 1}}"></view>
+    </view>
+  </view>
+
+  <view class="tips-card">
+    <text class="tips-text">姓名、私人电话、微信、私人邮箱等个人字段不可由团队修改，始终以本人名片为准。</text>
+  </view>
+
+  <view class="bottom-actions">
+    <view class="primary-btn {{isSaving ? 'disabled' : ''}}" bindtap="save">
+      {{isSaving ? '保存中...' : '保存'}}
+    </view>
+  </view>
+</view>

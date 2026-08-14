@@ -1,0 +1,54 @@
+<view class="container">
+  <view class="header">
+    <text class="header-title">创建团队</text>
+    <text class="header-sub">填写信息即可创建，你将成为团队创始人</text>
+  </view>
+
+  <view class="form-card">
+    <view class="form-group">
+      <text class="form-label">团队名称<text class="required">*</text></text>
+      <input
+        class="form-input {{errors.name ? 'input-error' : ''}}"
+        placeholder="如：科博科技"
+        value="{{name}}"
+        bindinput="onNameInput"
+        maxlength="30"
+      />
+      <view class="form-error" wx:if="{{errors.name}}">{{errors.name}}</view>
+
+      <!-- L2 软提示：创建期同名团队兜底 -->
+      <view class="similar-tip" wx:if="{{showSimilar && similarTeams.length}}">
+        <text class="similar-title">已有相似名称的团队：</text>
+        <view class="similar-item" wx:for="{{similarTeams}}" wx:key="_id">
+          <text class="similar-name">{{item.name}}</text>
+          <text class="similar-meta">ID {{item.shortId}} · {{item.memberCount}}人</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="form-divider"></view>
+
+    <view class="form-group">
+      <text class="form-label">团队简介</text>
+      <textarea
+        class="form-textarea"
+        placeholder="一句话介绍团队（选填）"
+        value="{{description}}"
+        bindinput="onDescInput"
+        maxlength="200"
+        auto-height
+      />
+    </view>
+  </view>
+
+  <view class="tips-card">
+    <text class="tips-text">创建后可在团队详情页生成邀请码，邀请成员加入。</text>
+  </view>
+
+  <view class="bottom-actions">
+    <view class="ghost-btn" bindtap="goJoin">用邀请码加入</view>
+    <view class="primary-btn {{isSubmitting ? 'disabled' : ''}}" bindtap="submit">
+      {{isSubmitting ? '创建中...' : '创建团队'}}
+    </view>
+  </view>
+</view>

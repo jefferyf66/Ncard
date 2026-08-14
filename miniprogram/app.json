@@ -7,7 +7,12 @@
     "pages/agreement/index",
     "pages/list/index",
     "pages/profile/index",
-    "pages/crop/index"
+    "pages/crop/index",
+    "pages/team/list",
+    "pages/team/create",
+    "pages/team/detail",
+    "pages/team/join",
+    "pages/team/member-edit"
   ],
   "window": {
     "backgroundTextStyle": "light",

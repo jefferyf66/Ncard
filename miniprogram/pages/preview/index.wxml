@@ -25,6 +25,12 @@
           <view class="name-area">
             <text class="name">{{card.name}}</text>
             <text class="position" wx:if="{{card.position}}">{{card.position}}</text>
+            <view class="team-badges" wx:if="{{teamBadges.length}}">
+              <view class="team-badge" wx:for="{{teamBadges}}" wx:key="teamId" data-index="{{index}}" bindtap="openTeamCard">
+                <view class="badge-dot"></view>
+                <text class="badge-text">{{item.team.name}}</text>
+              </view>
+            </view>
           </view>
         </view>
         
@@ -201,5 +207,27 @@
   <view class="auth-banner-actions">
     <view class="auth-btn-dismiss" bindtap="dismissAuthBanner">暂不</view>
     <view class="auth-btn-agree" bindtap="onAuthUserInfo">授权</view>
+  </view>
+</view>
+
+<!-- 团队名片视图（T12）：个人 card 真相源 + 托管字段覆盖层合并 -->
+<view class="team-card-modal" wx:if="{{showTeamCard}}" catchtap="closeTeamCard">
+  <view class="team-card-content" catchtap="stopPropagation">
+    <view class="tc-header">
+      <text class="tc-title">团队名片</text>
+      <text class="tc-team">由「{{teamCardName}}」管理</text>
+    </view>
+    <view class="tc-body" wx:if="{{teamCardView}}">
+      <view class="tc-field" wx:if="{{teamCardView.name}}"><text class="tc-label">姓名</text><text class="tc-value">{{teamCardView.name}}</text></view>
+      <view class="tc-field" wx:if="{{teamCardView.position}}"><text class="tc-label">职位</text><text class="tc-value">{{teamCardView.position}}</text></view>
+      <view class="tc-field" wx:if="{{teamCardView.company}}"><text class="tc-label">公司</text><text class="tc-value">{{teamCardView.company}}</text></view>
+      <view class="tc-field" wx:if="{{teamCardView.department}}"><text class="tc-label">部门</text><text class="tc-value">{{teamCardView.department}}</text></view>
+      <view class="tc-field" wx:if="{{teamCardView.companyPhone}}"><text class="tc-label">公司电话</text><text class="tc-value">{{teamCardView.companyPhone}}</text></view>
+      <view class="tc-field" wx:if="{{teamCardView.companyAddress}}"><text class="tc-label">公司地址</text><text class="tc-value">{{teamCardView.companyAddress}}</text></view>
+      <view class="tc-field" wx:if="{{teamCardView.companyWebsite}}"><text class="tc-label">公司网站</text><text class="tc-value">{{teamCardView.companyWebsite}}</text></view>
+      <view class="tc-field" wx:if="{{teamCardView.workEmail}}"><text class="tc-label">工作邮箱</text><text class="tc-value">{{teamCardView.workEmail}}</text></view>
+      <view class="tc-note">个人字段（姓名/私人手机/微信/私人邮箱/地址）始终以本人名片为准，不被团队覆盖。</view>
+    </view>
+    <view class="tc-close" bindtap="closeTeamCard">关闭</view>
   </view>
 </view>
