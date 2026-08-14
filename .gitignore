@@ -32,3 +32,7 @@ miniprogram/project.config.json
 .env
 .env.local
 .env.*.local
+
+# WorkBuddy project data (agent working dir: memory / cache / screenshots / artifacts)
+# Local project state, not source code — keep out of version control
+.workbuddy/
