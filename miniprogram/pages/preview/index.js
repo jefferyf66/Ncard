@@ -238,11 +238,10 @@ Page({
           app.showSuccess('已保存过此名片')
           return Promise.reject('duplicate')
         }
-        // 获取 openId 后写入
-        return wx.cloud.callFunction({ name: 'getOpenId', data: {} })
+        // 获取 openId 后写入（收敛到 app 层，复用缓存与默认 action）
+        return app.getOpenId()
       }.bind(this))
-      .then((res) => {
-        var myOpenId = (res.result && res.result.data && res.result.data.openid) || ''
+      .then((myOpenId) => {
         if (!myOpenId) {
           app.hideLoading()
           app.showError('保存失败，请重试')

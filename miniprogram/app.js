@@ -4,6 +4,8 @@ App({
   globalData: {
     userInfo: null,
     systemInfo: null,
+    // 当前登录用户记录（由 ensureUser 填充，见 getUser()）
+    user: null,
     // 应用版本号（关于页等展示用，唯一真源）
     version: '1.1.4'
   },
@@ -11,6 +13,8 @@ App({
   onLaunch() {
     this.getSystemInfo()
     this.initCloud()
+    // 启动即确保账号存在（fire-and-forget，失败不影响启动）
+    this.ensureUser()
   },
 
   getSystemInfo() {
@@ -117,6 +121,48 @@ App({
         }
       })
     })
+  },
+
+  /**
+   * 启动即确保用户账号存在（自动注册/登录）
+   * 调用 getOpenId 云函数 ensureUser action，写库并返回 user 记录
+   * 缓存 Promise：避免并发重复调用，并供页面在首装竞态时 await 刷新（P2-1）
+   * @returns {Promise<Object|null>}
+   */
+  ensureUser() {
+    if (!wx.cloud) return Promise.resolve(null)
+    if (this._ensureUserPromise) return this._ensureUserPromise
+    this._ensureUserPromise = new Promise((resolve) => {
+      wx.cloud.callFunction({
+        name: 'getOpenId',
+        data: { action: 'ensureUser' },
+        success: (res) => {
+          const user = res.result && res.result.data && res.result.data.user
+          if (user) {
+            this.globalData.user = user
+            this.globalData._openId = user._openid
+            try { wx.setStorageSync('user', user) } catch (e) {}
+          }
+          resolve(user || null)
+        },
+        fail: (err) => {
+          console.warn('[App] ensureUser 失败（不影响启动）', err)
+          resolve(null)
+        }
+      })
+    })
+    return this._ensureUserPromise
+  },
+
+  /**
+   * 获取当前用户记录
+   * 优先取 globalData.user，回退本地原始 storage
+   * （user 经 wx.setStorageSync('user', user) 原始写入，与 getCache 的 {value,timestamp} 包装不兼容，故不用 getCache 读取）
+   * @returns {Object|null}
+   */
+  getUser() {
+    if (this.globalData.user) return this.globalData.user
+    try { return wx.getStorageSync('user') || null } catch (e) { return null }
   },
 
   /**

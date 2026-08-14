@@ -54,6 +54,7 @@ Page({
 <li>设备型号、操作系统版本</li>
 <li>微信开放标识（OpenID），用于区分用户身份</li>
 </ul>
+<p style="margin:16rpx 0 8rpx 0;color:#64748B;">登录说明：登录即自动建立账号并安全存储您的 openid；当您主动完善资料（昵称、头像）时，即表示您授权我们收集上述信息。</p>
 
 <p style="font-weight:600;margin:32rpx 0 16rpx 0;color:#0F172A;">二、信息收集的目的和使用方式</p>
 <p style="margin-bottom:12rpx;">我们收集您的信息仅用于以下目的：</p>

@@ -4,6 +4,8 @@ Page({
   data: {
     userInfo: null,
     openid: '',
+    openidMask: '',
+    version: '',
     cardCount: 0,
     currentTheme: '#3B82F6',
     defaultCardName: '',
@@ -29,15 +31,22 @@ Page({
   onShow() {
     console.log('[Profile] onShow')
     this.loadUserData()
+    // 首装竞态兜底：ensureUser 尚未回写 globalData.user 时，主动等一次再刷新（P2-1）
+    if (!app.getUser()) {
+      app.ensureUser().then(() => this.loadUserData())
+    }
     this._loadSettings()
   },
 
   loadUserData() {
-    const userInfo = app.globalData.userInfo
-    const openid = app.globalData.openid
+    const user = app.getUser()
+    const openid = (user && user._openid) || ''
+    const openidMask = openid ? '..' + openid.slice(-6) : ''
     this.setData({
-      userInfo,
-      openid
+      userInfo: user,
+      openid,
+      openidMask,
+      version: (app.globalData && app.globalData.version) || '1.1.4'
     })
   },
 
@@ -120,7 +129,7 @@ Page({
   },
 
   showAbout() {
-    var version = (app.globalData && app.globalData.version) || '1.1.3'
+    var version = (app.globalData && app.globalData.version) || '1.1.4'
     wx.showModal({
       title: '关于科博名片',
       content: '科博名片 v' + version + '\n\n一款专业的电子名片管理工具\n\n© 2024-2026 科博名片',

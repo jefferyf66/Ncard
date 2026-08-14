@@ -130,6 +130,7 @@ bash uploadCloudFunction.sh
 
 | 集合名称 | 用途 | 权限 |
 |----------|------|------|
+| `users` | 用户账号主记录（ensureUser 写入） | 仅创建者可读写 |
 | `cards` | 名片数据 | 仅创建者可读写 |
 | `visits` | 访客记录 | 仅创建者可读写 |
 | `user_save_cards` | 用户保存的名片关联 | 仅创建者可读写 |
@@ -150,6 +151,7 @@ bash uploadCloudFunction.sh
 - `visits` 集合：`cardId`（升序）、`visitTime`（降序）
 - `user_save_cards` 集合：`userOpenId`（升序）、`cardId`（升序）
 - `visitor_profiles` 集合：`visitorOpenId`（升序）
+- `users` 集合：`_openid`（升序，**建议设唯一索引**，作为 ensureUser 先查后写在极端并发下的兜底）
 
 ---
 
