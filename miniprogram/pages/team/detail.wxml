@@ -36,7 +36,7 @@
       <view class="section-header">
         <text class="section-title">成员（{{members.length}}）</text>
       </view>
-      <view class="member-item" wx:for="{{members}}" wx:key="_id">
+      <view class="member-item" wx:for="{{members}}" wx:key="_id" bindtap="openMemberCard" data-id="{{item.cardId}}">
         <view class="member-avatar">{{item.isMe ? '我' : item.maskedId[2]}}</view>
         <view class="member-info">
           <view class="member-name-row">

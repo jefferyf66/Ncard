@@ -54,9 +54,19 @@ Page({
       const myOpenId = (me && me._openid) || ''
       const members = (res.data.members || []).map((m) => Object.assign({}, m, {
         isMe: m.memberOpenId === myOpenId,
-        maskedId: maskOpenId(m.memberOpenId)
+        maskedId: maskOpenId(m.memberOpenId),
+        cardId: m.cardId || ''
       }))
       this.setData({ members })
+    })
+  },
+
+  // 查看成员名片：跳 preview 并把当前团队 id 带上，由 preview 自动展开「该团队下的托管名片」
+  openMemberCard(e) {
+    const cardId = e.currentTarget.dataset.id
+    if (!cardId) return
+    wx.navigateTo({
+      url: '/pages/preview/index?id=' + cardId + '&teamId=' + this.data.teamId + '&fromTeam=1'
     })
   },
 

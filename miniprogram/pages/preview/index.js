@@ -24,6 +24,7 @@ Page({
 
     const id = options?.id || ''
     this._shareOptions = options  // 保存分享参数供 recordVisit 使用
+    this._fromTeamId = options?.teamId || ''  // 从团队详情跳入时携带，用于自动展开「该团队下的托管名片」
     this.setData({ id, isLoading: !!id })
 
     if (id) {
@@ -139,6 +140,9 @@ Page({
 
           // 加载团队徽章（跨用户读，经 teamManager 云函数 admin 上下文）
           this._loadTeamBadges(id)
+
+          // 若是「从团队详情点成员名片」跳入，自动展开该团队下的托管名片视图
+          if (this._fromTeamId) this._autoOpenTeamCard(id)
         } else {
           this.setData({
             isLoading: false,
@@ -731,6 +735,28 @@ Page({
       teamCardView: merged,
       teamCardName: (badge.team && badge.team.name) || '团队'
     })
+  },
+
+  /**
+   * 从团队详情点成员名片跳入时，按来源团队自动展开托管名片视图
+   * 复用 openTeamCard 的弹层字段（showTeamCard / teamCardView / teamCardName）
+   */
+  _autoOpenTeamCard(cardId) {
+    const teamId = this._fromTeamId
+    if (!teamId) return
+    team.callTeamManager('getCardTeams', { cardId }).then((res) => {
+      if (res.success && res.data && res.data.teams) {
+        const hit = res.data.teams.find(t => t.teamId === teamId)
+        if (hit) {
+          const merged = team.mergeCardWithTeam(this.data.card, hit.managedFields)
+          this.setData({
+            showTeamCard: true,
+            teamCardView: merged,
+            teamCardName: (hit.team && hit.team.name) || '团队'
+          })
+        }
+      }
+    }).catch(function () {})
   },
 
   closeTeamCard() {
