@@ -43,6 +43,9 @@ Page({
     // 当调用隐私 API（如云开发）时，微信自动弹出官方隐私弹窗
     this.loadCards(true)
     this.initShareMenu()
+    // 缓存设备平台，供「添加到桌面」等场景复用（避免每次点击重复取）
+    const deviceInfoCache = wx.getDeviceInfo ? wx.getDeviceInfo() : {}
+    this._devicePlatform = (deviceInfoCache.platform || deviceInfoCache.system || '').toLowerCase()
   },
 
   /**
@@ -686,30 +689,42 @@ Page({
 
   /**
    * 添加到桌面
-   * - Android: 调用 wx.showAddToDesktop() 一键添加（基础库 ≥ 2.10.3）
+   * - Android: 调用 wx.showAddToDesktop() 一键添加（能力由 wx.canIUse 判定，免手写版本号）
    * - iOS: 不支持 API，引导手动操作
+   * - 开发者工具: 不支持，提示真机预览
    * - 低版本微信: 降级为文字引导
    */
   addToDesktop() {
-    var self = this
-    var deviceInfo = wx.getDeviceInfo ? wx.getDeviceInfo() : {}
-    var appBaseInfo = wx.getAppBaseInfo ? wx.getAppBaseInfo() : {}
-    var platform = (deviceInfo.platform || deviceInfo.system || '').toLowerCase()
-    var sdkVersion = appBaseInfo.SDKVersion || '0.0.0'
+    let platform = this._devicePlatform || ''
+    if (!platform) {
+      const di = wx.getDeviceInfo ? wx.getDeviceInfo() : {}
+      platform = (di.platform || di.system || '').toLowerCase()
+    }
 
-    // iOS 不支持 API
-    if (platform.indexOf('ios') >= 0) {
+    // 开发者工具 / 模拟器不支持该 API，避免误导为权限问题
+    if (platform === 'devtools') {
       wx.showModal({
         title: '添加到桌面',
-        content: 'iOS 暂不支持一键添加。请点击右上角「...」→「分享」→「添加到主屏幕」',
+        content: '开发者工具暂不支持「添加到桌面」，请在真机预览中体验',
         showCancel: false,
         confirmText: '知道了'
       })
       return
     }
 
-    // 检查基础库版本
-    if (self._compareVersion(sdkVersion, '2.10.3') < 0) {
+    // iOS 不支持 API
+    if (platform.indexOf('ios') >= 0) {
+      wx.showModal({
+        title: '添加到桌面',
+        content: 'iOS 暂不支持一键添加。请点击右上角「...」→「添加到桌面」，或经 Safari「添加到主屏幕」',
+        showCancel: false,
+        confirmText: '知道了'
+      })
+      return
+    }
+
+    // 用官方能力判定替代手写版本比较（canIUse 始终与实际 API 对齐）
+    if (typeof wx.canIUse === 'function' && !wx.canIUse('showAddToDesktop')) {
       wx.showModal({
         title: '添加到桌面',
         content: '当前微信版本较低，请点击右上角「...」→「添加到桌面」',
@@ -721,12 +736,12 @@ Page({
 
     // Android: 调用官方 API
     wx.showAddToDesktop({
-      success: function () {
+      success: () => {
         wx.showToast({ title: '已发起添加，请按提示完成', icon: 'none', duration: 2500 })
       },
-      fail: function (err) {
+      fail: (err) => {
         console.warn('[Index] 添加桌面失败:', err)
-        var errMsg = (err && err.errMsg) || ''
+        const errMsg = (err && err.errMsg) || ''
         if (errMsg.indexOf('cancel') >= 0 || errMsg.indexOf('canceled') >= 0) {
           // 用户取消，不提示
           return
@@ -739,22 +754,6 @@ Page({
         })
       }
     })
-  },
-
-  /**
-   * 版本号比较: 返回 1(v1>v2) / 0(相等) / -1(v1<v2)
-   */
-  _compareVersion(v1, v2) {
-    var a = v1.split('.')
-    var b = v2.split('.')
-    var len = Math.max(a.length, b.length)
-    for (var i = 0; i < len; i++) {
-      var n1 = parseInt(a[i] || '0', 10)
-      var n2 = parseInt(b[i] || '0', 10)
-      if (n1 > n2) return 1
-      if (n1 < n2) return -1
-    }
-    return 0
   },
 
   /**
