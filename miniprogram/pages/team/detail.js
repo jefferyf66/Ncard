@@ -3,12 +3,23 @@ const team = require('../../utils/team')
 
 Page({
   data: {
+    // 原始 id（teamId 或 shortId，来自 onLoad 的 options.id）
+    rawId: '',
+    // 经 getTeam 解析后的真实 _id（toggleShare / 邀请 / 成员列表均用此）
     teamId: '',
+    shortId: '',
+    // 视图模式：manage（成员/owner）| public（公开目录）| whitelist（非成员未公开）
+    viewMode: '',
     team: null,
     myRole: '',
-    members: [],
-    isLoading: true,
     isOwner: false,
+    members: [],
+    // 公开目录数据（getTeamPublicDirectory）
+    pubTeam: null,
+    pubMembers: [],
+    // 目录公开开关（owner）
+    allowDirectoryShare: false,
+    isLoading: true,
     showInviteModal: false,
     inviteCode: '',
     inviteToken: '',
@@ -16,33 +27,75 @@ Page({
   },
 
   onLoad(options) {
-    const teamId = (options && options.teamId) || ''
-    this.setData({ teamId })
+    // 兼容新规范（?id=）与既有跳转（?teamId=）
+    const rawId = (options && (options.id || options.teamId)) || ''
+    const isPublicParam = !!(options && options.public === '1')
+    this.setData({ rawId, isPublicParam })
     app.ensureUser().then(() => this.loadDetail())
   },
 
   onShow() {
-    if (this.data.teamId && app.getUser()) this.loadMembers()
+    // 成员/owner 切回前台时刷新成员列表（公开/白名单模式无需）
+    if (this.data.viewMode === 'manage' && this.data.teamId && app.getUser()) {
+      this.loadMembers()
+    }
   },
 
   loadDetail() {
     this.setData({ isLoading: true })
-    team.callTeamManager('getTeam', { teamId: this.data.teamId }).then((res) => {
+    team.callTeamManager('getTeam', { teamId: this.data.rawId }).then((res) => {
       if (res.success) {
+        const t = res.data.team || {}
         const myRole = res.data.myRole || ''
+        const teamId = t._id || this.data.rawId
+        const shortId = t.shortId || this.data.rawId
+        const isOwner = myRole === 'owner'
+        const allowDirectoryShare = !!t.allowDirectoryShare
         this.setData({
-          team: res.data.team,
+          team: t,
+          teamId,
+          shortId,
           myRole,
-          isOwner: myRole === 'owner',
+          isOwner,
+          allowDirectoryShare,
           isLoading: false
         })
-        this.loadMembers()
+
+        if (this.data.isPublicParam) {
+          // 分享/公众号链接直达：一律走公开目录视图（内部判定 public / whitelist）
+          this.loadPublicDirectory()
+          return
+        }
+        if (myRole) {
+          // 成员 / owner → 管理视图
+          this.setData({ viewMode: 'manage' })
+          this.loadMembers()
+        } else {
+          // 非成员 → 尝试公开目录，否则白名单视图
+          this.loadPublicDirectory()
+        }
       } else {
         this.setData({ isLoading: false })
         team.showTeamError(res.error)
         if (res.error === 'TEAM_NOT_FOUND') {
           setTimeout(() => wx.navigateBack(), 1500)
         }
+      }
+    })
+  },
+
+  // 公开团队目录（只读）：非成员/外部访问也走此接口
+  loadPublicDirectory() {
+    team.callTeamManager('getTeamPublicDirectory', { teamId: this.data.rawId }).then((res) => {
+      if (res.success) {
+        this.setData({
+          viewMode: 'public',
+          pubTeam: res.data.team,
+          pubMembers: res.data.members
+        })
+      } else {
+        // 未公开 / 不存在 → 白名单视图（提示用邀请码加入）
+        this.setData({ viewMode: 'whitelist' })
       }
     })
   },
@@ -103,8 +156,34 @@ Page({
     })
   },
 
-  // 分享邀请卡片（P1，携带 teamId+token）
-  onShareAppMessage() {
+  // 切换目录公开开关（owner）：乐观更新，失败回滚
+  toggleShare(e) {
+    const checked = !!(e.detail && e.detail.value)
+    if (checked === this.data.allowDirectoryShare) return
+    this.setData({ allowDirectoryShare: checked })
+    team.callTeamManager('setDirectoryShare', { teamId: this.data.teamId, allow: checked }).then((res) => {
+      if (res.success) {
+        this.setData({ allowDirectoryShare: !!res.data.allowDirectoryShare })
+      } else {
+        // 回滚开关状态
+        this.setData({ allowDirectoryShare: !checked })
+        team.showTeamError(res.error)
+      }
+    })
+  },
+
+  // 分享：整组目录 / 邀请成员（依据按钮 data-share 区分）
+  onShareAppMessage(res) {
+    // 整组分享：团队名片目录
+    if (res && res.target && res.target.dataset && res.target.dataset.share === 'directory') {
+      const name = (this.data.pubTeam && this.data.pubTeam.name) ||
+        (this.data.team && this.data.team.name) || '团队'
+      return {
+        title: name + ' · 团队名片目录',
+        path: 'pages/team/detail?id=' + this.data.shortId + '&public=1'
+      }
+    }
+    // 默认：邀请成员（join 路径 / token）
     const t = this.data.team
     const title = '邀请你加入团队「' + (t && t.name || '我的团队') + '」'
     // 优先使用「邀请成员」弹窗生成的带 token 路径；胶囊菜单直接转发无 token 时降级到团队列表页（接收方仍可手输邀请码加入）
@@ -196,6 +275,11 @@ Page({
         team.showTeamError(res.error)
       }
     })
+  },
+
+  // 白名单视图：跳团队列表以输入邀请码加入
+  goTeamList() {
+    wx.navigateTo({ url: '/pages/team/list' })
   },
 
   stopPropagation() {}

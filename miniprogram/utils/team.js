@@ -30,6 +30,8 @@ const TEAM_ERROR_MESSAGES = {
   OWNER_CANNOT_LEAVE: '创始人不能退出，请先转让或解散',
   KEYWORD_REQUIRED: '请输入搜索关键词',
   CARD_NOT_FOUND: '名片不存在',
+  TEAM_NOT_PUBLIC: '该团队未开启公开目录',
+  INVALID_PARAM: '参数错误',
   UNKNOWN_ACTION: '未知操作',
   CLOUD_CALL_FAIL: '网络异常，请稍后重试'
 }

@@ -4,7 +4,70 @@
     <text class="loading-text">加载中...</text>
   </view>
 
-  <block wx:elif="{{team}}">
+  <!-- ============ 公开目录模式（成员/外部均可只读浏览） ============ -->
+  <block wx:elif="{{viewMode === 'public'}}">
+    <view class="team-header">
+      <view class="team-logo">{{pubTeam.name[0]}}</view>
+      <view class="team-head-info">
+        <text class="team-name">{{pubTeam.name}}</text>
+        <text class="team-meta">团队ID：{{pubTeam.shortId}} · {{pubTeam.memberCount}} 人</text>
+      </view>
+    </view>
+
+    <view class="card-block" wx:if="{{pubTeam.description}}">
+      <text class="block-text">{{pubTeam.description}}</text>
+    </view>
+
+    <!-- 成员目录网格（只读，无编辑/移除/退出/解散） -->
+    <view class="section-card">
+      <view class="section-header">
+        <text class="section-title">成员目录（{{pubMembers.length}}）</text>
+      </view>
+      <view class="member-grid">
+        <view class="member-card" wx:for="{{pubMembers}}" wx:key="memberId">
+          <image wx:if="{{item.avatarUrl}}" class="member-avatar-img" src="{{item.avatarUrl}}" mode="aspectFill"></image>
+          <view wx:else class="member-avatar-img member-avatar-default">{{item.name[0]}}</view>
+          <view class="member-card-name">{{item.name}}</view>
+          <view class="member-card-sub">{{item.position}}{{item.company ? ' · ' + item.company : ''}}{{item.department ? ' · ' + item.department : ''}}</view>
+        </view>
+      </view>
+      <view class="empty-members" wx:if="{{pubMembers.length === 0}}">暂无成员</view>
+    </view>
+
+    <!-- owner 可见：分享团队目录 -->
+    <view class="share-dir-card" wx:if="{{isOwner}}">
+      <button class="share-dir-btn" open-type="share" data-share="directory">分享团队目录</button>
+    </view>
+  </block>
+
+  <!-- ============ 白名单模式（非成员 + 团队未公开目录） ============ -->
+  <block wx:elif="{{viewMode === 'whitelist'}}">
+    <view class="team-header">
+      <view class="team-logo">{{team.name[0]}}</view>
+      <view class="team-head-info">
+        <text class="team-name">{{team.name}}</text>
+        <text class="team-meta">团队ID：{{team.shortId}} · {{team.memberCount}} 人</text>
+      </view>
+    </view>
+
+    <view class="card-block" wx:if="{{team.description}}">
+      <text class="block-text">{{team.description}}</text>
+    </view>
+
+    <view class="card-block whitelist-tip">
+      <view class="block-action">
+        <view class="action-icon"><view class="icon-lock"></view></view>
+        <view class="action-text">
+          <text class="action-title">该团队未公开成员目录</text>
+          <text class="action-sub">如需加入，请向团队成员获取邀请码</text>
+        </view>
+      </view>
+      <view class="join-cta" bindtap="goTeamList">用邀请码加入 ›</view>
+    </view>
+  </block>
+
+  <!-- ============ 管理模式（成员 / owner） ============ -->
+  <block wx:elif="{{viewMode === 'manage'}}">
     <!-- 团队头部 -->
     <view class="team-header">
       <view class="team-logo">{{team.name[0]}}</view>
@@ -28,6 +91,20 @@
           <text class="action-sub">生成邀请码 / 分享邀请卡片</text>
         </view>
         <text class="action-arrow">›</text>
+      </view>
+    </view>
+
+    <!-- 设置（owner）：目录公开开关 -->
+    <view class="settings-card" wx:if="{{isOwner}}">
+      <view class="settings-row">
+        <view class="settings-text">
+          <text class="settings-title">公开成员目录</text>
+          <text class="settings-sub">开启后，任何人凭链接/二维码可见团队名片</text>
+        </view>
+        <switch class="settings-switch" checked="{{allowDirectoryShare}}" bindchange="toggleShare" color="#3B82F6" />
+      </view>
+      <view class="share-dir-card" wx:if="{{allowDirectoryShare}}">
+        <button class="share-dir-btn" open-type="share" data-share="directory">分享团队目录</button>
       </view>
     </view>
 
@@ -74,7 +151,7 @@
         <view class="copy-btn" bindtap="copyInviteCode">复制</view>
       </view>
       <text class="modal-tip">把邀请码发给好友，或点击下方按钮分享邀请卡片。</text>
-      <button class="share-btn" open-type="share">分享邀请卡片</button>
+      <button class="share-btn" open-type="share" data-share="invite">分享邀请卡片</button>
       <view class="modal-close" bindtap="closeInvite">关闭</view>
     </view>
   </view>

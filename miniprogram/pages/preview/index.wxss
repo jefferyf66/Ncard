@@ -1021,6 +1021,18 @@
 }
 .badge-text { font-size: 22rpx; color: #2563EB; font-weight: 600; }
 
+/* 名片页 → 团队详情直达链接 */
+.team-link {
+  margin-top: 12rpx;
+  padding: 6rpx 0;
+}
+.team-link:active { opacity: 0.6; }
+.team-link-text {
+  font-size: 24rpx;
+  color: #3B82F6;
+  font-weight: 500;
+}
+
 .team-card-modal {
   position: fixed; left: 0; top: 0; right: 0; bottom: 0;
   background: rgba(15, 23, 42, 0.5);

@@ -322,9 +322,6 @@
       <view class="form-group team-join-block">
         <view class="form-header">
           <text class="form-title">加入团队</text>
-          <view class="header-right">
-            <text class="add-btn" bindtap="goToTeamList">我的团队 ›</text>
-          </view>
         </view>
         <text class="join-tip">粘贴邀请码，将当前名片关联到团队；团队可托管你的组织字段</text>
         <view class="join-row">

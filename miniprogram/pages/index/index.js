@@ -681,6 +681,17 @@ Page({
     })
   },
 
+  goTeamList() {
+    console.log('[Index] 跳转我的团队列表')
+    wx.navigateTo({
+      url: '/pages/team/list',
+      fail: (err) => {
+        console.error('[Index] 跳转失败:', err)
+        app.showError('跳转失败')
+      }
+    })
+  },
+
   goToVisitorDetail(e) {
     const item = e.currentTarget.dataset.item
     console.log('[Index] 查看访客详情:', item.name)

@@ -738,6 +738,22 @@ Page({
   },
 
   /**
+   * 从名片页直达团队详情：取当前徽章所属 teamId（优先 dataset.teamId，回退 teamBadges[index].teamId）
+   */
+  goToTeamDetail(e) {
+    const ds = e.currentTarget.dataset
+    const id = ds.teamId || (this.data.teamBadges[ds.index] && this.data.teamBadges[ds.index].teamId)
+    if (!id) return
+    wx.navigateTo({
+      url: '/pages/team/detail?id=' + id,
+      fail: (err) => {
+        console.error('[Preview] 跳转团队详情失败:', err)
+        wx.showToast({ title: '跳转失败', icon: 'none' })
+      }
+    })
+  },
+
+  /**
    * 从团队详情点成员名片跳入时，按来源团队自动展开托管名片视图
    * 复用 openTeamCard 的弹层字段（showTeamCard / teamCardView / teamCardName）
    */

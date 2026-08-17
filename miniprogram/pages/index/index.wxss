@@ -135,6 +135,56 @@ page {
   line-height: 1;
 }
 
+/* 我的团队（首页入口，与 desktop-btn 同款品牌蓝胶囊风格） */
+.team-entry-btn {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  height: 60rpx;
+  padding: 0 24rpx 0 18rpx;
+  border-radius: 30rpx;
+  background: linear-gradient(135deg, #3B82F6, #2563EB);
+  border: 2rpx solid rgba(37, 99, 235, 0.2);
+  box-shadow: 0 2rpx 10rpx rgba(37, 99, 235, 0.18);
+}
+.team-entry-btn:active {
+  transform: scale(0.96);
+  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+}
+.team-entry-icon {
+  width: 28rpx;
+  height: 28rpx;
+  position: relative;
+  flex-shrink: 0;
+}
+.team-entry-icon::before {
+  content: '';
+  position: absolute;
+  top: 2rpx;
+  left: 9rpx;
+  width: 10rpx;
+  height: 10rpx;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 9rpx 0 0 #fff, 0 9rpx 0 #fff, 9rpx 9rpx 0 #fff;
+}
+.team-entry-icon::after {
+  content: '';
+  position: absolute;
+  top: 18rpx;
+  left: 13rpx;
+  width: 2rpx;
+  height: 8rpx;
+  background: #fff;
+}
+.team-entry-text {
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #fff;
+  white-space: nowrap;
+  line-height: 1;
+}
+
 /* 头部按钮图标包装 */
 .header-icon-wrapper {
   width: 56rpx;

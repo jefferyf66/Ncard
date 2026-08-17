@@ -5,6 +5,10 @@
       <text class="subtitle" wx:if="{{!isLoading && !isError}}">{{cards.length}} 张名片</text>
     </view>
     <view class="header-actions">
+      <view class="team-entry-btn" bindtap="goTeamList">
+        <view class="team-entry-icon"></view>
+        <text class="team-entry-text">我的团队</text>
+      </view>
       <view class="desktop-btn" bindtap="addToDesktop">
         <view class="desktop-btn-icon"></view>
         <text class="desktop-btn-text">添加到桌面</text>

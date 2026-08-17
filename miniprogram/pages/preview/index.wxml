@@ -31,6 +31,10 @@
                 <text class="badge-text">{{item.team.name}}</text>
               </view>
             </view>
+            <!-- 直达团队详情（保留上方徽章点击弹托管视图的原行为） -->
+            <view class="team-link" wx:if="{{teamBadges.length}}" bindtap="goToTeamDetail" data-index="0">
+              <text class="team-link-text">查看团队 ›</text>
+            </view>
           </view>
         </view>
         

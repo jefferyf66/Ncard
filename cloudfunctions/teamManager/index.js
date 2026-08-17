@@ -37,6 +37,10 @@ exports.main = async (event, context) => {
       case 'leaveTeam': return await leaveTeam(event, OPENID)
       // 解散团队（仅 owner，破坏性操作）：级联清理成员/名片关联/邀请码
       case 'disbandTeam': return await disbandTeam(event, OPENID)
+      // 公开团队目录（只读公开接口，无需也不依赖 OPENID）
+      case 'getTeamPublicDirectory': return await getTeamPublicDirectory(event)
+      // 设置目录公开开关（owner，需 OPENID 鉴权）
+      case 'setDirectoryShare': { const { OPENID } = cloud.getWXContext(); return await setDirectoryShare(event, OPENID) }
       // 跨用户读（admin 上下文）：供 preview 展示团队徽章（团队名片视图）
       case 'getCardTeams': return await getCardTeams(event)
       default: return { success: false, error: 'UNKNOWN_ACTION' }
@@ -81,6 +85,7 @@ async function createTeam(event, OPENID) {
       logoUrl: '',
       openJoin: !!openJoin, // v1 默认 false，不被消费（前向兼容）
       inviteEnabled: inviteEnabled !== false, // 默认 true
+      allowDirectoryShare: false, // 默认关闭公开目录（D 阶段新增）
       memberCount: 1,
       createdAt: now
     }
@@ -98,6 +103,7 @@ async function createTeam(event, OPENID) {
       invitedBy: '',
       managedFields: emptyFields(),
       isPrimary: true,
+      avatarPublic: false, // 默认不对外公开头像（D 阶段新增）
       joinedAt: now
     }
   })
@@ -191,6 +197,7 @@ async function joinByInvite(event, OPENID) {
       invitedBy: inv.createdBy,
       managedFields: emptyFields(),
       isPrimary: false,
+      avatarPublic: false, // 默认不对外公开头像（D 阶段新增）
       joinedAt: now
     }
   })
@@ -326,26 +333,48 @@ async function getMyTeams(OPENID) {
   return { success: true, data: { teams: result } }
 }
 
+// ============ 团队标识解析（shortId 优先，兼容 teamId 实则为 shortId）============
+// 返回 teams 文档或 null。统一供 getTeam / getTeamPublicDirectory 复用。
+async function resolveTeamRef(event) {
+  const { teamId, shortId } = event
+  // 1) 显式 shortId：where 命中取其 _id
+  if (shortId) {
+    const r = await db.collection('teams').where({ shortId }).limit(1).get()
+    return (r.data && r.data[0]) || null
+  }
+  if (!teamId) return null
+  // 2) teamId：先按 _id 直查；未命中再按 shortId 回退（兼容详情页传 rawId）
+  try {
+    const d = await db.collection('teams').doc(teamId).get()
+    if (d && d.data) return d.data
+  } catch (e) { /* 非法 id 形态，走下面 shortId 回退 */ }
+  const r = await db.collection('teams').where({ shortId: teamId }).limit(1).get()
+  return (r.data && r.data[0]) || null
+}
+
 // ============ 团队详情（含我的角色/状态）============
 async function getTeam(event, OPENID) {
-  const { teamId } = event
-  if (!teamId) return { success: false, error: 'TEAM_NOT_FOUND' }
-
-  const teamRes = await db.collection('teams').doc(teamId).get()
-  const team = teamRes && teamRes.data
+  const team = await resolveTeamRef(event)
   if (!team) return { success: false, error: 'TEAM_NOT_FOUND' }
+  const teamId = team._id
 
   const mem = await db.collection('team_members').where({ teamId, memberOpenId: OPENID }).get()
   // BUG-03 修复：非成员读（join 页预填所需，逻辑正确）时收窄字段，避免外泄 _openid/ownerOpenId 等敏感信息
   const isMember = mem.data.length > 0
-  const safeTeam = isMember ? team : {
-    _id: team._id,
-    shortId: team.shortId,
-    name: team.name,
-    description: team.description,
-    logoUrl: team.logoUrl,
-    memberCount: team.memberCount
-  }
+  const safeTeam = isMember
+    ? Object.assign({}, team, {
+        // 成员可见「是否公开目录」开关
+        allowDirectoryShare: !!team.allowDirectoryShare
+      })
+    : {
+        // 非成员白名单分支：仅含基础公开字段，绝不返回 allowDirectoryShare（避免泄漏是否公开）
+        _id: team._id,
+        shortId: team.shortId,
+        name: team.name,
+        description: team.description,
+        logoUrl: team.logoUrl,
+        memberCount: team.memberCount
+      }
   return {
     success: true,
     data: {
@@ -354,6 +383,81 @@ async function getTeam(event, OPENID) {
       myStatus: isMember ? mem.data[0].status : null
     }
   }
+}
+
+// ============ 公开团队目录（只读公开接口，无需/不依赖 OPENID）============
+// 用于分享链接 / 公众号菜单直达，仅返回白名单六字段，剔除一切私人联系方式与 openid。
+async function getTeamPublicDirectory(event) {
+  const { teamId, shortId } = event
+  if (!teamId && !shortId) return { success: false, error: 'INVALID_PARAM' }
+
+  const team = await resolveTeamRef(event)
+  if (!team) return { success: false, error: 'TEAM_NOT_FOUND' }
+
+  // 未开启公开目录 → 拒绝（即便非成员也不得窥探）
+  if (team.allowDirectoryShare !== true) return { success: false, error: 'TEAM_NOT_PUBLIC' }
+
+  // 仅取 active 成员
+  const memRes = await db.collection('team_members').where({ teamId: team._id, status: 'active' }).get()
+  const members = memRes.data || []
+
+  // 批量取 cards：db.command.in 单次上限 20，必须按 20 一组循环
+  const cardIds = members.map(m => m.cardId).filter(Boolean)
+  const cardsMap = {}
+  for (let i = 0; i < cardIds.length; i += 20) {
+    const chunk = cardIds.slice(i, i + 20)
+    const r = await db.collection('cards').where({ _id: _.in(chunk) }).get()
+    ;(r.data || []).forEach(c => { cardsMap[c._id] = c })
+  }
+
+  // 仅以白名单六字段构造每个成员的组织名片（绝不原样下发文档）
+  const ALLOWED_KEYS = ['memberId', 'name', 'position', 'company', 'department', 'avatarUrl']
+  const directory = members.map(m => {
+    const card = (m.cardId && cardsMap[m.cardId]) || null
+    const mf = m.managedFields || {}
+    const out = {
+      memberId: m._id,
+      name: (card && card.name) || '匿名成员',
+      position: (mf.position) || (card && card.position) || '',
+      company: (mf.company) || (card && card.company) || '',
+      department: (mf.department) || (card && card.department) || '',
+      avatarUrl: (m.avatarPublic === true && card && card.avatarUrl) ? card.avatarUrl : ''
+    }
+    return out
+  })
+
+  // team 仅返回 6 个基础公开字段（剔除 _openid/ownerOpenId/memberOpenId/cardId 等敏感字段）
+  const safeTeam = {
+    _id: team._id,
+    shortId: team.shortId,
+    name: team.name,
+    description: team.description,
+    logoUrl: team.logoUrl,
+    memberCount: team.memberCount
+  }
+
+  return {
+    success: true,
+    data: {
+      team: safeTeam,
+      members: directory
+    }
+  }
+}
+
+// ============ 设置目录公开开关（owner）============
+async function setDirectoryShare(event, OPENID) {
+  const { teamId, allow } = event
+  if (!teamId) return { success: false, error: 'TEAM_NOT_FOUND' }
+
+  const teamRes = await db.collection('teams').doc(teamId).get()
+  const team = teamRes && teamRes.data
+  if (!team) return { success: false, error: 'TEAM_NOT_FOUND' }
+  // 仅 owner（OPENID 来自云端，绝不读 event.openid）可操作
+  if (team.ownerOpenId !== OPENID) return { success: false, error: 'NO_PERMISSION' }
+
+  await db.collection('teams').doc(teamId).update({ data: { allowDirectoryShare: !!allow } })
+  return { success: true, data: { allowDirectoryShare: !!allow } }
 }
 
 // ============ 搜索团队（v1 仅创建期 L2 软提示；exact 同名）============

@@ -105,3 +105,65 @@
   font-size: 30rpx; font-weight: 600; border-radius: 16rpx; margin-bottom: 16rpx;
 }
 .modal-close { text-align: center; font-size: 28rpx; color: #64748B; padding: 16rpx 0; }
+
+/* 公开目录：成员网格 */
+.member-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16rpx;
+  margin-top: 8rpx;
+}
+.member-card {
+  background: #F8FAFC;
+  border: 2rpx solid #E2E8F0;
+  border-radius: 16rpx;
+  padding: 24rpx 20rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.member-avatar-img {
+  width: 96rpx; height: 96rpx; border-radius: 50%;
+  background: #E2E8F0; color: #475569;
+  font-size: 36rpx; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 14rpx;
+}
+.member-card-name { font-size: 28rpx; font-weight: 600; color: #1F2937; }
+.member-card-sub { font-size: 22rpx; color: #94A3B8; margin-top: 6rpx; line-height: 1.5; }
+
+/* 分享团队目录按钮 */
+.share-dir-card { margin-top: 20rpx; }
+.share-dir-btn {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: #fff;
+  font-size: 30rpx; font-weight: 600; border-radius: 16rpx;
+}
+
+/* 设置区（owner）：目录公开开关 */
+.settings-card { margin-top: 20rpx; background: #fff; border-radius: 20rpx; padding: 8rpx 28rpx; border: 2rpx solid #E2E8F0; }
+.settings-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22rpx 0;
+}
+.settings-text { flex: 1; min-width: 0; padding-right: 20rpx; }
+.settings-title { font-size: 30rpx; font-weight: 600; color: #1F2937; display: block; }
+.settings-sub { font-size: 22rpx; color: #94A3B8; margin-top: 6rpx; display: block; line-height: 1.5; }
+.settings-switch { flex-shrink: 0; }
+
+/* 白名单提示 */
+.whitelist-tip .action-icon {
+  width: 64rpx; height: 64rpx; border-radius: 14rpx; background: #FEF3C7;
+  display: flex; align-items: center; justify-content: center; margin-right: 20rpx;
+}
+.icon-lock {
+  width: 28rpx; height: 24rpx; border: 4rpx solid #B45309; border-radius: 6rpx; position: relative;
+}
+.icon-lock::before {
+  content: ''; position: absolute; top: -14rpx; left: 50%; transform: translateX(-50%);
+  width: 18rpx; height: 14rpx; border: 4rpx solid #B45309; border-bottom: none;
+  border-radius: 10rpx 10rpx 0 0;
+}
+.join-cta {
+  margin-top: 16rpx; text-align: center; font-size: 28rpx; font-weight: 600; color: #3B82F6;
+}

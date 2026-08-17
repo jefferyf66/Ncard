@@ -614,9 +614,5 @@ Page({
         team.showTeamError(res.error)
       }
     })
-  },
-
-  goToTeamList() {
-    wx.navigateTo({ url: '/pages/team/list' })
   }
 })
