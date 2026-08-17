@@ -58,8 +58,9 @@
     <view class="bottom-actions" wx:if="{{!isOwner}}">
       <view class="danger-btn" bindtap="onLeave">退出团队</view>
     </view>
-    <view class="owner-tip" wx:if="{{isOwner}}">
-      <text class="owner-tip-text">你是团队创始人，不能退出。如需离开，请先转让或解散团队。</text>
+    <view class="owner-actions" wx:if="{{isOwner}}">
+      <text class="owner-tip-text">你是团队创始人，不可直接退出。解散后团队将永久删除且不可恢复。</text>
+      <view class="danger-btn" bindtap="onDisband">解散团队</view>
     </view>
   </block>
 

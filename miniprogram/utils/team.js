@@ -26,6 +26,7 @@ const TEAM_ERROR_MESSAGES = {
   NOT_MEMBER: '你还不是该团队成员',
   MEMBER_NOT_FOUND: '成员不存在',
   CANNOT_REMOVE_OWNER: '不能移除团队创始人',
+  NOT_OWNER: '仅团队创始人可解散团队',
   OWNER_CANNOT_LEAVE: '创始人不能退出，请先转让或解散',
   KEYWORD_REQUIRED: '请输入搜索关键词',
   CARD_NOT_FOUND: '名片不存在',

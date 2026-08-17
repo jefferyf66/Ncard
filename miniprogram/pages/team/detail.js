@@ -164,6 +164,30 @@ Page({
     })
   },
 
+  // 解散团队（owner 专属，破坏性操作需二次确认）
+  onDisband() {
+    wx.showModal({
+      title: '解散团队',
+      content: '解散后团队所有成员、邀请码将立即失效，且不可恢复。确认解散？',
+      confirmText: '解散',
+      confirmColor: '#F53F3F',
+      success: (r) => { if (r.confirm) this._doDisband() }
+    })
+  },
+
+  _doDisband() {
+    app.showLoading('解散中...')
+    team.callTeamManager('disbandTeam', { teamId: this.data.teamId }).then((res) => {
+      app.hideLoading()
+      if (res.success) {
+        app.showSuccess('团队已解散')
+        setTimeout(() => wx.navigateBack(), 800)
+      } else {
+        team.showTeamError(res.error)
+      }
+    })
+  },
+
   stopPropagation() {}
 })
 

@@ -35,6 +35,8 @@ exports.main = async (event, context) => {
       case 'updateMemberFields': return await updateMemberFields(event, OPENID)
       case 'removeMember': return await removeMember(event, OPENID)
       case 'leaveTeam': return await leaveTeam(event, OPENID)
+      // 解散团队（仅 owner，破坏性操作）：级联清理成员/名片关联/邀请码
+      case 'disbandTeam': return await disbandTeam(event, OPENID)
       // 跨用户读（admin 上下文）：供 preview 展示团队徽章（团队名片视图）
       case 'getCardTeams': return await getCardTeams(event)
       default: return { success: false, error: 'UNKNOWN_ACTION' }
@@ -265,6 +267,36 @@ async function leaveTeam(event, OPENID) {
   await db.collection('team_members').doc(m._id).remove()
   if (m.cardId) await db.collection('cards').doc(m.cardId).update({ data: { teamIds: _.pull(teamId) } })
   await db.collection('teams').doc(teamId).update({ data: { memberCount: _.inc(-1) } })
+  return { success: true }
+}
+
+// ============ 解散团队（仅 owner，破坏性操作）============
+async function disbandTeam(event, OPENID) {
+  const { teamId } = event
+  if (!teamId) return { success: false, error: 'TEAM_NOT_FOUND' }
+
+  const teamRes = await db.collection('teams').doc(teamId).get()
+  if (!teamRes.data) return { success: false, error: 'TEAM_NOT_FOUND' }
+  // 安全：仅创始人可解散（OPENID 来自云端，绝不读 event.openid）
+  if (teamRes.data.ownerOpenId !== OPENID) return { success: false, error: 'NOT_OWNER' }
+
+  // 取成员（用于清理各名片上的 teamIds 关联）
+  const memRes = await db.collection('team_members').where({ teamId }).get()
+  const cardIds = [...new Set((memRes.data || []).map(m => m.cardId).filter(Boolean))]
+
+  const tasks = []
+  // 1) 各成员名片 pull 掉该 teamId（解除名片托管关联）；个别名片缺失不阻断整体解散
+  cardIds.forEach(cid => {
+    tasks.push(db.collection('cards').doc(cid).update({ data: { teamIds: _.pull(teamId) } }).catch(() => {}))
+  })
+  // 2) 删除全部成员记录
+  tasks.push(db.collection('team_members').where({ teamId }).remove())
+  // 3) 删除该团队所有邀请码（使其立即失效）
+  tasks.push(db.collection('team_invites').where({ teamId }).remove())
+  // 4) 删除团队本身
+  tasks.push(db.collection('teams').doc(teamId).remove())
+  await Promise.all(tasks)
+
   return { success: true }
 }
 
