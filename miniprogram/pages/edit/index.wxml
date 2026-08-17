@@ -339,6 +339,7 @@
       <text class="btn-text">{{isEdit ? '保存修改' : '保存名片'}}</text>
     </view>
   </view>
+  </view>
 
   <!-- 分享卡片 Canvas（隐藏，仅用于生成分享图） -->
   <canvas type="2d" id="shareCanvas" class="share-canvas" style="width:600px;height:480px;"></canvas>
