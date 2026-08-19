@@ -5,12 +5,22 @@
  * 修改卡片样式时请同步更新 cardStyle.js 中的对应常量
  */
 page {
-  background: linear-gradient(180deg, #EEF2FF 0%, #F5F5F5 100%);
+  background: linear-gradient(165deg, #FFF7ED 0%, #FEF3E7 42%, #F1F5FB 100%);
   min-height: 100vh;
 }
 
+.brand-stripe {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 6rpx;
+  height: 100vh;
+  background: linear-gradient(180deg, #3B82F6 0%, #2563EB 100%);
+  z-index: 1;
+}
+
 .container {
-  padding: 0 24rpx 48rpx;
+  padding: 0 24rpx 128rpx;
   padding-top: calc(var(--status-bar-height) + 20rpx);
 }
 
@@ -23,8 +33,21 @@ page {
 
 .header-content {
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4rpx;
+}
+
+.subtitle-row {
+  display: flex;
   align-items: center;
   gap: 16rpx;
+}
+
+.desktop-link {
+  font-size: 24rpx;
+  color: #3B82F6;
+  margin-left: 8rpx;
 }
 
 .title {
@@ -316,7 +339,7 @@ page {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 8rpx;
 }
 
@@ -359,7 +382,7 @@ page {
 
 .contact-item {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   font-size: 26rpx;
   color: #475569;
 }
@@ -371,7 +394,7 @@ page {
   align-items: center;
   margin: 20rpx -32rpx -32rpx -32rpx;
   padding: 0;
-  background: linear-gradient(135deg, #1E3A5F 0%, #2D4A6F 100%);
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
   border-radius: 0 0 24rpx 24rpx;
   overflow: hidden;
 }
@@ -620,6 +643,8 @@ page {
 
 .error-icon text {
   font-size: 48rpx;
+  color: #DC2626;
+  font-weight: 700;
 }
 
 .error-title {
@@ -648,16 +673,15 @@ page {
 
 .add-btn {
   position: fixed;
-  right: 40rpx;
-  bottom: 120rpx;
-  height: 88rpx;
-  padding: 0 40rpx;
-  background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
-  border-radius: 44rpx;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 96rpx;
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8rpx 24rpx rgba(59, 130, 246, 0.3);
+  box-shadow: 0 -4rpx 16rpx rgba(37, 99, 235, 0.18);
   z-index: 100;
 }
 

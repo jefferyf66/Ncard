@@ -1,17 +1,18 @@
 <view class="container">
+  <!-- 左侧品牌蓝装饰条 -->
+  <view class="brand-stripe"></view>
   <view class="header">
     <view class="header-content">
       <text class="title">我的名片</text>
-      <text class="subtitle" wx:if="{{!isLoading && !isError}}">{{cards.length}} 张名片</text>
+      <view class="subtitle-row">
+        <text class="subtitle" wx:if="{{!isLoading && !isError}}">{{cards.length}} 张名片</text>
+        <text class="desktop-link" bindtap="addToDesktop">添加到桌面</text>
+      </view>
     </view>
     <view class="header-actions">
       <view class="team-entry-btn" bindtap="goTeamList">
         <view class="team-entry-icon"></view>
         <text class="team-entry-text">我的团队</text>
-      </view>
-      <view class="desktop-btn" bindtap="addToDesktop">
-        <view class="desktop-btn-icon"></view>
-        <text class="desktop-btn-text">添加到桌面</text>
       </view>
     </view>
   </view>
@@ -19,6 +20,15 @@
   <view class="loading-state" wx:if="{{isLoading}}">
     <view class="loading-spinner"></view>
     <text class="loading-text">加载中...</text>
+  </view>
+
+  <view class="error-state" wx:elif="{{isError}}">
+    <view class="error-icon">
+      <text>!</text>
+    </view>
+    <text class="error-title">加载失败</text>
+    <text class="error-desc">网络开小差了，请检查网络后重试</text>
+    <view class="error-btn" bindtap="retryLoad">重新加载</view>
   </view>
 
   <view class="empty-state" wx:elif="{{isEmpty}}">
@@ -119,7 +129,7 @@
         </view>
         <view class="stat-info">
           <text class="stat-value">{{visitorStats.viewed}}</text>
-          <text class="stat-label">多次来访</text>
+          <text class="stat-label">重复访问</text>
         </view>
       </view>
       <view class="stat-divider"></view>
@@ -129,7 +139,7 @@
         </view>
         <view class="stat-info">
           <text class="stat-value">{{visitorStats.newCards}}</text>
-          <text class="stat-label">名片数</text>
+          <text class="stat-label">名片夹</text>
         </view>
       </view>
     </view>
