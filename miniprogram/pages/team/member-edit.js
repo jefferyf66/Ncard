@@ -6,10 +6,10 @@ const FIELDS = [
   { key: 'company', label: '公司', placeholder: '公司名称' },
   { key: 'department', label: '部门', placeholder: '所在部门' },
   { key: 'position', label: '职位', placeholder: '职位名称' },
-  { key: 'companyPhone', label: '公司电话', placeholder: '公司座机 / 总机' },
-  { key: 'companyAddress', label: '公司地址', placeholder: '公司地址' },
-  { key: 'companyWebsite', label: '公司网站', placeholder: 'https://...' },
-  { key: 'workEmail', label: '工作邮箱', placeholder: '工作邮箱' }
+  { key: 'phone', label: '电话', placeholder: '公司座机 / 总机' },
+  { key: 'address', label: '地址', placeholder: '公司地址' },
+  { key: 'website', label: '网址', placeholder: 'https://...' },
+  { key: 'email', label: '邮箱', placeholder: '工作邮箱' }
 ]
 
 Page({

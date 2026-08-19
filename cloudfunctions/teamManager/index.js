@@ -86,6 +86,7 @@ async function createTeam(event, OPENID) {
       openJoin: !!openJoin, // v1 默认 false，不被消费（前向兼容）
       inviteEnabled: inviteEnabled !== false, // 默认 true
       allowDirectoryShare: false, // 默认关闭公开目录（D 阶段新增）
+      cardSchema: defaultCardSchema(), // 团队名片字段配置（可见/必填/预填）
       memberCount: 1,
       createdAt: now
     }
@@ -154,6 +155,61 @@ async function createInvite(event, OPENID) {
   return { success: true, data: { inviteId: res._id, code, token, teamId } }
 }
 
+// ============ 生成「空名片」邀请（owner，kind='card'）============
+async function createCardInvite(event, OPENID) {
+  const { teamId, prefill = {}, expiresAt, singleUse = true } = event
+  if (!teamId) return { success: false, error: 'TEAM_NOT_FOUND' }
+
+  const teamRes = await db.collection('teams').doc(teamId).get()
+  const team = teamRes && teamRes.data
+  if (!team) return { success: false, error: 'TEAM_NOT_FOUND' }
+  if (team.ownerOpenId !== OPENID) return { success: false, error: 'NO_PERMISSION' }
+  if (!team.inviteEnabled) return { success: false, error: 'INVITE_DISABLED' }
+
+  const prefillClean = sanitizePrefill(prefill)
+
+  let code
+  let attempts = 0
+  do {
+    code = genInviteCode()
+    attempts++
+    if (attempts > 20) return { success: false, error: 'GEN_CODE_FAIL' }
+  } while ((await db.collection('team_invites').where({ code }).count()).total > 0)
+
+  const token = genToken()
+  const res = await db.collection('team_invites').add({
+    data: {
+      _openid: OPENID,
+      teamId,
+      code,
+      token,
+      createdBy: OPENID,
+      kind: 'card', // 空名片邀请：成员需补全字段
+      prefill: prefillClean,
+      expiresAt: expiresAt || Date.now() + 7 * 86400000, // 默认 7 天
+      maxUses: 0,
+      usedCount: 0,
+      singleUse: !!singleUse
+    }
+  })
+
+  return { success: true, data: { inviteId: res._id, code, token, teamId } }
+}
+
+// ============ 保存团队名片字段配置（owner）============
+async function saveTeamCardSchema(event, OPENID) {
+  const { teamId, cardSchema } = event
+  if (!teamId) return { success: false, error: 'TEAM_NOT_FOUND' }
+
+  const teamRes = await db.collection('teams').doc(teamId).get()
+  const team = teamRes && teamRes.data
+  if (!team || team.ownerOpenId !== OPENID) return { success: false, error: 'NO_PERMISSION' }
+
+  const schema = sanitizeCardSchema(cardSchema)
+  await db.collection('teams').doc(teamId).update({ data: { cardSchema: schema } })
+  return { success: true, data: { cardSchema: schema } }
+}
+
 // ============ 凭邀请码/分享 token 加入（D8 需 card）============
 async function joinByInvite(event, OPENID) {
   const { code, token } = event
@@ -185,6 +241,23 @@ async function joinByInvite(event, OPENID) {
   const card = cardRes.data && cardRes.data[0]
   if (!card) return { success: false, error: 'NO_CARD', hint: '请先创建个人名片' }
 
+  // 计算最终托管字段；空名片邀请需合并 owner 预填 + 成员填写 + 必填校验
+  let finalMF = emptyFields()
+  if (inv.kind === 'card') {
+    const schema = (teamRes.data && teamRes.data.cardSchema) || defaultCardSchema()
+    const userMF = sanitizeManagedFields(event.managedFields || {})
+    const prefill = inv.prefill || {}
+    const requiredKeys = schema.filter(f => f.required).map(f => f.key)
+    schema.forEach(f => {
+      const def = (prefill[f.key] || '').trim()
+      const usr = (userMF[f.key] || '').trim()
+      // 成员填了用成员的，未填回退 owner 预填（预填可改：成员可覆盖）
+      finalMF[f.key] = usr || def
+    })
+    const missing = requiredKeys.filter(k => !(finalMF[k] || '').trim())
+    if (missing.length) return { success: false, error: 'MISSING_REQUIRED', fields: missing }
+  }
+
   const now = Date.now()
   await db.collection('team_members').add({
     data: {
@@ -195,7 +268,7 @@ async function joinByInvite(event, OPENID) {
       role: 'member',
       status: 'active',
       invitedBy: inv.createdBy,
-      managedFields: emptyFields(),
+      managedFields: finalMF,
       isPrimary: false,
       avatarPublic: false, // 默认不对外公开头像（D 阶段新增）
       joinedAt: now
@@ -361,10 +434,13 @@ async function getTeam(event, OPENID) {
   const mem = await db.collection('team_members').where({ teamId, memberOpenId: OPENID }).get()
   // BUG-03 修复：非成员读（join 页预填所需，逻辑正确）时收窄字段，避免外泄 _openid/ownerOpenId 等敏感信息
   const isMember = mem.data.length > 0
+  // 团队名片字段 schema（仅字段定义，不含敏感数据，成员/非成员均可下发）
+  const cardSchema = team.cardSchema || defaultCardSchema()
   const safeTeam = isMember
     ? Object.assign({}, team, {
         // 成员可见「是否公开目录」开关
-        allowDirectoryShare: !!team.allowDirectoryShare
+        allowDirectoryShare: !!team.allowDirectoryShare,
+        cardSchema
       })
     : {
         // 非成员白名单分支：仅含基础公开字段，绝不返回 allowDirectoryShare（避免泄漏是否公开）
@@ -373,7 +449,8 @@ async function getTeam(event, OPENID) {
         name: team.name,
         description: team.description,
         logoUrl: team.logoUrl,
-        memberCount: team.memberCount
+        memberCount: team.memberCount,
+        cardSchema
       }
   return {
     success: true,
@@ -412,15 +489,20 @@ async function getTeamPublicDirectory(event) {
 
   // 仅以白名单六字段构造每个成员的组织名片（绝不原样下发文档）
   const ALLOWED_KEYS = ['memberId', 'name', 'position', 'company', 'department', 'avatarUrl']
+  // 按 cardSchema.visible 过滤展示字段；phone/email/address/website 即便 visible 也绝不进公开目录（安全边界）
+  const schema = team.cardSchema || defaultCardSchema()
+  const visMap = {}
+  schema.forEach(f => { visMap[f.key] = f.visible })
+  const PUBLIC_SAFE = { position: true, company: true, department: true }
   const directory = members.map(m => {
     const card = (m.cardId && cardsMap[m.cardId]) || null
     const mf = m.managedFields || {}
     const out = {
       memberId: m._id,
       name: (card && card.name) || '匿名成员',
-      position: (mf.position) || (card && card.position) || '',
-      company: (mf.company) || (card && card.company) || '',
-      department: (mf.department) || (card && card.department) || '',
+      position: (visMap.position && PUBLIC_SAFE.position) ? ((mf.position) || (card && card.position) || '') : '',
+      company: (visMap.company && PUBLIC_SAFE.company) ? ((mf.company) || (card && card.company) || '') : '',
+      department: (visMap.department && PUBLIC_SAFE.department) ? ((mf.department) || (card && card.department) || '') : '',
       avatarUrl: (m.avatarPublic === true && card && card.avatarUrl) ? card.avatarUrl : ''
     }
     return out
@@ -529,7 +611,8 @@ async function getCardTeams(event) {
             memberCount: teamMap[m.teamId].memberCount
           }
         : null,
-      managedFields: m.managedFields || emptyFields()
+      managedFields: m.managedFields || emptyFields(),
+      cardSchema: (teamMap[m.teamId] && teamMap[m.teamId].cardSchema) || defaultCardSchema()
     }))
     .filter(r => r.team)
 
@@ -590,27 +673,74 @@ function genToken() {
   }
 }
 
-// 空托管字段（D2 七个组织字段）
+// 空托管字段（七个组织字段，统一 phone/email/address/website 命名，消除 companyPhone/workEmail 分裂）
 function emptyFields() {
   return {
     company: '',
     department: '',
     position: '',
-    companyPhone: '',
-    companyAddress: '',
-    companyWebsite: '',
-    workEmail: ''
+    phone: '',
+    address: '',
+    website: '',
+    email: ''
   }
 }
 
-// 仅放行 D2 七个组织字段，其余忽略；统一 trim 为字符串
+// 仅放行七个组织字段，其余忽略；统一 trim 为字符串
 function sanitizeManagedFields(raw) {
   const out = emptyFields()
   if (!raw || typeof raw !== 'object') return out
-  const keys = ['company', 'department', 'position', 'companyPhone', 'companyAddress', 'companyWebsite', 'workEmail']
+  const keys = ['company', 'department', 'position', 'phone', 'address', 'website', 'email']
   keys.forEach(k => {
     const v = raw[k]
     out[k] = (typeof v === 'string') ? v.trim() : (v == null ? '' : String(v).trim())
+  })
+  return out
+}
+
+// 团队名片字段 schema：定义「团队名片」上显示哪些字段、是否必填、owner 预填默认值
+// 字段 key 与 managedFields 完全一致，确保可写入/读出
+function defaultCardSchema() {
+  return [
+    { key: 'company', label: '公司', visible: true, required: false, defaultValue: '' },
+    { key: 'department', label: '部门', visible: false, required: false, defaultValue: '' },
+    { key: 'position', label: '职位', visible: true, required: false, defaultValue: '' },
+    { key: 'phone', label: '电话', visible: true, required: false, defaultValue: '' },
+    { key: 'email', label: '邮箱', visible: false, required: false, defaultValue: '' },
+    { key: 'address', label: '地址', visible: false, required: false, defaultValue: '' },
+    { key: 'website', label: '网址', visible: false, required: false, defaultValue: '' }
+  ]
+}
+
+// 校验并规整 owner 提交过来的 cardSchema：仅保留合法 key，字段结构归一
+const CARD_SCHEMA_KEYS = ['company', 'department', 'position', 'phone', 'address', 'website', 'email']
+function sanitizeCardSchema(raw) {
+  const base = defaultCardSchema()
+  const baseMap = {}
+  base.forEach(f => { baseMap[f.key] = f })
+  if (!Array.isArray(raw)) return base
+  const out = base.map(f => {
+    const src = raw.find(r => r && r.key === f.key)
+    if (!src) return f
+    return {
+      key: f.key,
+      label: src.label || f.label,
+      visible: src.visible === true,
+      required: src.required === true,
+      defaultValue: (typeof src.defaultValue === 'string') ? src.defaultValue.trim().slice(0, 200) : ''
+    }
+  })
+  // 防御：若 raw 含未知 key，忽略（不写入）
+  return out.filter(f => CARD_SCHEMA_KEYS.indexOf(f.key) >= 0)
+}
+
+// 规整预填值：仅保留合法 key，统一 trim 截断
+function sanitizePrefill(raw) {
+  const out = {}
+  if (!raw || typeof raw !== 'object') return out
+  CARD_SCHEMA_KEYS.forEach(k => {
+    const v = raw[k]
+    if (typeof v === 'string' && v.trim()) out[k] = v.trim().slice(0, 200)
   })
   return out
 }

@@ -98,17 +98,18 @@ function mergeCardWithTeam(card, managedFields) {
   if (mf.company) merged.company = mf.company
   if (mf.department) merged.department = mf.department
   if (mf.position) merged.position = mf.position
-  if (mf.companyPhone) merged.companyPhone = mf.companyPhone
-  if (mf.companyAddress) merged.companyAddress = mf.companyAddress
-  if (mf.workEmail) merged.workEmail = mf.workEmail
-  if (mf.companyWebsite) {
+  if (mf.phone) merged.phone = mf.phone
+  if (mf.address) merged.address = mf.address
+  if (mf.email) merged.email = mf.email
+  if (mf.website) {
+    merged.website = mf.website
     const base = (typeof merged.companyWebsite === 'object' && merged.companyWebsite) || {}
-    merged.companyWebsite = Object.assign({}, base, { url: mf.companyWebsite })
+    merged.companyWebsite = Object.assign({}, base, { url: mf.website })
   }
 
   merged.teamManaged = !!(
     mf.company || mf.department || mf.position ||
-    mf.companyPhone || mf.companyAddress || mf.companyWebsite || mf.workEmail
+    mf.phone || mf.address || mf.email || mf.website
   )
   return merged
 }

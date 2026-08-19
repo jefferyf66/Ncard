@@ -568,7 +568,7 @@ Page({
         // 仅个人名片存在的组织字段可被团队托管覆盖
         if (mf.company) map.company = t.name
         if (mf.position) map.position = t.name
-        if (mf.companyWebsite) map.companyWebsite = t.name
+        if (mf.website) map.companyWebsite = t.name
       })
       this.setData({
         managedFieldMap: map,
