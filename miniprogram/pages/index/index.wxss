@@ -377,99 +377,6 @@ page {
   font-size: 24rpx;
 }
 
-.visitors-section {
-  margin-top: 32rpx;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20rpx;
-}
-
-.section-title {
-  font-size: 32rpx;
-  font-weight: 600;
-  color: #0F172A;
-}
-
-.section-arrow {
-  font-size: 26rpx;
-  color: #3B82F6;
-}
-
-.stats-card {
-  background: #fff;
-  border-radius: 20rpx;
-  padding: 24rpx;
-  display: flex;
-  gap: 24rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.04);
-}
-
-.stat-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 16rpx;
-  border-radius: 16rpx;
-  transition: all 0.2s ease;
-}
-
-.stat-item:active {
-  background: #F8FAFC;
-}
-
-.stat-icon {
-  width: 48rpx;
-  height: 48rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 12rpx;
-}
-
-.stat-info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.stat-value {
-  font-size: 40rpx;
-  font-weight: 700;
-  color: #1E293B;
-  margin-bottom: 8rpx;
-}
-
-.stat-label {
-  font-size: 24rpx;
-  color: #94A3B8;
-}
-
-.recent-visitors {
-  background: #fff;
-  border-radius: 20rpx;
-  padding: 24rpx;
-  margin-top: 20rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.04);
-}
-
-.visitors-list {
-  display: flex;
-  gap: 20rpx;
-  overflow-x: auto;
-  padding-bottom: 8rpx;
-}
-
-.visitors-list::-webkit-scrollbar {
-  display: none;
-}
-
-/* 访客列表样式已移至底部 .visitor-list 区块 */
-
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -678,235 +585,7 @@ page {
   box-shadow: 0 8rpx 0 #94A3B8;
 }
 
-.icon-users {
-  width: 40rpx;
-  height: 40rpx;
-  position: relative;
-}
-
-.icon-users::before {
-  content: '';
-  position: absolute;
-  top: 2rpx;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 24rpx;
-  height: 24rpx;
-  border: 3rpx solid #3B82F6;
-  border-radius: 50%;
-}
-
-.icon-users::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 4rpx;
-  right: 4rpx;
-  height: 20rpx;
-  border: 3rpx solid #3B82F6;
-  border-radius: 10rpx 10rpx 0 0;
-}
-
-.icon-eye {
-  width: 44rpx;
-  height: 28rpx;
-  position: relative;
-}
-
-.icon-eye::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 44rpx;
-  height: 22rpx;
-  border: 3rpx solid #3B82F6;
-  border-radius: 50%;
-}
-
-.icon-eye::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 14rpx;
-  height: 14rpx;
-  background: #3B82F6;
-  border-radius: 50%;
-}
-
-.icon-add {
-  width: 40rpx;
-  height: 40rpx;
-  position: relative;
-}
-
-.icon-add::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 36rpx;
-  height: 4rpx;
-  background: #3B82F6;
-  border-radius: 2rpx;
-}
-
-.icon-add::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 4rpx;
-  height: 36rpx;
-  background: #3B82F6;
-  border-radius: 2rpx;
-}
-
-.icon-user {
-  width: 44rpx;
-  height: 52rpx;
-  position: relative;
-}
-
-.icon-user::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 28rpx;
-  height: 28rpx;
-  border: 2rpx solid #3B82F6;
-  border-radius: 50%;
-}
-
-.icon-user::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 28rpx;
-  border: 2rpx solid #3B82F6;
-  border-radius: 14rpx 14rpx 0 0;
-}
-
-/* ============ 统计卡片分隔线 ============ */
-.stat-divider {
-  width: 2rpx;
-  height: 60rpx;
-  background: #E2E8F0;
-  align-self: center;
-}
-
-/* ============ 访客列表（首页精简版） ============ */
-.visitor-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16rpx;
-}
-
-.visitor-item {
-  display: flex;
-  gap: 20rpx;
-  background: #FFFFFF;
-  border-radius: 8rpx;
-  padding: 24rpx;
-  box-shadow: 0 2rpx 12rpx rgba(29, 78, 216, 0.03), 0 1rpx 3rpx rgba(0, 0, 0, 0.03);
-  border: 2rpx solid #E2E8F0;
-}
-
-.visitor-avatar-img {
-  width: 100%;
-  height: 100%;
-  border-radius: 4rpx;
-}
-
-.visitor-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8rpx;
-  min-width: 0;
-}
-
-.visitor-header {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-}
-
-.visitor-level-badge {
-  padding: 2rpx 10rpx;
-  border-radius: 4rpx;
-  font-size: 20rpx;
-  font-weight: 500;
-  flex-shrink: 0;
-}
-
-.visitor-level-badge.level-1 {
-  background: #F1F5F9;
-  color: #94A3B8;
-  border: 1rpx solid #E2E8F0;
-}
-
-.visitor-level-badge.level-2 {
-  background: rgba(59, 130, 246, 0.06);
-  color: #3B82F6;
-  border: 1rpx solid rgba(59, 130, 246, 0.12);
-}
-
-.visitor-level-badge.level-3 {
-  background: rgba(16, 185, 129, 0.06);
-  color: #10B981;
-  border: 1rpx solid rgba(16, 185, 129, 0.12);
-}
-
-.visitor-time {
-  font-size: 22rpx;
-  color: #94A3B8;
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
-.visitor-position {
-  font-size: 26rpx;
-  color: #3B82F6;
-  font-weight: 500;
-}
-
-.visitor-tags {
-  display: flex;
-  gap: 10rpx;
-  flex-wrap: wrap;
-}
-
-.tag {
-  font-size: 22rpx;
-  color: #64748B;
-  padding: 4rpx 14rpx;
-  background: #F1F5F9;
-  border-radius: 4rpx;
-}
-
-.visit-count-tag {
-  color: #3B82F6;
-  background: rgba(59, 130, 246, 0.06);
-  font-weight: 500;
-}
-
-/* ============ 查看全部按钮 ============ */
-.view-all-btn {
-  text-align: center;
-  padding: 32rpx;
-  color: #94A3B8;
-  font-size: 28rpx;
-}
+/* 以下 icon-users/icon-eye/icon-add/icon-user 随首页访客模块移除已清理，仅保留 .icon-card 供空态使用 */
 
 /* ============ 底部协议入口 ============ */
 .agreement-footer {
@@ -925,4 +604,32 @@ page {
 .agreement-sep {
   font-size: 24rpx;
   color: #CBD5E1;
+}
+
+/* ============ 名片夹入口（首页轻量导航） ============ */
+.card-list-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 32rpx;
+  padding: 28rpx 32rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  border: 2rpx solid #F1F5F9;
+}
+
+.card-list-entry:active {
+  background: #F8FAFF;
+}
+
+.entry-label {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.entry-arrow {
+  font-size: 36rpx;
+  color: #94A3B8;
 }

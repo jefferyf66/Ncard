@@ -100,89 +100,10 @@
     </view>
   </view>
 
-  <view class="visitors-section" wx:if="{{!isLoading && !isError && !isEmpty}}">
-    <view class="section-header">
-      <text class="section-title">名片数据</text>
-      <view class="section-arrow" bindtap="goToVisitors">
-        <text>查看更多 ›</text>
-      </view>
-    </view>
-
-    <view class="stats-card">
-      <view class="stat-item" bindtap="goToVisitors">
-        <view class="stat-icon">
-          <view class="icon-users"></view>
-        </view>
-        <view class="stat-info">
-          <text class="stat-value">{{visitorStats.visitors}}</text>
-          <text class="stat-label">我的访客</text>
-        </view>
-      </view>
-      <view class="stat-divider"></view>
-      <view class="stat-item">
-        <view class="stat-icon">
-          <view class="icon-eye"></view>
-        </view>
-        <view class="stat-info">
-          <text class="stat-value">{{visitorStats.viewed}}</text>
-          <text class="stat-label">重复访问</text>
-        </view>
-      </view>
-      <view class="stat-divider"></view>
-      <view class="stat-item" bindtap="goToCardList">
-        <view class="stat-icon">
-          <view class="icon-add"></view>
-        </view>
-        <view class="stat-info">
-          <text class="stat-value">{{visitorStats.newCards}}</text>
-          <text class="stat-label">名片夹</text>
-        </view>
-      </view>
-    </view>
-
-    <view class="section-header">
-      <text class="section-title">最近访客</text>
-    </view>
-
-    <view class="visitor-list">
-      <view
-        class="visitor-item"
-        wx:for="{{recentVisitors}}"
-        wx:key="id"
-        bindtap="goToVisitorDetail"
-        data-item="{{item}}"
-      >
-        <view class="visitor-avatar">
-          <image
-            wx:if="{{item.avatar}}"
-            class="visitor-avatar-img"
-            src="{{item.avatar}}"
-            mode="aspectFill"
-            binderror="onVisitorAvatarError"
-            data-index="{{index}}"
-          ></image>
-          <view class="icon-user" wx:else></view>
-        </view>
-        <view class="visitor-content">
-          <view class="visitor-header">
-            <text class="visitor-name">{{item.name}}</text>
-            <view class="visitor-level-badge level-{{item.visitorLevel}}" wx:if="{{item.isAnonymous}}">
-              <text>匿名</text>
-            </view>
-            <text class="visitor-time">{{item.lastVisit}}</text>
-          </view>
-          <text class="visitor-position" wx:if="{{item.position}}">{{item.position}}</text>
-          <view class="visitor-tags">
-            <text class="tag visit-count-tag" wx:if="{{item.visitCount > 1}}">访问 {{item.visitCount}} 次</text>
-            <text class="tag" wx:for="{{item.actions}}" wx:key="index">{{item}}</text>
-          </view>
-        </view>
-      </view>
-    </view>
-
-    <view class="view-all-btn" bindtap="goToVisitors">
-      <text>查看全部访客</text>
-    </view>
+  <!-- 名片夹入口：数字归位于名片夹页顶部，此处仅作导航 -->
+  <view class="card-list-entry" wx:if="{{!isLoading && !isError}}" bindtap="goToCardList">
+    <text class="entry-label">名片夹</text>
+    <text class="entry-arrow">›</text>
   </view>
 
   <!-- 底部固定操作栏：我的团队（左）/ ＋ 新增名片（右）。无名片时隐藏，创建第一张后恢复 -->
