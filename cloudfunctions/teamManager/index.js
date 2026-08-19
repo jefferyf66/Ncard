@@ -43,6 +43,8 @@ exports.main = async (event, context) => {
       case 'setDirectoryShare': { const { OPENID } = cloud.getWXContext(); return await setDirectoryShare(event, OPENID) }
       // 跨用户读（admin 上下文）：供 preview 展示团队徽章（团队名片视图）
       case 'getCardTeams': return await getCardTeams(event)
+      // 邀请元信息（无 OPENID 依赖，供 join 页渲染空名片表单）
+      case 'getInviteMeta': return await getInviteMeta(event)
       default: return { success: false, error: 'UNKNOWN_ACTION' }
     }
   } catch (e) {
@@ -458,6 +460,33 @@ async function getTeam(event, OPENID) {
       team: safeTeam,
       myRole: isMember ? mem.data[0].role : null,
       myStatus: isMember ? mem.data[0].status : null
+    }
+  }
+}
+
+// ============ 邀请元信息（供 join 页渲染空名片表单）============
+// 输入 token，返回邀请类型(kind) + owner 预填(prefill) + 团队字段配置(cardSchema)
+// 无 OPENID 依赖，仅做 token 定位 + 团队存在性校验，不泄露敏感信息
+async function getInviteMeta(event) {
+  const { token } = event
+  if (!token) return { success: false, error: 'INVALID_PARAM' }
+  const r = await db.collection('team_invites').where({ token }).get()
+  const inv = r.data && r.data[0]
+  if (!inv) return { success: false, error: 'INVITE_NOT_FOUND' }
+  const teamRes = await db.collection('teams').doc(inv.teamId).get()
+  const team = teamRes && teamRes.data
+  if (!team) return { success: false, error: 'TEAM_NOT_FOUND' }
+  const schema = team.cardSchema || defaultCardSchema()
+  return {
+    success: true,
+    data: {
+      teamId: team._id,
+      teamName: team.name,
+      kind: inv.kind || 'invite',
+      prefill: inv.prefill || {},
+      expired: inv.expiresAt ? (Date.now() > inv.expiresAt) : false,
+      usedUp: (inv.singleUse && inv.usedCount >= 1) || (inv.maxUses && inv.usedCount >= inv.maxUses),
+      cardSchema: schema
     }
   }
 }

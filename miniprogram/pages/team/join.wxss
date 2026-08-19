@@ -45,3 +45,11 @@
 .no-card-tip { margin-top: 28rpx; display: flex; flex-direction: column; align-items: center; gap: 8rpx; }
 .tip-text { font-size: 24rpx; color: #94A3B8; }
 .tip-link { font-size: 26rpx; color: #3B82F6; font-weight: 600; }
+
+/* 空名片填空表单 */
+.cardform-card { margin-bottom: 24rpx; }
+.cardform-tip {
+  font-size: 24rpx; color: #64748B; line-height: 1.6; background: #EFF6FF;
+  border: 2rpx solid #BFDBFE; border-radius: 14rpx; padding: 18rpx 22rpx; margin-bottom: 20rpx;
+}
+.req-star { color: #EF4444; font-weight: 700; }
