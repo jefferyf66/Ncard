@@ -100,12 +100,12 @@
         <view class="action-icon"><view class="icon-card"></view></view>
         <view class="action-text">
           <text class="action-title">团队名片配置</text>
-          <text class="action-sub">选择显示字段 / 预填内容 / 分享空名片</text>
+          <text class="action-sub">选择显示字段 / 预填内容 / 邀请成员填写名片</text>
         </view>
         <text class="action-arrow">›</text>
       </view>
       <view class="share-actions" wx:if="{{cardConfigSchema.length}}">
-        <view class="share-card-btn" bindtap="onShareCard">分享空名片给成员</view>
+        <view class="share-card-btn" bindtap="onShareCard">邀请成员填写名片</view>
       </view>
     </view>
 
@@ -196,9 +196,9 @@
   <!-- 空名片邀请弹窗 -->
   <view class="modal-overlay" wx:if="{{showCardInviteModal}}" catchtap="closeCardInvite">
     <view class="modal-content" catchtap="stopPropagation">
-      <view class="modal-title">分享空名片</view>
+      <view class="modal-title">邀请成员填写名片</view>
       <text class="modal-tip">把这张待填写的团队名片转发给成员，对方补全必填项后即加入团队。</text>
-      <button class="share-btn" open-type="share" data-share="card">分享空名片</button>
+      <button class="share-btn" open-type="share" data-share="card">邀请成员填写名片</button>
       <view class="modal-close" bindtap="closeCardInvite">关闭</view>
     </view>
   </view>
