@@ -144,24 +144,28 @@ exports.main = async (event, context) => {
       return { ok: true, created: true, visitorLevel: visitorLevel }
     }
 
-    // 获取我的访客统计
+    // 获取我的访客统计（可选 cardId：按单张名片过滤）
     case 'getMyVisitorStats': {
-      const { cardOwnerId } = data
+      const { cardOwnerId, cardId } = data
 
       // 参数校验：防止权限绕过
       if (!cardOwnerId) {
         return { ok: false, message: '缺少 cardOwnerId 参数' }
       }
 
+      // 构建过滤条件：cardId 可选（缺省为全局聚合）
+      const where = { cardOwnerId }
+      if (cardId) where.cardId = cardId
+
       // 访客总数
       const totalResult = await db.collection('visits')
-        .where({ cardOwnerId })
+        .where(where)
         .count()
 
       // 多次来访数
       const repeatResult = await db.collection('visits')
         .where({
-          cardOwnerId,
+          ...where,
           visitCount: db.command.gt(1)
         })
         .count()
@@ -173,17 +177,21 @@ exports.main = async (event, context) => {
       }
     }
 
-    // 获取最近访客列表
+    // 获取最近访客列表（可选 cardId：按单张名片过滤）
     case 'getRecentVisitors': {
-      const { cardOwnerId, limit = 10 } = data
+      const { cardOwnerId, limit = 10, cardId } = data
 
       // 参数校验：防止权限绕过
       if (!cardOwnerId) {
         return { ok: false, message: '缺少 cardOwnerId 参数' }
       }
 
+      // 构建过滤条件：cardId 可选（缺省为全局聚合）
+      const where = { cardOwnerId }
+      if (cardId) where.cardId = cardId
+
       const result = await db.collection('visits')
-        .where({ cardOwnerId })
+        .where(where)
         .orderBy('visitTime', 'desc')
         .limit(limit)
         .get()
@@ -194,22 +202,26 @@ exports.main = async (event, context) => {
       }
     }
 
-    // 获取我的访客仪表盘（统计 + 最近访客，合并为一次调用）
+    // 获取我的访客仪表盘（统计 + 最近访客，合并为一次调用；可选 cardId）
     case 'getMyVisitorDashboard': {
-      const { cardOwnerId } = data
+      const { cardOwnerId, cardId } = data
 
       if (!cardOwnerId) {
         return { ok: false, message: '缺少 cardOwnerId 参数' }
       }
 
+      // 构建过滤条件：cardId 可选（缺省为全局聚合）
+      const where = { cardOwnerId }
+      if (cardId) where.cardId = cardId
+
       // 三路并行：总数、回访数、最近访客
       const [totalResult, repeatResult, recentResult] = await Promise.all([
-        db.collection('visits').where({ cardOwnerId }).count(),
+        db.collection('visits').where(where).count(),
         db.collection('visits')
-          .where({ cardOwnerId, visitCount: db.command.gt(1) })
+          .where({ ...where, visitCount: db.command.gt(1) })
           .count(),
         db.collection('visits')
-          .where({ cardOwnerId })
+          .where(where)
           .orderBy('visitTime', 'desc')
           .limit(20)
           .get()
