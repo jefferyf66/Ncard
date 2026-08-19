@@ -111,7 +111,7 @@
   </view>
 
   <view class="version-info">
-    <text class="version-text">科博名片 v{{version}}</text>
+    <text class="version-text">投贴儿 v{{version}}</text>
   </view>
 
   <view class="modal-overlay" wx:if="{{showThemePicker}}" catchtap="closeThemePicker">

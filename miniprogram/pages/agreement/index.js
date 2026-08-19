@@ -27,13 +27,13 @@ Page({
 
   getPrivacyContent() {
     return `<div style="padding:0 0 40rpx 0;line-height:1.8;font-size:28rpx;color:#334155;">
-<h2 style="font-size:36rpx;color:#0F172A;font-weight:700;margin:40rpx 0 24rpx 0;">科博名片隐私政策</h2>
+<h2 style="font-size:36rpx;color:#0F172A;font-weight:700;margin:40rpx 0 24rpx 0;">投贴儿隐私政策</h2>
 <p style="margin-bottom:16rpx;color:#64748B;">更新日期：2026年6月3日</p>
 <p style="margin-bottom:16rpx;color:#64748B;">生效日期：2026年6月3日</p>
 
 <p style="font-weight:600;margin:32rpx 0 16rpx 0;color:#0F172A;">引言</p>
-<p style="margin-bottom:12rpx;">科博名片（以下简称"本小程序"）非常重视用户隐私保护。本隐私政策旨在向您说明我们如何收集、使用、存储和保护您的个人信息。请您在使用本小程序前仔细阅读本政策。</p>
-<p style="margin-bottom:12rpx;">本小程序由【科博名片开发者团队】（以下简称"我们"）运营。如果您不同意本政策的任何内容，请立即停止使用本小程序。</p>
+<p style="margin-bottom:12rpx;">投贴儿（以下简称"本小程序"）非常重视用户隐私保护。本隐私政策旨在向您说明我们如何收集、使用、存储和保护您的个人信息。请您在使用本小程序前仔细阅读本政策。</p>
+<p style="margin-bottom:12rpx;">本小程序由【投贴儿开发者团队】（以下简称"我们"）运营。如果您不同意本政策的任何内容，请立即停止使用本小程序。</p>
 
 <p style="font-weight:600;margin:32rpx 0 16rpx 0;color:#0F172A;">一、我们收集的信息</p>
 <p style="font-weight:500;margin-bottom:8rpx;">1. 您主动提供的信息</p>
@@ -106,18 +106,18 @@ Page({
 <p style="font-weight:600;margin:32rpx 0 16rpx 0;color:#0F172A;">十、联系我们</p>
 <p style="margin-bottom:12rpx;">如果您对本隐私政策有任何疑问或建议，请通过以下方式联系我们：</p>
 <p style="margin-bottom:12rpx;">邮箱：jianf232323@163.com</p>
-<p style="margin-bottom:24rpx;">感谢您使用科博名片！</p>
+<p style="margin-bottom:24rpx;">感谢您使用投贴儿！</p>
 </div>`
   },
 
   getServiceContent() {
     return `<div style="padding:0 0 40rpx 0;line-height:1.8;font-size:28rpx;color:#334155;">
-<h2 style="font-size:36rpx;color:#0F172A;font-weight:700;margin:40rpx 0 24rpx 0;">科博名片用户服务协议</h2>
+<h2 style="font-size:36rpx;color:#0F172A;font-weight:700;margin:40rpx 0 24rpx 0;">投贴儿用户服务协议</h2>
 <p style="margin-bottom:16rpx;color:#64748B;">更新日期：2026年6月3日</p>
 <p style="margin-bottom:16rpx;color:#64748B;">生效日期：2026年6月3日</p>
 
 <p style="font-weight:600;margin:32rpx 0 16rpx 0;color:#0F172A;">引言</p>
-<p style="margin-bottom:12rpx;">欢迎使用科博名片小程序（以下简称"本服务"）。本协议是您与科博名片开发者团队之间关于使用本服务所订立的协议。请您仔细阅读本协议，在使用本服务前确保已充分理解并同意本协议的所有内容。</p>
+<p style="margin-bottom:12rpx;">欢迎使用投贴儿小程序（以下简称"本服务"）。本协议是您与投贴儿开发者团队之间关于使用本服务所订立的协议。请您仔细阅读本协议，在使用本服务前确保已充分理解并同意本协议的所有内容。</p>
 
 <p style="font-weight:600;margin:32rpx 0 16rpx 0;color:#0F172A;">一、服务内容</p>
 <p style="margin-bottom:12rpx;">本服务为用户提供电子名片的创建、编辑、展示和管理功能，具体包括：</p>

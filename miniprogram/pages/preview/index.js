@@ -542,7 +542,7 @@ Page({
       nickName: card.name,
       firstName: card.name,
       lastName: '',
-      remark: card.position ? `${card.position}@${card.company || ''}` : card.company || '科博名片',
+      remark: card.position ? `${card.position}@${card.company || ''}` : card.company || '投贴儿',
       mobilePhoneNumber: card.phone,
       weChatNumber: '',
       email: card.email || '',
