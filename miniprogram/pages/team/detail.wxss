@@ -167,3 +167,40 @@
 .join-cta {
   margin-top: 16rpx; text-align: center; font-size: 28rpx; font-weight: 600; color: #3B82F6;
 }
+
+/* 团队名片配置入口图标 */
+.icon-card { width: 36rpx; height: 28rpx; border: 4rpx solid #3B82F6; border-radius: 6rpx; position: relative; }
+.icon-card::after {
+  content: ''; position: absolute; left: 6rpx; right: 6rpx; top: 8rpx; height: 4rpx;
+  background: #3B82F6; box-shadow: 0 10rpx 0 #3B82F6;
+}
+
+/* 空名片分享按钮 */
+.share-actions { margin-top: 20rpx; padding-top: 20rpx; border-top: 2rpx solid #F1F5F9; }
+.share-card-btn {
+  background: #EFF6FF; color: #2563EB; font-size: 28rpx; font-weight: 600; text-align: center;
+  padding: 22rpx 0; border-radius: 14rpx; border: 2rpx solid #BFDBFE;
+}
+
+/* 团队名片配置弹层 */
+.config-modal { max-height: 82vh; display: flex; flex-direction: column; }
+.schema-scroll { max-height: 52vh; margin: 8rpx 0 20rpx; }
+.schema-row { display: flex; align-items: center; justify-content: space-between; padding: 22rpx 0; border-bottom: 2rpx solid #F1F5F9; }
+.schema-row:last-child { border-bottom: none; }
+.schema-main { flex: 1; min-width: 0; padding-right: 20rpx; }
+.schema-label { font-size: 28rpx; color: #1F2937; font-weight: 600; display: block; margin-bottom: 12rpx; }
+.schema-default {
+  background: #F8FAFC; border: 2rpx solid #E2E8F0; border-radius: 12rpx;
+  padding: 14rpx 18rpx; font-size: 26rpx; color: #334155; width: 100%; box-sizing: border-box;
+}
+.schema-toggles { display: flex; gap: 12rpx; flex-shrink: 0; }
+.schema-toggle {
+  font-size: 24rpx; color: #94A3B8; padding: 10rpx 18rpx; border-radius: 20rpx;
+  border: 2rpx solid #E2E8F0; background: #F8FAFC;
+}
+.schema-toggle.on { color: #2563EB; border-color: #BFDBFE; background: #EFF6FF; }
+.schema-toggle.on.req { color: #fff; background: #3B82F6; border-color: #3B82F6; }
+.save-btn {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: #fff;
+  font-size: 30rpx; font-weight: 600; border-radius: 16rpx; margin-bottom: 12rpx;
+}

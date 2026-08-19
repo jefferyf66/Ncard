@@ -23,7 +23,13 @@ Page({
     showInviteModal: false,
     inviteCode: '',
     inviteToken: '',
-    sharePath: ''
+    sharePath: '',
+    // 团队名片字段配置（owner 配置 + 空名片分享）
+    cardConfigSchema: [],
+    showCardConfig: false,
+    cardConfigDraft: [],
+    cardShareToken: '',
+    showCardInviteModal: false
   },
 
   onLoad(options) {
@@ -58,6 +64,7 @@ Page({
           myRole,
           isOwner,
           allowDirectoryShare,
+          cardConfigSchema: (t && t.cardSchema) || [],
           isLoading: false
         })
 

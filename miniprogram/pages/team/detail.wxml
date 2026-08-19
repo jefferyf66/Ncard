@@ -94,6 +94,21 @@
       </view>
     </view>
 
+    <!-- 团队名片配置（owner） -->
+    <view class="card-block" wx:if="{{isOwner}}">
+      <view class="block-action" bindtap="onConfigureCard">
+        <view class="action-icon"><view class="icon-card"></view></view>
+        <view class="action-text">
+          <text class="action-title">团队名片配置</text>
+          <text class="action-sub">选择显示字段 / 预填内容 / 分享空名片</text>
+        </view>
+        <text class="action-arrow">›</text>
+      </view>
+      <view class="share-actions" wx:if="{{cardConfigSchema.length}}">
+        <view class="share-card-btn" bindtap="onShareCard">分享空名片给成员</view>
+      </view>
+    </view>
+
     <!-- 设置（owner）：目录公开开关 -->
     <view class="settings-card" wx:if="{{isOwner}}">
       <view class="settings-row">
@@ -153,6 +168,38 @@
       <text class="modal-tip">把邀请码发给好友，或点击下方按钮分享邀请卡片。</text>
       <button class="share-btn" open-type="share" data-share="invite">分享邀请卡片</button>
       <view class="modal-close" bindtap="closeInvite">关闭</view>
+    </view>
+  </view>
+
+  <!-- 团队名片配置弹层 -->
+  <view class="modal-overlay" wx:if="{{showCardConfig}}" catchtap="closeCardConfig">
+    <view class="modal-content config-modal" catchtap="stopPropagation">
+      <view class="modal-title">团队名片配置</view>
+      <text class="modal-tip">勾选「显示」控制该字段在团队名片上出现；「必填」成员须补全；预填内容会自动带入空名片。</text>
+      <scroll-view scroll-y class="schema-scroll">
+        <view class="schema-row" wx:for="{{cardConfigDraft}}" wx:key="key">
+          <view class="schema-main">
+            <text class="schema-label">{{item.label}}</text>
+            <input class="schema-default" placeholder="预填内容（可选）" value="{{item.defaultValue}}" data-index="{{index}}" bindinput="onSchemaDefaultInput" maxlength="100" />
+          </view>
+          <view class="schema-toggles">
+            <view class="schema-toggle {{item.visible ? 'on' : ''}}" data-index="{{index}}" bindtap="toggleSchemaVisible">显示</view>
+            <view class="schema-toggle {{item.required ? 'on req' : ''}}" data-index="{{index}}" bindtap="toggleSchemaRequired">必填</view>
+          </view>
+        </view>
+      </scroll-view>
+      <button class="save-btn" bindtap="saveCardSchema">保存配置</button>
+      <view class="modal-close" bindtap="closeCardConfig">关闭</view>
+    </view>
+  </view>
+
+  <!-- 空名片邀请弹窗 -->
+  <view class="modal-overlay" wx:if="{{showCardInviteModal}}" catchtap="closeCardInvite">
+    <view class="modal-content" catchtap="stopPropagation">
+      <view class="modal-title">分享空名片</view>
+      <text class="modal-tip">把这张待填写的团队名片转发给成员，对方补全必填项后即加入团队。</text>
+      <button class="share-btn" open-type="share" data-share="card">分享空名片</button>
+      <view class="modal-close" bindtap="closeCardInvite">关闭</view>
     </view>
   </view>
 </view>
