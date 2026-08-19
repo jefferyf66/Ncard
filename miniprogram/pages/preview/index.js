@@ -12,6 +12,9 @@ Page({
     isOwner: false,
     isSaved: false,
     showAuthBanner: false,
+    // 访客分析（按单卡维度，仅名片主人可见）
+    visitorStats: { visitors: 0, viewed: 0 },
+    recentVisitors: [],
     // 团队徽章（T12）：名片所属团队 + 托管字段覆盖层
     teamBadges: [],
     showTeamCard: false,
@@ -195,6 +198,7 @@ Page({
 
       if (isOwner) {
         this.setData({ isOwner: true, isSaved: false })
+        this.loadVisitorAnalytics(cardId, cardOwnerId)
         return
       }
 
@@ -227,6 +231,80 @@ Page({
       .catch(() => {
         this.setData({ isSaved: false })
       })
+  },
+
+  /**
+   * 加载本名片的访客分析（仅名片主人调用，按单卡维度聚合）
+   * 调用 initVisits 的 getMyVisitorStats + getRecentVisitors，均带 cardId
+   */
+  loadVisitorAnalytics(cardId, cardOwnerId) {
+    if (!wx.cloud || !cardOwnerId || !cardId) return
+    var that = this
+    wx.cloud.callFunction({
+      name: 'initVisits',
+      data: { action: 'getMyVisitorStats', data: { cardOwnerId: cardOwnerId, cardId: cardId } }
+    }).then(function (statsRes) {
+      if (statsRes.result && statsRes.result.ok) {
+        that.setData({
+          'visitorStats.visitors': statsRes.result.visitors || 0,
+          'visitorStats.viewed': statsRes.result.viewed || 0
+        })
+      }
+      return wx.cloud.callFunction({
+        name: 'initVisits',
+        data: { action: 'getRecentVisitors', data: { cardOwnerId: cardOwnerId, cardId: cardId, limit: 5 } }
+      })
+    }).then(function (res) {
+      if (res.result && res.result.ok) {
+        that._processRecentVisitors(res.result.list || [])
+      } else {
+        that.setData({ recentVisitors: [] })
+      }
+    }).catch(function () {
+      that.setData({ recentVisitors: [] })
+    })
+  },
+
+  _processRecentVisitors(list) {
+    const visitors = (list || []).map((v) => ({
+      id: v._id,
+      visitorOpenId: v.visitorOpenId || '',
+      name: v.visitorName || ('访客 #' + (v.visitorOpenId || '').slice(-4).toUpperCase()),
+      avatar: v.visitorAvatar || '',
+      visitCount: v.visitCount || 1,
+      visitorLevel: v.visitorLevel || 1,
+      lastVisit: app.formatTime(v.visitTime)
+    }))
+    const merged = this._mergeVisitorsByOpenId(visitors)
+    this.setData({ recentVisitors: merged })
+  },
+
+  _mergeVisitorsByOpenId(visitors) {
+    const map = {}
+    visitors.forEach((v) => {
+      const key = v.visitorOpenId || ('anon_' + v.id)
+      if (!map[key]) {
+        map[key] = { ...v }
+      } else {
+        map[key].visitCount = (map[key].visitCount || 1) + (v.visitCount || 1)
+      }
+    })
+    return Object.values(map)
+  },
+
+  /**
+   * 从详情页跳转到访客页（带 cardId，按本名片筛选）
+   */
+  goToVisitorAnalytics() {
+    const id = this.data.id
+    if (!id) return
+    wx.navigateTo({
+      url: '/pages/visitors/index?cardId=' + id,
+      fail: (err) => {
+        console.error('[Preview] 跳转访客页失败:', err)
+        app.showError('跳转失败')
+      }
+    })
   },
 
   /**

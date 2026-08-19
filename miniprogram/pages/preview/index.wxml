@@ -152,6 +152,60 @@
       </view>
     </view>
 
+    <!-- 访客分析（仅名片主人可见，按本名片维度聚合） -->
+    <view class="section-card visitor-analytics" wx:if="{{isOwner}}">
+      <view class="section-header">
+        <view class="section-icon">
+          <view class="icon-eye"></view>
+        </view>
+        <text class="section-title">访客分析</text>
+        <view class="view-all-btn" wx:if="{{visitorStats.visitors > 0}}" bindtap="goToVisitorAnalytics">
+          <text>查看全部 ›</text>
+        </view>
+      </view>
+
+      <view class="analytics-stats">
+        <view class="analytics-stat">
+          <text class="analytics-value">{{visitorStats.visitors}}</text>
+          <text class="analytics-label">总访客</text>
+        </view>
+        <view class="analytics-divider"></view>
+        <view class="analytics-stat">
+          <text class="analytics-value">{{visitorStats.viewed}}</text>
+          <text class="analytics-label">重复访问</text>
+        </view>
+        <view class="analytics-divider"></view>
+        <view class="analytics-stat">
+          <text class="analytics-value">{{recentVisitors.length}}</text>
+          <text class="analytics-label">最近访客</text>
+        </view>
+      </view>
+
+      <view class="analytics-recent" wx:if="{{recentVisitors.length > 0}}">
+        <view class="recent-visitor" wx:for="{{recentVisitors}}" wx:key="visitorOpenId">
+          <view class="recent-avatar">
+            <image wx:if="{{item.avatar}}" class="recent-avatar-img" src="{{item.avatar}}" mode="aspectFill"></image>
+            <view class="icon-user" wx:else></view>
+          </view>
+          <view class="recent-info">
+            <view class="recent-name-row">
+              <text class="recent-name">{{item.name}}</text>
+              <view class="visitor-level-badge level-{{item.visitorLevel}}" wx:if="{{item.visitorLevel < 3}}">
+                <text wx:if="{{item.visitorLevel === 2}}">已授权</text>
+                <text wx:else>匿名</text>
+              </view>
+              <text class="recent-count" wx:if="{{item.visitCount > 1}}">×{{item.visitCount}}</text>
+            </view>
+            <text class="recent-meta">{{item.lastVisit}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="analytics-empty" wx:else>
+        <text>暂无访客数据，分享名片后这里会显示访问情况</text>
+      </view>
+    </view>
+
     <view class="function-card">
       <view class="function-item" bindtap="goToEdit" wx:if="{{isOwner}}">
         <view class="func-icon-wrap">
