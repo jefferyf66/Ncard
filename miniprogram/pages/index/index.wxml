@@ -7,13 +7,6 @@
         <text class="title">我的名片</text>
         <text class="subtitle" wx:if="{{!isLoading && !isError}}">{{cards.length}} 张名片</text>
       </view>
-      <view class="header-stat team-entry" bindtap="goTeamList">
-        <view class="team-label">
-          <text class="title">我的团队</text>
-          <text class="chevron">›</text>
-        </view>
-        <text class="subtitle" wx:if="{{!isLoading && !isError}}">{{teamCount}} 个团队</text>
-      </view>
     </view>
     <view class="header-actions">
       <text class="desktop-link" bindtap="addToDesktop">添加到桌面</text>
@@ -192,9 +185,15 @@
     </view>
   </view>
 
-  <!-- 新增名片悬浮按钮：无名片时隐藏，创建第一张后自动恢复 -->
-  <view class="add-btn" wx:if="{{!isEmpty}}" bindtap="goToEdit">
-    <text class="add-btn-text">新增名片</text>
+  <!-- 底部固定操作栏：我的团队（左）/ ＋ 新增名片（右）。无名片时隐藏，创建第一张后恢复 -->
+  <view class="bottom-bar" wx:if="{{!isEmpty}}">
+    <view class="bottom-bar-btn team-bar-btn" bindtap="goTeamList">
+      <text class="bottom-bar-text">我的团队 · {{teamCount}}</text>
+    </view>
+    <view class="bottom-bar-divider"></view>
+    <view class="bottom-bar-btn add-bar-btn" bindtap="goToEdit">
+      <text class="bottom-bar-text">＋ 新增名片</text>
+    </view>
   </view>
 
   <!-- 底部协议入口 -->

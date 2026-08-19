@@ -44,27 +44,6 @@ page {
   gap: 4rpx;
 }
 
-.header-stat.team-entry {
-  margin-top: 16rpx;
-}
-
-.team-label {
-  display: flex;
-  align-items: center;
-  gap: 6rpx;
-}
-
-.chevron {
-  font-size: 32rpx;
-  font-weight: 700;
-  color: #94A3B8;
-  line-height: 1;
-}
-
-.team-entry:active {
-  opacity: 0.6;
-}
-
 .desktop-link {
   font-size: 24rpx;
   color: #3B82F6;
@@ -121,7 +100,7 @@ page {
   gap: 16rpx;
 }
 
-/* 头部按钮旧样式已移除：添加到桌面 / 我的团队 改用文字入口（见 .desktop-link / .team-entry） */
+/* 头部按钮旧样式已移除：添加到桌面 改用文字入口（见 .desktop-link），我的团队入口已移至底部固定栏 */
 
 /* 头部按钮图标包装 */
 .header-icon-wrapper {
@@ -586,7 +565,8 @@ page {
   border: 2rpx solid #3B82F6;
 }
 
-.add-btn {
+/* 底部固定操作栏：我的团队 / ＋ 新增名片 两格 */
+.bottom-bar {
   position: fixed;
   left: 0;
   right: 0;
@@ -594,13 +574,32 @@ page {
   height: 96rpx;
   background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
   display: flex;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
   box-shadow: 0 -4rpx 16rpx rgba(37, 99, 235, 0.18);
   z-index: 100;
 }
 
-.add-btn-text {
+.bottom-bar-btn {
+  flex: 1;
+  height: 96rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bottom-bar-btn:active {
+  opacity: 0.7;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.bottom-bar-divider {
+  width: 1rpx;
+  height: 48rpx;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.bottom-bar-text {
   font-size: 28rpx;
   font-weight: 500;
   color: #fff;
