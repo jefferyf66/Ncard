@@ -190,6 +190,15 @@ Page({
         path: 'pages/team/detail?id=' + this.data.shortId + '&public=1'
       }
     }
+    // 空名片邀请（owner 转发给成员填写）：token 指向 join 页空名片表单
+    if (res && res.target && res.target.dataset && res.target.dataset.share === 'card') {
+      const t = this.data.team
+      const name = (t && t.name) || '团队'
+      return {
+        title: name + ' · 邀请你填写团队名片',
+        path: 'pages/team/join?teamId=' + this.data.teamId + '&token=' + this.data.cardShareToken
+      }
+    }
     // 默认：邀请成员（join 路径 / token）
     const t = this.data.team
     const title = '邀请你加入团队「' + (t && t.name || '我的团队') + '」'
@@ -199,6 +208,77 @@ Page({
         ? '/pages/team/join?teamId=' + this.data.teamId + '&token=' + this.data.inviteToken
         : '/pages/team/list')
     return { title, path }
+  },
+
+  // ============ 团队名片字段配置 + 空名片邀请（owner）============
+
+  // 打开配置弹层：深拷贝 cardConfigSchema → cardConfigDraft（避免直接改源数据）
+  onConfigureCard() {
+    const draft = (this.data.cardConfigSchema || []).map((f) => Object.assign({}, f))
+    this.setData({ cardConfigDraft: draft, showCardConfig: true })
+  },
+
+  closeCardConfig() {
+    this.setData({ showCardConfig: false })
+  },
+
+  toggleSchemaVisible(e) {
+    const idx = e.currentTarget.dataset.index
+    const draft = this.data.cardConfigDraft.slice()
+    if (!draft[idx]) return
+    draft[idx] = Object.assign({}, draft[idx], { visible: !draft[idx].visible })
+    this.setData({ cardConfigDraft: draft })
+  },
+
+  toggleSchemaRequired(e) {
+    const idx = e.currentTarget.dataset.index
+    const draft = this.data.cardConfigDraft.slice()
+    if (!draft[idx]) return
+    draft[idx] = Object.assign({}, draft[idx], { required: !draft[idx].required })
+    this.setData({ cardConfigDraft: draft })
+  },
+
+  onSchemaDefaultInput(e) {
+    const idx = e.currentTarget.dataset.index
+    const val = (e.detail && e.detail.value) || ''
+    const draft = this.data.cardConfigDraft.slice()
+    if (!draft[idx]) return
+    draft[idx] = Object.assign({}, draft[idx], { defaultValue: val })
+    this.setData({ cardConfigDraft: draft })
+  },
+
+  saveCardSchema() {
+    const schema = this.data.cardConfigDraft
+    app.showLoading('保存配置...')
+    team.callTeamManager('saveTeamCardSchema', { teamId: this.data.teamId, cardSchema: schema }).then((res) => {
+      app.hideLoading()
+      if (res.success) {
+        this.setData({
+          cardConfigSchema: (res.data && res.data.cardSchema) || schema,
+          showCardConfig: false
+        })
+        app.showSuccess('配置已保存')
+      } else {
+        team.showTeamError(res.error)
+      }
+    })
+  },
+
+  // 生成「空名片」邀请：调 createCardInvite 拿 token，弹出空名片分享窗
+  onShareCard() {
+    app.showLoading('生成邀请...')
+    team.callTeamManager('createCardInvite', { teamId: this.data.teamId }).then((res) => {
+      app.hideLoading()
+      if (res.success) {
+        this.setData({ cardShareToken: res.data.token, showCardInviteModal: true })
+      } else {
+        team.showTeamError(res.error)
+      }
+    })
+  },
+
+  closeCardInvite() {
+    this.setData({ showCardInviteModal: false })
   },
 
   // 编辑成员组织字段（owner）

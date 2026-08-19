@@ -45,6 +45,10 @@ exports.main = async (event, context) => {
       case 'getCardTeams': return await getCardTeams(event)
       // 邀请元信息（无 OPENID 依赖，供 join 页渲染空名片表单）
       case 'getInviteMeta': return await getInviteMeta(event)
+      // 生成「空名片」邀请（owner，kind='card'）：成员经转发补全字段后加入
+      case 'createCardInvite': return await createCardInvite(event, OPENID)
+      // 保存团队名片字段配置（owner）：决定空名片表单字段 + 公开目录外的团队名片展示字段
+      case 'saveTeamCardSchema': return await saveTeamCardSchema(event, OPENID)
       default: return { success: false, error: 'UNKNOWN_ACTION' }
     }
   } catch (e) {
