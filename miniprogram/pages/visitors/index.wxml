@@ -7,7 +7,11 @@
 
   <block wx:else>
   <view class="section-header">
-    <text class="section-title">名片数据</text>
+    <view class="header-title-group">
+      <text class="section-title">{{mode === 'card' ? '本名片访客' : '名片数据'}}</text>
+      <text class="card-context" wx:if="{{mode === 'card' && cardName}}">{{cardName}}</text>
+    </view>
+    <text class="back-global" wx:if="{{mode === 'card'}}" bindtap="goGlobal">全部名片 ›</text>
   </view>
 
   <view class="stats-row">
@@ -21,9 +25,13 @@
       <text class="stat-label">多次来访</text>
     </view>
     <view class="stat-divider"></view>
-    <view class="stat-item">
+    <view class="stat-item" wx:if="{{mode === 'global'}}">
       <text class="stat-value">{{stats.newCards}}</text>
       <text class="stat-label">名片数</text>
+    </view>
+    <view class="stat-item" wx:else>
+      <text class="stat-value">{{stats.recent}}</text>
+      <text class="stat-label">最近访客</text>
     </view>
   </view>
 

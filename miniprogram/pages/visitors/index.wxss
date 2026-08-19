@@ -371,3 +371,29 @@
   color: #94A3B8;
   font-size: 28rpx;
 }
+
+/* ============ 单卡模式头部 ============ */
+.header-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.card-context {
+  font-size: 24rpx;
+  color: #64748B;
+  font-weight: 400;
+}
+
+.back-global {
+  font-size: 26rpx;
+  color: #3B82F6;
+  font-weight: 500;
+  padding: 6rpx 16rpx;
+  background: rgba(59, 130, 246, 0.06);
+  border-radius: 4rpx;
+}
+
+.back-global:active {
+  background: rgba(59, 130, 246, 0.12);
+}

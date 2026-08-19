@@ -5,16 +5,26 @@ Page({
     stats: {
       visitors: 0,
       viewed: 0,
-      newCards: 0
+      newCards: 0,
+      recent: 0
     },
     visitors: [],
     isLoading: true,
     isEmpty: false,
     isError: false,
-    errorMsg: ''
+    errorMsg: '',
+    mode: 'global',
+    cardId: '',
+    cardName: ''
   },
 
-  onLoad() {
+  onLoad(options) {
+    const cardId = (options && options.cardId) || ''
+    this._cardId = cardId
+    if (cardId) {
+      this.setData({ mode: 'card', cardId: cardId })
+      this._loadCardName(cardId)
+    }
     this.loadVisitors()
   },
 
@@ -24,6 +34,27 @@ Page({
     if (this.data.isEmpty && !this.data.isLoading) {
       this.loadVisitors()
     }
+  },
+
+  /**
+   * 单卡模式：读取卡片名作为页面上下文（仅取 name 字段，降权限）
+   */
+  _loadCardName(cardId) {
+    if (!wx.cloud) return
+    wx.cloud.database().collection('cards').doc(cardId).field({ name: true }).get()
+      .then((res) => {
+        if (res.data && res.data.name) {
+          this.setData({ cardName: res.data.name })
+        }
+      })
+      .catch(() => {})
+  },
+
+  /**
+   * 从单卡视图返回全局访客视图
+   */
+  goGlobal() {
+    wx.redirectTo({ url: '/pages/visitors/index' })
   },
 
   loadVisitors() {
@@ -42,17 +73,27 @@ Page({
     app.getOpenId().then((myOpenId) => {
       this._myOpenId = myOpenId
 
-      // 1. 名片数（统计 user_save_cards，与名片夹及首页数据源保持一致）
-      wx.cloud.database().collection('user_save_cards').count()
-        .then((res) => {
-          this.setData({ 'stats.newCards': res.total || 0 })
-        })
-        .catch(() => {})
+      // 1. 名片数（仅全局模式有意义；单卡模式无需展示）
+      if (!this._cardId) {
+        wx.cloud.database().collection('user_save_cards').count()
+          .then((res) => {
+            this.setData({ 'stats.newCards': res.total || 0 })
+          })
+          .catch(() => {})
+      }
 
-      // 2. 访客统计（准确 count，与首页口径对齐）
+      // 构建请求体：单卡模式追加 cardId 维度（per-card 过滤）
+      const statsData = { cardOwnerId: myOpenId || '' }
+      const listData = { cardOwnerId: myOpenId || '', limit: 50 }
+      if (this._cardId) {
+        statsData.cardId = this._cardId
+        listData.cardId = this._cardId
+      }
+
+      // 2. 访客统计（准确 count，按 cardOwnerId + 可选 cardId 过滤）
       wx.cloud.callFunction({
         name: 'initVisits',
-        data: { action: 'getMyVisitorStats', data: { cardOwnerId: myOpenId || '' } }
+        data: { action: 'getMyVisitorStats', data: statsData }
       }).then((statsRes) => {
         if (statsRes.result && statsRes.result.ok) {
           this.setData({
@@ -63,10 +104,7 @@ Page({
         // 3. 访客列表（单独请求，不影响统计口径）
         return wx.cloud.callFunction({
           name: 'initVisits',
-          data: {
-            action: 'getRecentVisitors',
-            data: { cardOwnerId: myOpenId || '', limit: 50 }
-          }
+          data: { action: 'getRecentVisitors', data: listData }
         })
       }).then((res) => {
         if (res.result && res.result.ok) {
@@ -109,7 +147,8 @@ Page({
     this.setData({
       visitors: merged,
       isLoading: false,
-      isEmpty: merged.length === 0
+      isEmpty: merged.length === 0,
+      'stats.recent': merged.length
     })
   },
 
@@ -135,8 +174,10 @@ Page({
     const _ = db.command
     const myOpenId = this._myOpenId || ''
 
-    // 构建查询条件：按 cardOwnerId 过滤
-    const baseWhere = myOpenId ? { cardOwnerId: myOpenId } : {}
+    // 构建查询条件：按 cardOwnerId 过滤（单卡模式追加 cardId）
+    const baseWhere = {}
+    if (myOpenId) baseWhere.cardOwnerId = myOpenId
+    if (this._cardId) baseWhere.cardId = this._cardId
 
     // 统计：访客总数
     let query = db.collection('visits')
