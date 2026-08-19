@@ -161,6 +161,15 @@
 
 详见 [CHANGELOG.md](CHANGELOG.md)
 
+### v1.3.0 (2026-08-19)
+- ✨ 访客数据 per-card 化：详情页新增「访客分析」区，访客页支持 `?cardId=` 单卡筛选（initVisits 三聚合加可选 cardId）
+- 🏢 团队能力增强：公开团队目录、整组分享、成员托管名片、解散团队级联清理
+- 🎨 首页重构：UI 对齐设计系统、头部重排、团队入口底部化
+- 🧹 首页移除名片数据统计区与最近访客（访问数据随具体名片走，归位详情页）
+
+### v1.2.0 (2026-08-17)
+- 🐛 修复 edit 页 page-content 闭合标签缺失导致的 WXML 编译错误
+
 ### v1.1.4 (2026-08-14)
 - ♻️ 新增 `config/storage.js` 作为云存储 HTTPS 基址单一真源，移除 4 文件 5 处硬编码
 - ♻️ 替换 `crop` / `shareCard` / `index` 三处弃用 `wx.getSystemInfoSync()` 为官方推荐 API

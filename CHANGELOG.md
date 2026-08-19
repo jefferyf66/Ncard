@@ -2,6 +2,29 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.3.0] - 2026-08-19
+
+### Added
+- 访客数据 per-card 化：`initVisits` 的 `getMyVisitorStats` / `getRecentVisitors` / `getMyVisitorDashboard` 三聚合 action 新增可选 `cardId` 维度（缺省保持全局聚合，向后兼容）
+- 名片详情页新增「访客分析」区（仅名片主人可见）：本名片访客数 / 重复访问 / 最近访客 Top5，「查看全部」跳访客页单卡筛选
+- 访客页支持 `?cardId=` 单卡筛选；单卡模式头部自适应「本名片访客」+ 卡片名，第三指标切换为「最近访客」，并提供「全部名片 ›」回全局
+- 团队能力增强：公开团队目录、整组分享、团队详情点成员查看其在本团队下的托管名片、owner 专属解散团队（级联清理成员 / 名片关联 / 邀请码）
+- 首页「添加到桌面」实现优化
+
+### Changed
+- 首页 UI 对齐设计系统（对齐 / 错误态 / 统计语义修复）
+- 首页头部重排：我的团队左移并带实时团队数，添加到桌面归位右上
+- 首页团队入口移出头部，改置底部固定双按钮栏（方案C）
+
+### Removed
+- 首页「名片数据」三宫格（我的访客 / 多次来访 / 名片夹）与「最近访客」列表整块移除（访问数据改为随具体名片走，归位于详情页 per-card 维度）
+- 首页 4 个纯 CSS 图标死代码样式（icon-users / icon-eye / icon-add / icon-user）
+
+## [1.2.0] - 2026-08-17
+
+### Fixed
+- 修复 `edit` 页 `page-content` 闭合标签缺失导致的 WXML 编译错误
+
 ## [1.1.4] - 2026-08-14
 
 ### Added
