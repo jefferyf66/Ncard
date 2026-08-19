@@ -9,7 +9,7 @@
       <text class="form-label">团队名称<text class="required">*</text></text>
       <input
         class="form-input {{errors.name ? 'input-error' : ''}}"
-        placeholder="如：科博科技"
+        placeholder="如：ABC科技"
         value="{{name}}"
         bindinput="onNameInput"
         maxlength="30"
