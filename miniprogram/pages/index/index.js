@@ -1,5 +1,6 @@
 const app = getApp()
 var shareUtil = require('../../utils/share')
+var teamUtil = require('../../utils/team')
 var cardStyle = require('../../config/cardStyle')
 var storage = require('../../config/storage')
 
@@ -10,6 +11,7 @@ Page({
     isEmpty: false,
     isError: false,
     errorMsg: '',
+    teamCount: 0,
     hasMore: true,
     pageSize: 10,
     currentPage: 0,
@@ -110,6 +112,9 @@ Page({
     
     // 静默注册访客身份（idempotent：已存在则跳过）
     this._registerVisitorProfile()
+
+    // 实时拉取「我的团队」数量（5 分钟缓存，见 loadTeamCount）
+    this.loadTeamCount()
     
     var needsRefresh = app.getCache('cardsNeedRefresh')
     if (needsRefresh) {
@@ -678,6 +683,29 @@ Page({
         console.error('[Index] 跳转失败:', err)
         app.showError('跳转失败')
       }
+    })
+  },
+
+  /**
+   * 拉取「我的团队」数量，显示在首页头部（与「X 张名片」同风格）
+   * 带 5 分钟缓存，避免每次 onShow 都打云函数
+   */
+  loadTeamCount() {
+    if (!wx.cloud) return
+    var that = this
+    var cached = app.getCache('teamCountCache')
+    if (cached && Date.now() - cached.t < 300000) {
+      that.setData({ teamCount: cached.count || 0 })
+      return
+    }
+    teamUtil.callTeamManager('getMyTeams').then(function (res) {
+      if (res.success && res.data && res.data.teams) {
+        var count = (res.data.teams || []).length
+        that.setData({ teamCount: count })
+        app.setCache('teamCountCache', { count: count, t: Date.now() })
+      }
+    }).catch(function () {
+      // 静默失败，保留上一值
     })
   },
 
