@@ -3,6 +3,8 @@ const app = getApp()
 Page({
   data: {
     cards: [],
+    shownCards: [],
+    filter: 'all', // all | personal | team
     isLoading: true,
     isEmpty: false
   },
@@ -86,12 +88,15 @@ Page({
           }
         })
 
-        var finishLoad = function () {
-          this.setData({
-            cards: cards,
-            isLoading: false,
-            isEmpty: cards.length === 0
-          })
+        var finishLoad = function (cards) {
+          this._mergeTeamInfo(cards).then(function (cardsWithTeams) {
+            this.setData({
+              cards: cardsWithTeams,
+              isLoading: false,
+              isEmpty: cardsWithTeams.length === 0
+            })
+            this._applyFilter()
+          }.bind(this))
         }.bind(this)
 
         if (cloudAvatars.length > 0) {
@@ -103,13 +108,13 @@ Page({
             })
             // 兜底：将未解析成功的 cloud:// URL 替换为默认头像，避免渲染层加载失败
             this._fallbackCloudAvatars(cards)
-            finishLoad()
+            finishLoad(cards)
           }.bind(this)).catch(function () {
             this._fallbackCloudAvatars(cards)
-            finishLoad()
+            finishLoad(cards)
           }.bind(this))
         } else {
-          finishLoad()
+          finishLoad(cards)
         }
       })
       .catch((err) => {
@@ -131,12 +136,78 @@ Page({
     })
   },
 
-  goToPreview(e) {
+  /**
+   * 批量聚合「名片所属团队」信息（仅客户端不可直读 team_members，必须经云函数）
+   * 返回带 teams / isTeam 的 cards；优先用团队托管 org 字段覆盖 company/department/position
+   * 失败不阻断名片夹主流程（降级为纯个人名片展示）
+   */
+  _mergeTeamInfo(cards) {
+    const cardIds = (cards || []).map(c => c._id)
+    if (!cardIds.length || !wx.cloud) {
+      cards.forEach(c => { c.teams = []; c.isTeam = false })
+      return Promise.resolve(cards)
+    }
+    return wx.cloud.callFunction({
+      name: 'teamManager',
+      data: { action: 'getCardsTeams', cardIds }
+    }).then((res) => {
+      const r = res && res.result
+      const map = {}
+      if (r && r.success && r.data && r.data.list) {
+        r.data.list.forEach(item => { map[item.cardId] = item.teams })
+      }
+      cards.forEach(c => {
+        const teams = map[c._id] || []
+        c.teams = teams
+        c.isTeam = teams.length > 0
+        // 团队名片：优先展示团队托管的组织字段（company/department/position）
+        if (c.isTeam) {
+          const t = teams[0]
+          if (t && t.org) {
+            if (t.org.company) c.company = t.org.company
+            if (t.org.department) c.department = t.org.department
+            if (t.org.position) c.position = t.org.position
+          }
+        }
+      })
+      return cards
+    }).catch(() => {
+      cards.forEach(c => { c.teams = []; c.isTeam = false })
+      return cards
+    })
+  },
+
+  /**
+   * 按 filter 计算可见列表：全部 / 个人 / 团队
+   */
+  _applyFilter() {
+    const filter = this.data.filter
+    let shown = this.data.cards
+    if (filter === 'personal') shown = this.data.cards.filter(c => !c.isTeam)
+    else if (filter === 'team') shown = this.data.cards.filter(c => c.isTeam)
+    this.setData({ shownCards: shown })
+  },
+
+  setFilter(e) {
+    const filter = e.currentTarget.dataset.filter
+    if (!filter || filter === this.data.filter) return
+    this.setData({ filter }, () => this._applyFilter())
+  },
+
+  goToCard(e) {
     const id = e.currentTarget.dataset.id
     if (!id) return
-    wx.navigateTo({
-      url: `/pages/preview/index?id=${id}`
-    })
+    const card = this.data.cards.find(c => c._id === id)
+    if (!card) return
+    // 团队名片且存在可访问团队 → 进团队视图；否则进个人名片预览
+    if (card.isTeam) {
+      const accessibleTeam = (card.teams || []).find(t => t.accessible)
+      if (accessibleTeam) {
+        wx.navigateTo({ url: `/pages/team/detail?id=${accessibleTeam.shortId}` })
+        return
+      }
+    }
+    wx.navigateTo({ url: `/pages/preview/index?id=${id}` })
   },
 
   /**

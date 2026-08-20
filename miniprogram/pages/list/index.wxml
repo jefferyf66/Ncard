@@ -1,24 +1,33 @@
 <view class="page-container">
   <view class="header">
     <view class="header-title">名片夹</view>
-    <view class="header-count">{{cards.length}} 张名片</view>
+    <view class="header-count">{{shownCards.length}} 张名片</view>
+  </view>
+
+  <view class="segment">
+    <view class="segment-item {{filter === 'all' ? 'active' : ''}}" bindtap="setFilter" data-filter="all">全部</view>
+    <view class="segment-item {{filter === 'personal' ? 'active' : ''}}" bindtap="setFilter" data-filter="personal">个人</view>
+    <view class="segment-item {{filter === 'team' ? 'active' : ''}}" bindtap="setFilter" data-filter="team">团队</view>
   </view>
 
   <view class="card-list">
     <view 
-      wx:for="{{cards}}" 
+      wx:for="{{shownCards}}" 
       wx:key="_id" 
-      class="card-item"
-      bindtap="goToPreview"
+      class="card-item {{item.isTeam ? 'is-team' : ''}}"
+      bindtap="goToCard"
       data-id="{{item._id}}"
     >
-      <image class="avatar" src="{{item.avatar || '../../images/avatar.png'}}" mode="aspectFill" binderror="onAvatarError" data-index="{{index}}"></image>
+      <view wx:if="{{item.isTeam}}" class="team-bar"></view>
+      <image class="avatar {{item.isTeam ? 'avatar-team' : ''}}" src="{{item.avatar || '../../images/avatar.png'}}" mode="aspectFill" binderror="onAvatarError" data-index="{{index}}"></image>
       <view class="card-info">
         <view class="name-row">
           <text class="name">{{item.name || '未填写'}}</text>
-          <text class="position">{{item.position || ''}}</text>
+          <text class="position" wx:if="{{item.position}}">{{item.position}}</text>
+          <view wx:if="{{item.isTeam && item.teams[0]}}" class="team-badge">{{item.teams[0].teamName}}</view>
         </view>
         <text class="company">{{item.company || ''}}</text>
+        <text wx:if="{{item.isTeam && item.teams[0].org.department}}" class="team-dept">{{item.teams[0].org.department}}</text>
         <view class="contact-info">
           <view class="contact-item" wx:if="{{item.phone}}">
             <text class="contact-icon">📞</text>
@@ -29,6 +38,7 @@
             <text class="contact-text">{{item.email}}</text>
           </view>
         </view>
+        <text wx:if="{{item.isTeam && item.teams[0]}}" class="team-source">来自「{{item.teams[0].teamName}}」· 组织身份由团队托管</text>
       </view>
       <view class="card-arrow">
         <text class="arrow">›</text>
@@ -36,7 +46,7 @@
     </view>
   </view>
 
-  <view wx:if="{{cards.length === 0}}" class="empty-state">
+  <view wx:if="{{shownCards.length === 0}}" class="empty-state">
     <view class="empty-icon">
       <text class="icon-text">👔</text>
     </view>

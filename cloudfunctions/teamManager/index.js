@@ -43,6 +43,8 @@ exports.main = async (event, context) => {
       case 'setDirectoryShare': { const { OPENID } = cloud.getWXContext(); return await setDirectoryShare(event, OPENID) }
       // 跨用户读（admin 上下文）：供 preview 展示团队徽章（团队名片视图）
       case 'getCardTeams': return await getCardTeams(event)
+      // 名片夹批量读（admin 上下文）：给定一组 cardId，返回每张卡所属「可访问」团队（公开团队 / 访客为成员）
+      case 'getCardsTeams': return await getCardsTeams(event, OPENID)
       // 邀请元信息（无 OPENID 依赖，供 join 页渲染空名片表单）
       case 'getInviteMeta': return await getInviteMeta(event)
       // 生成「空名片」邀请（owner，kind='card'）：成员经转发补全字段后加入
@@ -649,6 +651,68 @@ async function getCardTeams(event) {
     .filter(r => r.team)
 
   return { success: true, data: { teams: result } }
+}
+
+// ============ 名片夹批量所属团队（跨用户读，admin 上下文）============
+// 给定一组 cardId，返回每张名片所属的「可访问」团队（公开团队 / 访客为成员）。
+// 私密团队且访客非成员 → 完全不返回（安全边界，与 getCardTeams 单卡版、公开目录一致）。
+// 名片夹仅展示组织三字段 company/department/position，绝不带联系方式，按 cardSchema.visible 过滤。
+async function getCardsTeams(event, OPENID) {
+  const { cardIds = [] } = event
+  if (!Array.isArray(cardIds) || cardIds.length === 0) return { success: true, data: { list: [] } }
+
+  // 1) 批量按 cardId 查 team_members（_.in 单次上限 20，分组循环）
+  let memberRecords = []
+  for (let i = 0; i < cardIds.length; i += 20) {
+    const batch = cardIds.slice(i, i + 20)
+    const res = await db.collection('team_members').where({ cardId: _.in(batch), status: 'active' }).get()
+    memberRecords = memberRecords.concat(res.data)
+  }
+  if (!memberRecords.length) return { success: true, data: { list: [] } }
+
+  // 2) 取涉及团队 + 判定访客成员身份（一次批量查）
+  const teamIds = [...new Set(memberRecords.map(m => m.teamId))]
+  const teamsRes = await db.collection('teams').where({ _id: _.in(teamIds) }).get()
+  const teamMap = {}
+  teamsRes.data.forEach(t => { teamMap[t._id] = t })
+
+  const myMemRes = await db.collection('team_members')
+    .where({ teamId: _.in(teamIds), memberOpenId: OPENID, status: 'active' })
+    .get()
+  const myTeamIds = new Set(myMemRes.data.map(m => m.teamId))
+  const ownedTeamIds = new Set(teamsRes.data.filter(t => t.ownerOpenId === OPENID).map(t => t._id))
+
+  const byCard = {}
+  for (const m of memberRecords) {
+    const team = teamMap[m.teamId]
+    if (!team) continue
+    const isMember = myTeamIds.has(m.teamId) || ownedTeamIds.has(m.teamId)
+    const isPublic = team.allowDirectoryShare === true
+    if (!isMember && !isPublic) continue // 私密团队且非成员：不暴露任何团队信息
+
+    const schema = team.cardSchema || defaultCardSchema()
+    const visMap = {}
+    schema.forEach(f => { visMap[f.key] = f.visible === true })
+    const mf = m.managedFields || emptyFields()
+    // 仅组织三字段进入名片夹（去除 phone/email/address/website，与公开目录安全边界一致）
+    const org = {}
+    if (visMap.company && mf.company) org.company = mf.company
+    if (visMap.department && mf.department) org.department = mf.department
+    if (visMap.position && mf.position) org.position = mf.position
+
+    const entry = {
+      teamId: team._id,
+      shortId: team.shortId,
+      teamName: team.name,
+      accessible: isMember || isPublic, // 访客能否打开该团队视图（决定点击路由）
+      org
+    }
+    if (!byCard[m.cardId]) byCard[m.cardId] = []
+    byCard[m.cardId].push(entry)
+  }
+
+  const list = Object.keys(byCard).map(cardId => ({ cardId, teams: byCard[cardId] }))
+  return { success: true, data: { list } }
 }
 
 // ============ 工具函数 ============
