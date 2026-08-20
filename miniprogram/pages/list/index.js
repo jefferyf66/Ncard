@@ -12,6 +12,9 @@ Page({
   },
 
   onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ selected: 1 })
+    }
     const now = Date.now()
     if (now - (this._lastLoadTs || 0) < 5000) return
     this._lastLoadTs = now

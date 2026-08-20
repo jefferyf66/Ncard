@@ -100,6 +100,9 @@ Page({
   },
 
   onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ selected: 0 })
+    }
     // 静默注册访客身份（idempotent：已存在则跳过）
     this._registerVisitorProfile()
 
@@ -451,12 +454,12 @@ Page({
   },
 
   goToCardList() {
-    console.log('[Index] 跳转到名片列表')
-    wx.navigateTo({
+    console.log('[Index] 切换到名片夹')
+    wx.switchTab({
       url: '/pages/list/index',
       fail: (err) => {
-        console.error('[Index] 跳转失败:', err)
-        app.showError('跳转失败')
+        console.error('[Index] 切换失败:', err)
+        app.showError('切换失败')
       }
     })
   },
@@ -485,12 +488,12 @@ Page({
   },
 
   goTeamList() {
-    console.log('[Index] 跳转我的团队列表')
-    wx.navigateTo({
+    console.log('[Index] 切换到我的团队列表')
+    wx.switchTab({
       url: '/pages/team/list',
       fail: (err) => {
-        console.error('[Index] 跳转失败:', err)
-        app.showError('跳转失败')
+        console.error('[Index] 切换失败:', err)
+        app.showError('切换失败')
       }
     })
   },

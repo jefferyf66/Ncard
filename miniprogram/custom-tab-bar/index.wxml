@@ -1,0 +1,23 @@
+<view class="tab-bar">
+  <view class="tab-item {{selected === 0 ? 'active' : ''}}" data-path="/pages/index/index" bindtap="switchTab">
+    <view class="tab-icon icon-card"></view>
+    <view class="tab-text">名片</view>
+  </view>
+  <view class="tab-item {{selected === 1 ? 'active' : ''}}" data-path="/pages/list/index" bindtap="switchTab">
+    <view class="tab-icon icon-stack"></view>
+    <view class="tab-text">名片夹</view>
+  </view>
+
+  <view class="tab-plus" bindtap="onPlusTap">
+    <text class="plus-sign">＋</text>
+  </view>
+
+  <view class="tab-item {{selected === 2 ? 'active' : ''}}" data-path="/pages/team/list" bindtap="switchTab">
+    <view class="tab-icon icon-team"></view>
+    <view class="tab-text">团队</view>
+  </view>
+  <view class="tab-item {{selected === 3 ? 'active' : ''}}" data-path="/pages/profile/index" bindtap="switchTab">
+    <view class="tab-icon icon-user"></view>
+    <view class="tab-text">我的</view>
+  </view>
+</view>

@@ -14,6 +14,9 @@ Page({
   },
 
   onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ selected: 2 })
+    }
     // 返回页面时刷新（创建/加入后）
     if (app.getUser()) this.loadTeams()
   },

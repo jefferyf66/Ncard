@@ -30,6 +30,9 @@ Page({
   },
 
   onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ selected: 3 })
+    }
     this.loadUserData()
     // 首装竞态兜底：ensureUser 尚未回写 globalData.user 时，主动等一次再刷新（P2-1）
     if (!app.getUser()) {
@@ -123,7 +126,7 @@ Page({
   },
 
   goToCardList() {
-    wx.navigateTo({ url: '/pages/list/index' })
+    wx.switchTab({ url: '/pages/list/index' })
   },
 
   clearCache() {
@@ -158,7 +161,7 @@ Page({
   },
 
   goToTeam() {
-    wx.navigateTo({ url: '/pages/team/list' })
+    wx.switchTab({ url: '/pages/team/list' })
   },
 
   goToAccount() {

@@ -20,7 +20,7 @@ page {
 }
 
 .container {
-  padding: 0 24rpx 128rpx;
+  padding: 0 24rpx 160rpx;
   padding-top: calc(var(--status-bar-height) + 20rpx);
 }
 
@@ -472,47 +472,6 @@ page {
   border: 2rpx solid #3B82F6;
 }
 
-/* 底部固定操作栏：我的团队 / ＋ 新增名片 两格 */
-.bottom-bar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 96rpx;
-  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  box-shadow: 0 -4rpx 16rpx rgba(37, 99, 235, 0.18);
-  z-index: 100;
-}
-
-.bottom-bar-btn {
-  flex: 1;
-  height: 96rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.bottom-bar-btn:active {
-  opacity: 0.7;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.bottom-bar-divider {
-  width: 1rpx;
-  height: 48rpx;
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.bottom-bar-text {
-  font-size: 28rpx;
-  font-weight: 500;
-  color: #fff;
-  white-space: nowrap;
-}
-
 .hidden-canvas {
   position: fixed;
   top: -1000px;
@@ -606,30 +565,3 @@ page {
   color: #CBD5E1;
 }
 
-/* ============ 名片夹入口（首页轻量导航） ============ */
-.card-list-entry {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 32rpx;
-  padding: 28rpx 32rpx;
-  background: #fff;
-  border-radius: 16rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
-  border: 2rpx solid #F1F5F9;
-}
-
-.card-list-entry:active {
-  background: #F8FAFF;
-}
-
-.entry-label {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: #0F172A;
-}
-
-.entry-arrow {
-  font-size: 36rpx;
-  color: #94A3B8;
-}

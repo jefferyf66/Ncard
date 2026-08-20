@@ -100,23 +100,6 @@
     </view>
   </view>
 
-  <!-- 名片夹入口：数字归位于名片夹页顶部，此处仅作导航 -->
-  <view class="card-list-entry" wx:if="{{!isLoading && !isError}}" bindtap="goToCardList">
-    <text class="entry-label">名片夹</text>
-    <text class="entry-arrow">›</text>
-  </view>
-
-  <!-- 底部固定操作栏：我的团队（左）/ ＋ 新增名片（右）。无名片时隐藏，创建第一张后恢复 -->
-  <view class="bottom-bar" wx:if="{{!isEmpty}}">
-    <view class="bottom-bar-btn team-bar-btn" bindtap="goTeamList">
-      <text class="bottom-bar-text">我的团队 · {{teamCount}}</text>
-    </view>
-    <view class="bottom-bar-divider"></view>
-    <view class="bottom-bar-btn add-bar-btn" bindtap="goToEdit">
-      <text class="bottom-bar-text">＋ 新增名片</text>
-    </view>
-  </view>
-
   <!-- 底部协议入口 -->
   <view class="agreement-footer">
     <text class="agreement-link" bindtap="openPrivacyPolicy">隐私政策</text>

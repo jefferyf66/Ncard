@@ -142,7 +142,7 @@
   position: fixed;
   left: 24rpx;
   right: 24rpx;
-  bottom: 28rpx;
+  bottom: calc(120rpx + env(safe-area-inset-bottom));
   display: flex;
   gap: 20rpx;
 }

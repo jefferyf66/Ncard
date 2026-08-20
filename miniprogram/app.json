@@ -23,6 +23,19 @@
     "navigationBarTextStyle": "white",
     "backgroundColor": "#F5F7FA"
   },
+  "tabBar": {
+    "custom": true,
+    "color": "#888780",
+    "selectedColor": "#3B82F6",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      { "pagePath": "pages/index/index", "text": "名片" },
+      { "pagePath": "pages/list/index", "text": "名片夹" },
+      { "pagePath": "pages/team/list", "text": "团队" },
+      { "pagePath": "pages/profile/index", "text": "我的" }
+    ]
+  },
   "style": "v2",
   "sitemapLocation": "sitemap.json",
   "cloud": true,

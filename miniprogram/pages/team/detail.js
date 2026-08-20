@@ -374,7 +374,7 @@ Page({
 
   // 白名单视图：跳团队列表以输入邀请码加入
   goTeamList() {
-    wx.navigateTo({ url: '/pages/team/list' })
+    wx.switchTab({ url: '/pages/team/list' })
   },
 
   stopPropagation() {}
