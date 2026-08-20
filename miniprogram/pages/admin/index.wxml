@@ -1,0 +1,54 @@
+<view wx:if="{{!hasAccess}}" class="no-access">
+  <view class="no-access-title">无访问权限</view>
+  <view class="no-access-text">管理后台仅对 root / admin 开放。</view>
+</view>
+
+<view wx:else class="page">
+  <view class="nav">
+    <view class="nav-back" bindtap="goBack">‹ 返回</view>
+    <view class="nav-title">管理后台</view>
+    <view class="role-badge">{{role}}</view>
+  </view>
+
+  <view class="stats">
+    <view class="stat"><view class="stat-v">{{stats.total}}</view><view class="stat-l">总用户</view></view>
+    <view class="stat"><view class="stat-v">{{stats.active7}}</view><view class="stat-l">7日活跃</view></view>
+    <view class="stat danger"><view class="stat-v">{{stats.zombie30}}</view><view class="stat-l">30日僵尸</view></view>
+  </view>
+
+  <view class="section-title">用户</view>
+  <view class="card user-row" wx:for="{{users}}" wx:key="_id">
+    <view class="u-main">
+      <view class="u-name">{{item.nickname || item.realName || '未命名'}} <text class="u-role">{{item.role}}</text></view>
+      <view class="u-sub">登录 {{item.lastLoginAt || '—'}} · 次数 {{item.loginCount || 0}}</view>
+    </view>
+  </view>
+  <view wx:if="{{users.length === 0}}" class="empty">暂无用户</view>
+
+  <view class="section-title">团队</view>
+  <view class="card team-row" wx:for="{{teams}}" wx:key="_id">
+    <view class="t-main">
+      <view class="t-name">{{item.name}}</view>
+      <view class="t-sub">{{item.memberCount}} 人 · owner: {{item.ownerOpenId}}</view>
+    </view>
+    <view class="t-del" data-id="{{item._id}}" data-name="{{item.name}}" bindtap="disbandTeam">解散</view>
+  </view>
+  <view wx:if="{{teams.length === 0}}" class="empty">暂无团队</view>
+
+  <button wx:if="{{role === 'root'}}" class="btn-transfer" bindtap="openTransfer">转让 root 权限</button>
+
+  <view wx:if="{{showTransfer}}" class="modal-mask" bindtap="closeTransfer">
+    <view class="modal" catchtap="stopProp">
+      <view class="modal-title">转让 root 权限</view>
+      <view class="modal-text danger">
+        <view style="margin-bottom:12rpx;">目标用户 openid：</view>
+        <input class="input" placeholder="粘贴目标用户 openid" value="{{transferOpenid}}" bindinput="onTransferInput" />
+      </view>
+      <view class="modal-hint">转让后您将降级为 admin，无法再改角色 / 转 root。操作写入审计日志。</view>
+      <view class="modal-actions">
+        <button class="btn-ghost" bindtap="closeTransfer">取消</button>
+        <button class="btn-primary" bindtap="confirmTransfer">确认转让</button>
+      </view>
+    </view>
+  </view>
+</view>

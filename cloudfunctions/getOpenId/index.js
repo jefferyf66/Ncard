@@ -3,8 +3,6 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
 exports.main = async (event, context) => {
-  console.log('[getOpenId] 开始执行，event:', JSON.stringify(event))
-
   // 路由：ensureUser action → 自动建号/登录并写入 users 集合
   if (event && event.action === 'ensureUser') {
     return await ensureUser()
@@ -12,13 +10,7 @@ exports.main = async (event, context) => {
 
   // 默认（原逻辑）：仅返回上下文身份信息，不写库
   const wxContext = cloud.getWXContext()
-  console.log('[getOpenId] 获取到的 wxContext:', JSON.stringify({
-    OPENID: wxContext.OPENID,
-    APPID: wxContext.APPID,
-    UNIONID: wxContext.UNIONID
-  }))
-
-  const result = {
+  return {
     success: true,
     data: {
       openid: wxContext.OPENID,
@@ -26,16 +18,12 @@ exports.main = async (event, context) => {
       unionid: wxContext.UNIONID
     }
   }
-
-  console.log('[getOpenId] 执行完成，返回:', JSON.stringify(result))
-  return result
 }
 
 /**
  * 确保 users 集合中存在当前用户记录（自动注册/登录）
  * 注意：仅使用 cloud.getWXContext() 获取 OPENID，绝不信任 event.openid
  * 注意：admin 上下文 add() 不会自动注入 _openid，必须显式写入
- * @returns {Promise<Object>}
  */
 async function ensureUser() {
   try {
@@ -46,23 +34,47 @@ async function ensureUser() {
     const exist = await userColl.where({ _openid: OPENID }).get()
     if (exist.data.length > 0) {
       const userDoc = exist.data[0]
-      const now = Date.now()
-      await userColl.doc(userDoc._id).update({ data: { lastLoginAt: now } })
-      userDoc.lastLoginAt = now
+      // 已注销账号：不重新激活、不更新登录时间，客户端据此视为未登录
+      if (userDoc.status !== 'deleted') {
+        const now = Date.now()
+        await userColl.doc(userDoc._id).update({
+          data: {
+            lastLoginAt: now,
+            loginCount: db.command.inc(1),
+            updatedAt: now
+          }
+        })
+        userDoc.lastLoginAt = now
+        userDoc.loginCount = (userDoc.loginCount || 0) + 1
+        userDoc.updatedAt = now
+      }
+      // 种子 root 晋升（命中 config.rootOpenids 且当前非 root 时）
+      userDoc.role = await resolveRole(OPENID, userDoc.role, userDoc._id)
       return buildResult(OPENID, APPID, UNIONID, userDoc)
     }
 
     // 首次注册：显式写 _openid（admin 上下文 add 不自动注入）
     const now = Date.now()
+    const seededRole = await readSeedRole(OPENID) // 'root' 或 'user'
     const payload = {
       _openid: OPENID,            // D2坑：admin上下文add不自动注入_openid，必须显式写
       unionid: UNIONID || '',
+      appid: APPID || '',
+      // 资料层
       nickname: '',
       avatarUrl: '',
+      realName: '',
+      username: '',              // V2 可选 handle，暂空
+      // 设置层
       themeColor: '',
       defaultCardId: '',
+      // 账号层
+      role: seededRole,
+      status: 'active',
+      loginCount: 1,
       registeredAt: now,
-      lastLoginAt: now
+      lastLoginAt: now,
+      updatedAt: now
     }
 
     let userDoc
@@ -82,10 +94,34 @@ async function ensureUser() {
 
     return buildResult(OPENID, APPID, UNIONID, userDoc)
   } catch (e) {
-    // 与默认 action 的 {success:true} 契约统一：失败返回 success:false（P2-4）
     console.error('[getOpenId] ensureUser 失败:', e)
     return { success: false, error: (e && e.message) || String(e) }
   }
+}
+
+// 读取 config 集合的种子 root 列表，命中则返回 'root'
+async function readSeedRole(OPENID) {
+  try {
+    const cfg = await db.collection('config').doc('root').get()
+    const list = (cfg.data && cfg.data.rootOpenids) || []
+    if (Array.isArray(list) && list.indexOf(OPENID) > -1) return 'root'
+  } catch (e) {
+    // config 不存在时静默降级为普通用户
+  }
+  return 'user'
+}
+
+// 已存在用户：若命中种子 root 且当前非 root，则晋升
+async function resolveRole(OPENID, currentRole, userId) {
+  if (currentRole === 'root') return 'root'
+  const seed = await readSeedRole(OPENID)
+  if (seed === 'root') {
+    try {
+      await db.collection('users').doc(userId).update({ data: { role: 'root' } })
+    } catch (e) {}
+    return 'root'
+  }
+  return currentRole || 'user'
 }
 
 // 统一 ensureUser 返回体（openid/appid/unionid 与默认 action 一致）

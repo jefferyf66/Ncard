@@ -1,0 +1,9 @@
+{
+  "name": "adminManager",
+  "version": "1.0.0",
+  "description": "运营后台管理（用户/团队统计与维护，服务端角色守卫）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

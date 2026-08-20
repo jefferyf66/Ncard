@@ -164,8 +164,13 @@ App({
    * @returns {Object|null}
    */
   getUser() {
-    if (this.globalData.user) return this.globalData.user
-    try { return wx.getStorageSync('user') || null } catch (e) { return null }
+    // 已注销账号（status='deleted'）视为未登录：ensureUser 不会重新激活，仅返回原记录
+    if (this.globalData.user && this.globalData.user.status !== 'deleted') return this.globalData.user
+    try {
+      const cached = wx.getStorageSync('user')
+      if (cached && cached.status !== 'deleted') return cached
+    } catch (e) {}
+    return null
   },
 
   /**

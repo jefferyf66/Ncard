@@ -1,0 +1,50 @@
+<view class="page">
+  <view class="nav">
+    <view class="nav-back" bindtap="goBack">‹ 返回</view>
+    <view class="nav-title">账号设置</view>
+  </view>
+
+  <view class="card">
+    <view class="label">头像</view>
+    <button class="avatar-btn" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
+      <image wx:if="{{avatarUrl}}" class="avatar" src="{{avatarUrl}}" mode="aspectFill" />
+      <view wx:else class="avatar avatar-empty">选</view>
+    </button>
+    <view class="hint">点击使用微信头像（微信合规要求用户主动授权）</view>
+  </view>
+
+  <view class="card">
+    <view class="label">昵称</view>
+    <input class="input" type="nickname" placeholder="微信昵称或自定义" value="{{nickname}}" bindinput="onNicknameInput" />
+    <view class="label" style="margin-top:16rpx;">真实姓名（用于名片预填）</view>
+    <input class="input" placeholder="如：张三" value="{{realName}}" bindinput="onRealNameInput" />
+  </view>
+
+  <button class="btn-primary" loading="{{saving}}" bindtap="saveProfile">保存资料</button>
+
+  <view class="card">
+    <view class="row" bindtap="exportData">
+      <text>导出我的数据</text><text class="arrow">›</text>
+    </view>
+  </view>
+
+  <view class="danger-zone">
+    <view class="danger-title">危险操作</view>
+    <button class="btn-danger" bindtap="requestDelete">注销账号</button>
+    <view class="hint danger-hint">注销为软删除：保留名片内容，清除收藏与登录态；若您拥有团队需先转让或解散。</view>
+  </view>
+
+  <view wx:if="{{showDeleteModal}}" class="modal-mask" bindtap="closeDeleteModal">
+    <view class="modal" catchtap="stopProp">
+      <view class="modal-title">确认注销账号？</view>
+      <view wx:if="{{deleteCheck.canDelete}}" class="modal-text">注销后账号将不可恢复，收藏数据被清除。</view>
+      <view wx:else class="modal-text danger">您仍拥有以下团队，请先在团队中转让或解散后再注销：
+        <view wx:for="{{deleteCheck.ownedTeams}}" wx:key="_id" class="team-line">· {{item.name}}</view>
+      </view>
+      <view class="modal-actions">
+        <button class="btn-ghost" bindtap="closeDeleteModal">取消</button>
+        <button wx:if="{{deleteCheck.canDelete}}" class="btn-danger" loading="{{deleting}}" bindtap="confirmDelete">确认注销</button>
+      </view>
+    </view>
+  </view>
+</view>

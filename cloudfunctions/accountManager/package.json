@@ -1,0 +1,9 @@
+{
+  "name": "accountManager",
+  "version": "1.0.0",
+  "description": "用户自助账号管理（查看/编辑/导出/注销本人）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

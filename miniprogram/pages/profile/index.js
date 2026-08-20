@@ -6,6 +6,8 @@ Page({
     openid: '',
     openidMask: '',
     version: '',
+    userRole: '',
+    isAdmin: false,
     cardCount: 0,
     currentTheme: '#3B82F6',
     defaultCardName: '',
@@ -40,10 +42,13 @@ Page({
     const user = app.getUser()
     const openid = (user && user._openid) || ''
     const openidMask = openid ? '..' + openid.slice(-6) : ''
+    const role = (user && user.role) || 'user'
     this.setData({
       userInfo: user,
       openid,
       openidMask,
+      userRole: role,
+      isAdmin: role === 'root' || role === 'admin',
       version: (app.globalData && app.globalData.version) || '1.1.4'
     })
   },
@@ -154,6 +159,19 @@ Page({
 
   goToTeam() {
     wx.navigateTo({ url: '/pages/team/list' })
+  },
+
+  goToAccount() {
+    wx.navigateTo({ url: '/pages/account/index' })
+  },
+
+  goToAdmin() {
+    const role = this.data.userRole
+    if (role !== 'root' && role !== 'admin') {
+      wx.showToast({ title: '无访问权限', icon: 'none' })
+      return
+    }
+    wx.navigateTo({ url: '/pages/admin/index' })
   },
 
   showThemePicker() {

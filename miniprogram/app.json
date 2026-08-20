@@ -12,7 +12,9 @@
     "pages/team/create",
     "pages/team/detail",
     "pages/team/join",
-    "pages/team/member-edit"
+    "pages/team/member-edit",
+    "pages/account/index",
+    "pages/admin/index"
   ],
   "window": {
     "backgroundTextStyle": "light",
