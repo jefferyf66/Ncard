@@ -41,44 +41,62 @@ async function ensureUser() {
   try {
     const { OPENID, APPID, UNIONID } = cloud.getWXContext()
     const userColl = db.collection('users')
-    const exist = await userColl.where({ _openid: OPENID }).get()
 
-    let userDoc
-    if (exist.data.length === 0) {
-      // 复用同一 payload：确保库记录与返回体字段、时间戳完全一致（P2-2）
-      const now = Date.now()
-      const payload = {
-        _openid: OPENID,            // D2坑：admin上下文add不自动注入_openid，必须显式写
-        unionid: UNIONID || '',
-        nickname: '',
-        avatarUrl: '',
-        themeColor: '',
-        defaultCardId: '',
-        registeredAt: now,
-        lastLoginAt: now
-      }
-      const addRes = await userColl.add({ data: payload })
-      userDoc = { _id: addRes._id, ...payload }
-    } else {
-      userDoc = exist.data[0]
+    // 幂等登录：先查已存在记录，避免重复建号
+    const exist = await userColl.where({ _openid: OPENID }).get()
+    if (exist.data.length > 0) {
+      const userDoc = exist.data[0]
       const now = Date.now()
       await userColl.doc(userDoc._id).update({ data: { lastLoginAt: now } })
-      // 返回体应反映本次更新后的 lastLoginAt（P2-3）
       userDoc.lastLoginAt = now
+      return buildResult(OPENID, APPID, UNIONID, userDoc)
     }
 
-    return {
-      success: true,
-      data: {
-        openid: OPENID,
-        appid: APPID,
-        unionid: UNIONID || '',
-        user: userDoc
+    // 首次注册：显式写 _openid（admin 上下文 add 不自动注入）
+    const now = Date.now()
+    const payload = {
+      _openid: OPENID,            // D2坑：admin上下文add不自动注入_openid，必须显式写
+      unionid: UNIONID || '',
+      nickname: '',
+      avatarUrl: '',
+      themeColor: '',
+      defaultCardId: '',
+      registeredAt: now,
+      lastLoginAt: now
+    }
+
+    let userDoc
+    try {
+      const addRes = await userColl.add({ data: payload })
+      userDoc = { _id: addRes._id, ...payload }
+    } catch (addErr) {
+      // P1-①: 并发首登竞态（唯一索引冲突等）时回查已有记录返回，杜绝重复建号 / 返回 null
+      console.warn('[getOpenId] ensureUser add 冲突，回查已有记录:', addErr)
+      const retry = await userColl.where({ _openid: OPENID }).get()
+      if (retry.data.length > 0) {
+        userDoc = retry.data[0]
+      } else {
+        throw addErr // 实在拿不到则交给外层 catch 返回 success:false
       }
     }
+
+    return buildResult(OPENID, APPID, UNIONID, userDoc)
   } catch (e) {
     // 与默认 action 的 {success:true} 契约统一：失败返回 success:false（P2-4）
     console.error('[getOpenId] ensureUser 失败:', e)
     return { success: false, error: (e && e.message) || String(e) }
+  }
+}
+
+// 统一 ensureUser 返回体（openid/appid/unionid 与默认 action 一致）
+function buildResult(openid, appid, unionid, userDoc) {
+  return {
+    success: true,
+    data: {
+      openid,
+      appid,
+      unionid: unionid || '',
+      user: userDoc
+    }
   }
 }

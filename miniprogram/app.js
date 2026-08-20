@@ -149,6 +149,7 @@ App({
         },
         fail: (err) => {
           console.warn('[App] ensureUser 失败（不影响启动）', err)
+          this._ensureUserPromise = null // P1-②: 失败后清空缓存，允许后续重试，避免整会话无账号
           resolve(null)
         }
       })
