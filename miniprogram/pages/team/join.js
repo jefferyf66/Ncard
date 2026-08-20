@@ -13,6 +13,7 @@ Page({
     prefill: {},         // owner 预填值
     form: {},            // 成员填写值
     requiredMissing: [], // 校验未过的字段 key
+    inviteInvalid: false, // 邀请已失效/已使用
     isJoining: false
   },
 
@@ -37,8 +38,18 @@ Page({
       }
       const d = res.data
       const isCard = d.kind === 'card'
+      // 失效 / 已使用：直接提示并阻止填空表单，而非等提交才报错
+      if (d.expired || d.usedUp) {
+        this.setData({ teamName: d.teamName || '', inviteInvalid: true })
+        app.showError('该邀请已失效或已使用')
+        return
+      }
       const form = {}
-      ;(d.cardSchema || []).forEach(f => { form[f.key] = (d.prefill[f.key] || '').trim() })
+      ;(d.cardSchema || []).forEach(f => {
+        // 回显 owner 预填值（prefill），无预填则回退字段默认值（defaultValue），成员可改
+        const v = (d.prefill && d.prefill[f.key]) || (f.defaultValue || '')
+        form[f.key] = (v || '').toString().trim()
+      })
       this.setData({
         teamId: d.teamId,
         teamName: d.teamName,

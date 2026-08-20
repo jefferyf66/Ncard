@@ -255,9 +255,10 @@ async function joinByInvite(event, OPENID) {
     const prefill = inv.prefill || {}
     const requiredKeys = schema.filter(f => f.required).map(f => f.key)
     schema.forEach(f => {
-      const def = (prefill[f.key] || '').trim()
+      const schemaDefault = (f.defaultValue || '').trim()
+      const def = (prefill[f.key] || schemaDefault || '').trim()
       const usr = (userMF[f.key] || '').trim()
-      // 成员填了用成员的，未填回退 owner 预填（预填可改：成员可覆盖）
+      // 成员填了用成员的；未填回退 owner 预填；再回退字段默认值（owner 在配置里设的「预填内容」）
       finalMF[f.key] = usr || def
     })
     const missing = requiredKeys.filter(k => !(finalMF[k] || '').trim())
@@ -520,8 +521,6 @@ async function getTeamPublicDirectory(event) {
     ;(r.data || []).forEach(c => { cardsMap[c._id] = c })
   }
 
-  // 仅以白名单六字段构造每个成员的组织名片（绝不原样下发文档）
-  const ALLOWED_KEYS = ['memberId', 'name', 'position', 'company', 'department', 'avatarUrl']
   // 按 cardSchema.visible 过滤展示字段；phone/email/address/website 即便 visible 也绝不进公开目录（安全边界）
   const schema = team.cardSchema || defaultCardSchema()
   const visMap = {}
@@ -599,7 +598,6 @@ async function searchTeam(event) {
     _id: t._id,
     shortId: t.shortId,
     name: t.name,
-    ownerOpenId: t.ownerOpenId,
     ownerNick: nickMap[t.ownerOpenId] || '',
     memberCount: t.memberCount
   }))
@@ -644,7 +642,8 @@ async function getCardTeams(event) {
             memberCount: teamMap[m.teamId].memberCount
           }
         : null,
-      managedFields: m.managedFields || emptyFields(),
+      // 仅返回「可见」的托管字段：即便成员填了 phone/email 等，owner 在 cardSchema 中设为不可见则不对外暴露
+      managedFields: filterManagedByVisible(m.managedFields || emptyFields(), (teamMap[m.teamId] && teamMap[m.teamId].cardSchema) || defaultCardSchema()),
       cardSchema: (teamMap[m.teamId] && teamMap[m.teamId].cardSchema) || defaultCardSchema()
     }))
     .filter(r => r.team)
@@ -774,6 +773,17 @@ function sanitizePrefill(raw) {
   CARD_SCHEMA_KEYS.forEach(k => {
     const v = raw[k]
     if (typeof v === 'string' && v.trim()) out[k] = v.trim().slice(0, 200)
+  })
+  return out
+}
+
+// 仅保留 cardSchema 中 visible=true 的托管字段（供 getCardTeams 返回，防止向访客泄露隐藏联系方式）
+function filterManagedByVisible(raw, schema) {
+  const vis = {}
+  ;(schema || defaultCardSchema()).forEach(f => { vis[f.key] = f.visible === true })
+  const out = {}
+  CARD_SCHEMA_KEYS.forEach(k => {
+    if (vis[k] && raw && raw[k]) out[k] = raw[k]
   })
   return out
 }

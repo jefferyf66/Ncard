@@ -4,6 +4,8 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
 exports.main = async (event, context) => {
+  // 服务端身份（唯一可信来源，绝不读 event 传入的 openid）
+  const { OPENID } = cloud.getWXContext()
   const { action, data } = event
 
   switch (action) {
@@ -28,9 +30,24 @@ exports.main = async (event, context) => {
 
     // 记录一次访问（含匿名访客身份识别）
     case 'recordVisit': {
-      const { cardId, visitorOpenId, cardOwnerId } = data
-      if (!cardId || !visitorOpenId) {
+      const { cardId, source } = data || {}
+      if (!cardId) {
         return { ok: false, message: '参数不完整' }
+      }
+      if (!OPENID) {
+        return { ok: false, message: '未授权' }
+      }
+
+      // 访客身份以服务端 OPENID 为准
+      const visitorOpenId = OPENID
+      // 名片归属以数据库为准，防止伪造 cardOwnerId
+      let cardOwnerId = ''
+      try {
+        const cardRes = await db.collection('cards').doc(cardId).get()
+        cardOwnerId = (cardRes.data && cardRes.data._openid) || ''
+      } catch (e) { /* 名片不存在 */ }
+      if (!cardOwnerId) {
+        return { ok: false, message: '名片不存在' }
       }
 
       // 不记录自己访问自己的卡片
@@ -137,24 +154,22 @@ exports.main = async (event, context) => {
           visitTime: now,
           visitCount: 1,
           actions: [],
-          source: data.source || 'direct'
+          source: source || 'direct'
         }
       })
 
       return { ok: true, created: true, visitorLevel: visitorLevel }
     }
 
-    // 获取我的访客统计（可选 cardId：按单张名片过滤）
+    // 获取我的访客统计（可选 cardId：按单张名片过滤；owner 以服务端 OPENID 为准）
     case 'getMyVisitorStats': {
-      const { cardOwnerId, cardId } = data
-
-      // 参数校验：防止权限绕过
-      if (!cardOwnerId) {
-        return { ok: false, message: '缺少 cardOwnerId 参数' }
+      const { cardId } = data || {}
+      if (!OPENID) {
+        return { ok: false, message: '未授权' }
       }
 
-      // 构建过滤条件：cardId 可选（缺省为全局聚合）
-      const where = { cardOwnerId }
+      // 构建过滤条件：cardId 可选（缺省为全局聚合）；cardOwnerId 强制服务端身份
+      const where = { cardOwnerId: OPENID }
       if (cardId) where.cardId = cardId
 
       // 访客总数
@@ -177,17 +192,15 @@ exports.main = async (event, context) => {
       }
     }
 
-    // 获取最近访客列表（可选 cardId：按单张名片过滤）
+    // 获取最近访客列表（可选 cardId：按单张名片过滤；owner 以服务端 OPENID 为准）
     case 'getRecentVisitors': {
-      const { cardOwnerId, limit = 10, cardId } = data
-
-      // 参数校验：防止权限绕过
-      if (!cardOwnerId) {
-        return { ok: false, message: '缺少 cardOwnerId 参数' }
+      const { limit = 10, cardId } = data || {}
+      if (!OPENID) {
+        return { ok: false, message: '未授权' }
       }
 
-      // 构建过滤条件：cardId 可选（缺省为全局聚合）
-      const where = { cardOwnerId }
+      // 构建过滤条件：cardId 可选（缺省为全局聚合）；cardOwnerId 强制服务端身份
+      const where = { cardOwnerId: OPENID }
       if (cardId) where.cardId = cardId
 
       const result = await db.collection('visits')
@@ -204,14 +217,13 @@ exports.main = async (event, context) => {
 
     // 获取我的访客仪表盘（统计 + 最近访客，合并为一次调用；可选 cardId）
     case 'getMyVisitorDashboard': {
-      const { cardOwnerId, cardId } = data
-
-      if (!cardOwnerId) {
-        return { ok: false, message: '缺少 cardOwnerId 参数' }
+      const { cardId } = data || {}
+      if (!OPENID) {
+        return { ok: false, message: '未授权' }
       }
 
-      // 构建过滤条件：cardId 可选（缺省为全局聚合）
-      const where = { cardOwnerId }
+      // 构建过滤条件：cardId 可选（缺省为全局聚合）；cardOwnerId 强制服务端身份
+      const where = { cardOwnerId: OPENID }
       if (cardId) where.cardId = cardId
 
       // 三路并行：总数、回访数、最近访客

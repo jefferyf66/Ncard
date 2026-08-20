@@ -4,8 +4,13 @@
     <text class="header-sub">{{isCardInvite ? '补全信息后加入「' + teamName + '」' : '输入邀请码加入团队'}}</text>
   </view>
 
+  <!-- 邀请已失效 / 已使用 -->
+  <view wx:if="{{inviteInvalid}}" class="cardform-tip warn">
+    {{teamName ? '「' + teamName + '」的邀请已失效或已使用' : '邀请已失效或已使用'}}
+  </view>
+
   <!-- 空名片填空表单（kind='card' 邀请） -->
-  <block wx:if="{{isCardInvite}}">
+  <block wx:elif="{{isCardInvite}}">
     <view class="cardform-card">
       <view class="cardform-tip">负责人已预填部分信息（提示「预填」），补全必填项（带 *）后提交即可加入。</view>
       <view class="form-card">
@@ -31,13 +36,6 @@
 
   <!-- 普通邀请：邀请码输入 / 凭 token 直接加入 -->
   <block wx:else>
-    <view class="prefill-card" wx:if="{{prefillTeam}}">
-      <view class="prefill-logo">{{prefillTeam.name[0]}}</view>
-      <view class="prefill-info">
-        <text class="prefill-name">你被邀请加入</text>
-        <text class="prefill-team">{{prefillTeam.name}}</text>
-      </view>
-    </view>
     <view class="form-card">
       <view class="form-group">
         <text class="form-label">邀请码</text>

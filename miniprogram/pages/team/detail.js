@@ -267,7 +267,15 @@ Page({
   // 生成「空名片」邀请：调 createCardInvite 拿 token，弹出空名片分享窗
   onShareCard() {
     app.showLoading('生成邀请...')
-    team.callTeamManager('createCardInvite', { teamId: this.data.teamId }).then((res) => {
+    // 将 owner 在「团队名片配置」里设的「预填内容」(defaultValue) 打包进邀请，
+    // 成员打开即见预填值（可改），必填项也不会再逼成员手填 owner 已填的内容
+    const prefill = {}
+    ;(this.data.cardConfigSchema || []).forEach(f => {
+      if (f && f.defaultValue && f.defaultValue.toString().trim()) {
+        prefill[f.key] = f.defaultValue.toString().trim()
+      }
+    })
+    team.callTeamManager('createCardInvite', { teamId: this.data.teamId, prefill }).then((res) => {
       app.hideLoading()
       if (res.success) {
         this.setData({ cardShareToken: res.data.token, showCardInviteModal: true })

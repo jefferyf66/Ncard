@@ -2,6 +2,7 @@
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
+const _ = db.command
 
 exports.main = async (event, context) => {
   const { cardId } = event
@@ -83,6 +84,20 @@ exports.main = async (event, context) => {
         })
     )
   }
+
+  // 2.5 清理引用该名片的团队关系：删除 team_members 中 cardId 指向本名片的记录，并回退团队 memberCount
+  // 避免名片删除后残留悬空托管关系、团队人数虚高
+  try {
+    const memRes = await db.collection('team_members').where({ cardId: cardId }).get()
+    const memTasks = (memRes.data || []).map(function (m) {
+      const t = [db.collection('team_members').doc(m._id).remove().catch(function () {})]
+      if (m.teamId) {
+        t.push(db.collection('teams').doc(m.teamId).update({ data: { memberCount: _.inc(-1) } }).catch(function () {}))
+      }
+      return t
+    })
+    await Promise.all([].concat.apply([], memTasks))
+  } catch (e) { /* 团队关系清理失败不阻断整体删除 */ }
 
   var results = await Promise.all(tasks)
 
