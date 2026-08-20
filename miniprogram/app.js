@@ -1,5 +1,8 @@
 var storage = require('./config/storage')
 
+// 应用版本号唯一真源（关于页等展示用）
+const APP_VERSION = '1.1.4'
+
 App({
   globalData: {
     userInfo: null,
@@ -7,7 +10,7 @@ App({
     // 当前登录用户记录（由 ensureUser 填充，见 getUser()）
     user: null,
     // 应用版本号（关于页等展示用，唯一真源）
-    version: '1.1.4'
+    version: APP_VERSION
   },
 
   onLaunch() {
@@ -42,7 +45,6 @@ App({
         traceUser: true,
         env: wx.cloud.DYNAMIC_CURRENT_ENV
       })
-      console.log('[App] 云开发初始化成功')
     } catch (e) {
       console.error('[App] 云开发初始化失败:', e)
     }

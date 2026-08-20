@@ -25,11 +25,9 @@ Page({
   },
 
   onLoad() {
-    console.log('[Profile] onLoad')
   },
 
   onShow() {
-    console.log('[Profile] onShow')
     this.loadUserData()
     // 首装竞态兜底：ensureUser 尚未回写 globalData.user 时，主动等一次再刷新（P2-1）
     if (!app.getUser()) {
@@ -57,6 +55,18 @@ Page({
   _loadSettings() {
     if (!wx.cloud) return
     var that = this
+
+    // 先用本地缓存秒显，避免每次 onShow 闪白 + 冗余云调用
+    try {
+      var cachedTheme = wx.getStorageSync('themeColor')
+      var cachedCard = wx.getStorageSync('defaultCardName')
+      if (cachedTheme || cachedCard) {
+        that.setData({
+          currentTheme: cachedTheme || '#3B82F6',
+          defaultCardName: cachedCard || ''
+        })
+      }
+    } catch (e) {}
 
     app.getOpenId().then(function (myOpenId) {
       if (!myOpenId) return
@@ -205,7 +215,6 @@ Page({
           }
         })
         .then(function () {
-          console.log('[Profile] 主题色已同步到云端')
         })
         .catch(function (err) {
           console.warn('[Profile] 主题色云端同步失败:', err)

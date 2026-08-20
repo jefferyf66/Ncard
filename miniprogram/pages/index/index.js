@@ -34,7 +34,6 @@ Page({
   },
 
   onLoad() {
-    console.log('[Index] onLoad')
     // 官方隐私弹窗模式：无需手动检查隐私授权状态
     // 当调用隐私 API（如云开发）时，微信自动弹出官方隐私弹窗
     this.loadCards(true)
@@ -58,7 +57,6 @@ Page({
       db.collection('visitor_profiles').where({ openid: myOpenId }).count()
         .then(function (res) {
           if (res.total > 0) {
-            console.log('[Index] visitor_profiles 已存在，跳过注册')
             return
           }
           return db.collection('visitor_profiles').add({
@@ -72,7 +70,7 @@ Page({
           })
         })
         .then(function () {
-          console.log('[Index] visitor_profiles 注册成功')
+          // 注册成功
         })
         .catch(function (err) {
           console.warn('[Index] visitor_profiles 静默注册失败:', err)
@@ -84,7 +82,7 @@ Page({
     // 官方弹窗模式：使用微信内置隐私协议页替代自定义 agreement 页面
     if (wx.openPrivacyContract) {
       wx.openPrivacyContract({
-        success: () => console.log('[Index] 打开隐私协议页成功'),
+        success: () => {},
         fail: (err) => {
           console.error('[Index] 打开隐私协议页失败:', err)
           // 降级：跳转到自定义协议页
@@ -102,8 +100,6 @@ Page({
   },
 
   onShow() {
-    console.log('[Index] onShow')
-    
     // 静默注册访客身份（idempotent：已存在则跳过）
     this._registerVisitorProfile()
 
@@ -114,7 +110,6 @@ Page({
     if (needsRefresh) {
       // 编辑页设置了刷新标志 → 强制重新加载卡片
       app.setCache('cardsNeedRefresh', false)
-      console.log('[Index] 检测到卡片变更，强制刷新')
       this.loadCards(true)
       return
     }
@@ -128,7 +123,6 @@ Page({
   },
 
   onPullDownRefresh() {
-    console.log('[Index] 下拉刷新')
     this.loadCards(true, () => {
       wx.stopPullDownRefresh()
     })
@@ -136,14 +130,18 @@ Page({
 
   onReachBottom() {
     if (this.data.hasMore && !this.data.isLoading) {
-      console.log('[Index] 加载更多')
       this.loadCards(false)
     }
   },
 
-  loadCards(isRefresh = false, callback) {
-    console.log('[Index] loadCards, isRefresh:', isRefresh)
+  onUnload() {
+    if (this._loadTimer) {
+      clearTimeout(this._loadTimer)
+      this._loadTimer = null
+    }
+  },
 
+  loadCards(isRefresh = false, callback) {
     if (!wx.cloud) {
       this.setData({
         isLoading: false,
@@ -186,7 +184,7 @@ Page({
       query = query.where({ _openid: myOpenId })
     }
 
-    const timer = setTimeout(() => {
+    this._loadTimer = setTimeout(() => {
       console.warn('[Index] 加载超时，尝试使用缓存')
       this.tryLoadCache()
       if (callback) callback()
@@ -194,8 +192,7 @@ Page({
 
     query.get()
       .then(res => {
-        clearTimeout(timer)
-        console.log('[Index] 获取成功，数量:', res.data.length)
+        clearTimeout(this._loadTimer)
 
         const newCards = res.data || []
         const cards = isRefresh ? newCards : [...this.data.cards, ...newCards]
@@ -217,7 +214,7 @@ Page({
         if (callback) callback()
       })
       .catch(err => {
-        clearTimeout(timer)
+        clearTimeout(this._loadTimer)
         console.error('[Index] 加载失败:', err)
         this.tryLoadCache()
         this.setData({
@@ -231,7 +228,6 @@ Page({
   tryLoadCache() {
     const cache = app.getCache('cardsCache')
     if (cache && cache.value && cache.value.length > 0) {
-      console.log('[Index] 使用缓存数据')
       this.setData({
         cards: cache.value,
         isLoading: false,

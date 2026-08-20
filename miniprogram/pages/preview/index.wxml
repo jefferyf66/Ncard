@@ -32,7 +32,7 @@
               </view>
             </view>
             <!-- 直达团队详情（保留上方徽章点击弹托管视图的原行为） -->
-            <view class="team-link" wx:if="{{teamBadges.length}}" bindtap="goToTeamDetail" data-index="0">
+            <view class="team-link" wx:if="{{teamBadges.length}}" bindtap="goToTeamDetail" data-team-id="{{teamBadges[0].teamId}}">
               <text class="team-link-text">查看团队 ›</text>
             </view>
           </view>

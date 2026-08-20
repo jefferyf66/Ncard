@@ -12,6 +12,9 @@ Page({
   },
 
   onShow() {
+    const now = Date.now()
+    if (now - (this._lastLoadTs || 0) < 5000) return
+    this._lastLoadTs = now
     this.loadCards()
   },
 

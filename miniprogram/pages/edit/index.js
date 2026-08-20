@@ -50,20 +50,27 @@ Page({
     app.ensureUser().then(() => this._loadTeamManagedFields())
   },
 
+  onUnload() {
+    if (this._loadTimer) {
+      clearTimeout(this._loadTimer)
+      this._loadTimer = null
+    }
+  },
+
   loadCard(id) {
     if (!id || !wx.cloud) {
       this.setData({ isLoading: false })
       return
     }
 
-    const timer = setTimeout(() => {
+    this._loadTimer = setTimeout(() => {
       this.setData({ isLoading: false })
       app.showError('加载超时，请重试')
     }, 10000)
 
     wx.cloud.database().collection('cards').doc(id).get()
       .then(res => {
-        clearTimeout(timer)
+        clearTimeout(this._loadTimer)
         if (res.data) {
           const data = res.data
           this.setData({
@@ -97,7 +104,7 @@ Page({
         }
       })
       .catch(err => {
-        clearTimeout(timer)
+        clearTimeout(this._loadTimer)
         this.setData({ isLoading: false })
         app.showError('加载失败，请重试')
       })
@@ -156,7 +163,7 @@ Page({
         if (oldAvatarFileID && oldAvatarFileID.indexOf('cloud://') === 0) {
           wx.cloud.deleteFile({ fileList: [oldAvatarFileID] })
             .then(function () {
-              console.log('[Edit] 旧头像文件已清理')
+              // 清理成功，无需处理
             })
             .catch(function () {
               // 静默失败，不影响主流程
@@ -227,7 +234,7 @@ Page({
     if (removed && removed.url && removed.url.indexOf('cloud://') === 0) {
       wx.cloud.deleteFile({ fileList: [removed.url] })
         .then(function () {
-          console.log('[Edit] 附件文件已清理')
+          // 清理成功，无需处理
         })
         .catch(function () {
           // 静默失败，不影响主流程
@@ -483,14 +490,12 @@ Page({
               // cloud:// 格式在 WeChat 2.8.1+ 声称支持但实测接收方不可见
               var cloudFileID = uploadRes.fileID
               var shareUrl = storage.resolveCloudUrl(cloudFileID)
-              console.log('[Edit] 分享图已生成:', shareUrl)
               wx.cloud.database().collection('cards').doc(cardId).update({
                 data: { shareImageUrl: shareUrl }
               }).then(function () {
                 if (settled) return
                 settled = true
                 clearTimeout(timer)
-                console.log('[Edit] shareImageUrl 已存入卡片 (HTTPS)')
                 resolve(shareUrl)
               }).catch(function (e) {
                 if (settled) return
@@ -546,7 +551,7 @@ Page({
           }
         })
         .then(function () {
-          console.log('[Edit] visitor_profiles 同步成功')
+          // 同步成功
         })
         .catch(function (err) {
           console.warn('[Edit] visitor_profiles 同步失败:', err)

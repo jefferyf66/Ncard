@@ -17,6 +17,13 @@ Page({
     app.ensureUser().then(() => {})
   },
 
+  onUnload() {
+    if (this.data.searchTimer) {
+      clearTimeout(this.data.searchTimer)
+      this.data.searchTimer = null
+    }
+  },
+
   onNameInput(e) {
     const name = e.detail.value.trim()
     this.setData({ name })

@@ -23,7 +23,6 @@ Page({
   },
 
   onLoad(options) {
-    console.log('[Preview] onLoad, options:', options)
 
     const id = options?.id || ''
     this._shareOptions = options  // 保存分享参数供 recordVisit 使用
@@ -49,7 +48,6 @@ Page({
       // 不记录自己访问自己的名片
       var cardOwnerId = cardData._openid || ''
       if (visitorOpenId === cardOwnerId) {
-        console.log('[Preview] 跳过自有名片访问记录')
         return
       }
 
@@ -66,7 +64,6 @@ Page({
           }
         },
         success: function (result) {
-          console.log('[Preview] 访问记录成功:', result)
           // 云函数返回 visitorLevel，用于决定是否展示授权引导
           var res = result.result || {}
           if (res.visitorLevel && res.visitorLevel < 2) {
@@ -86,9 +83,15 @@ Page({
   onShow() {
     // 从编辑页返回时，名片数据可能已变更，总是重新加载
     if (this.data.id) {
-      console.log('[Preview] onShow, 重新加载名片:', this.data.id)
       this.setData({ isError: false, isLoading: true })
       this.loadCard(this.data.id)
+    }
+  },
+
+  onUnload() {
+    if (this._loadTimer) {
+      clearTimeout(this._loadTimer)
+      this._loadTimer = null
     }
   },
 
@@ -102,7 +105,7 @@ Page({
       return
     }
 
-    const timer = setTimeout(() => {
+    this._loadTimer = setTimeout(() => {
       console.warn('[Preview] 加载超时')
       this.setData({
         isLoading: false,
@@ -113,7 +116,7 @@ Page({
 
     wx.cloud.database().collection('cards').doc(id).get()
       .then(res => {
-        clearTimeout(timer)
+        clearTimeout(this._loadTimer)
         if (res.data) {
           var card = {
             ...res.data,
@@ -155,7 +158,7 @@ Page({
         }
       })
       .catch(err => {
-        clearTimeout(timer)
+        clearTimeout(this._loadTimer)
         console.error('[Preview] 加载失败:', err)
         this.setData({
           isLoading: false,
@@ -509,7 +512,7 @@ Page({
             wx.openDocument({
               filePath: res.tempFilePath,
               fileName: name,
-              success: () => console.log('[Preview] 打开文件成功'),
+              success: () => {},
               fail: () => app.showError('无法打开文件')
             })
           }
@@ -662,7 +665,6 @@ Page({
     var currentAvatar = this.data.card.avatar || ''
     // _resolveCardAvatar 已成功解析 → 不做降级（当前 HTTPS URL 有效，旧 cloud:// 失败是预期的）
     if (currentAvatar.indexOf('https://') === 0) {
-      console.log('[Preview] 头像 URL 已解析为 HTTPS，忽略旧 cloud:// 的 error 回调')
       return
     }
     this.setData({ 'card.avatar': '/images/avatar.png' })
@@ -684,7 +686,6 @@ Page({
         var today = new Date()
         var todayStr = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate()
         if (dismissedDate === todayStr) {
-          console.log('[Preview] 授权引导条今日已拒绝，跳过')
           return
         }
         // 非今日 → 清除旧记录
@@ -751,7 +752,6 @@ Page({
             .then(function () {
               wx.showToast({ title: '身份已更新，感谢授权', icon: 'success' })
               // 授权成功后，后续访问会自动使用 L2 身份
-              console.log('[Preview] visitor_profiles 已更新')
             })
             .catch(function (err) {
               console.warn('[Preview] visitor_profiles 写入失败:', err)
@@ -760,7 +760,6 @@ Page({
         }
       },
       fail: function (err) {
-        console.log('[Preview] 用户拒绝授权:', err)
         // 隐私协议拒绝 → 统一提示
         if (app.showPrivacyError(err)) return
         // 拒绝授权 → 记录当日冷却期
