@@ -2,6 +2,18 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.4.1] - 2026-08-24
+
+### Fixed
+- **「我的」页指标卡接真数据**：名片数改为 `cards` 按 `_openid` count、访客数接入 `initVisits.getMyVisitorStats`（与访客页同口径），修复原本恒为 0 的死数字；「我的名片」点击改跳首页（我的名片展示页），消除"数字=我创建的、跳转=收藏夹"语义错位
+- **「我的」页半成品功能清理**：移除「主题颜色」「默认名片」两个只存不用的设置项（`themeColor`/`isDefault` 全局无消费方），连同弹层与样式一并删除
+- **关于页版本号停更**：`APP_VERSION` 1.1.4 → 1.4.0，修复关于弹窗与页脚显示三个版本前旧号的缺陷
+- **账号设置图标空白**：补充缺失的 `.icon-user` 样式（此前图标不渲染）
+- **构建配置**：`app.json` 开启 `lazyCodeLoading: requiredComponents` 修复上传代码质量扫描"组件按需注入未通过"；`project.config.json` 关闭增强编译（`enhance:false`）修复 `@babel/runtime/helpers/arrayWithoutHoles` 缺失导致的编译报错
+
+### Changed
+- **「我的」页用户卡文案**：「已绑定账号..openid后6位」→「已登录」（小程序为静默登录，无绑定动作，openid 片段对用户无意义）
+
 ## [1.4.0] - 2026-08-24
 
 ### Added
