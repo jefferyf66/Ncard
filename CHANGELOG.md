@@ -134,18 +134,31 @@
 ### Changed
 - 自定义隐私弹窗 → 微信官方隐私弹窗（`__usePrivacyCheck__: true`）
 - 云函数增加 `downloadFile`→base64 降级路径修复跨用户头像访问
-
-### Fixed
-- 云存储「仅创建者可读写」时跨用户头像 `STORAGE_EXCEED_AUTHORITY`
-
-## [1.0.8] - 2026-06-13
-
-### Changed
 - 首页发名片按钮使用微信原生 `open-type="share"`，异步预生成分享卡片
 
 ### Fixed
+- 云存储「仅创建者可读写」时跨用户头像 `STORAGE_EXCEED_AUTHORITY`
 - 首页发名片按钮点击后跳转到预览页
 - 事件冒泡阻止失效
+
+## [1.0.7] - 2026-06-13
+
+### Added
+- 首页名片列表使用 Canvas 渲染预览
+
+### Fixed
+- 优化 Canvas 渲染，修复 5 个问题
+- 更新 release 工作流配置（GitHub Actions 权限配置）
+
+## [1.0.6] - 2026-06-13
+
+### Added
+- 首个正式标签版本：完善项目配置，接入 visitors 页面至 app.json
+
+### Fixed
+- 修复代码质量扫描问题
+- 修复 edit/index 页面 wxml 编码与中文乱码、变量名问题
+- 修复首页加载逻辑（去除 openid 过滤），恢复原始中文 UI 文件
 
 ## [1.0.0] - 2026-06-01
 
