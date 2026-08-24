@@ -39,5 +39,6 @@
   "style": "v2",
   "sitemapLocation": "sitemap.json",
   "cloud": true,
-  "__usePrivacyCheck__": true
+  "__usePrivacyCheck__": true,
+  "lazyCodeLoading": "requiredComponents"
 }
