@@ -2,6 +2,25 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.4.0] - 2026-08-24
+
+### Added
+- **用户管理模块（方案A）**：自助账号体系（`accountManager` 云函数）+ 运营后台（`adminManager` 云函数），含 root 角色晋升与权限管控
+- **自定义 tabBar 导航重构（方案C）**：名片 / 名片夹 / 团队 / 我的 四域一级导航 + 中央品牌蓝凸起「＋」按钮（创建名片 / 创建团队 / 加入团队动作菜单）
+- **名片夹团队名片区分**：后端 `getCardsTeams` 批量归属查询（公开团队 / 成员可见，私密非成员隔离）；前端视觉三要素（左侧品牌蓝条 + 头像蓝描边 + 团队胶囊徽章 / 来源行）+ 全部 / 个人 / 团队分段筛选 + 点击团队卡进团队视图
+- **团队空名片邀请流**：owner 配置团队名片字段（`teams.cardSchema`）→ 邀请成员填空表单（预填回显 + 必填校验）→ 直接 active 加入
+
+### Changed
+- **产品统一更名**：科博名片 → 投贴儿（导航标题 / 协议页 / 关于页 / 转发备注；`team/create` 占位示例同步）
+- **团队数据层**：`managedFields` 统一命名为 `company/department/position/phone/address/website`，与个名片 `card` 字段对齐
+- **团队能力增强**：公开团队目录、整组分享、owner 解散团队（级联清理成员 / 名片关联 / 邀请码）接入
+
+### Fixed
+- 登录链路 2 项 P1 缺陷修复
+- 安全 / 逻辑 / 数据完整性审计修复（越权 + 信息泄露等，需重新部署 `initVisits` / `teamManager` / `deleteCard` 方生效）
+- 清理全库 6 项 LOW 级技术债务
+- `team/detail` 分享文案「分享空名片」→「邀请成员填写名片」
+
 ## [1.3.0] - 2026-08-19
 
 ### Added
