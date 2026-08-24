@@ -1,7 +1,8 @@
 var storage = require('./config/storage')
 
 // 应用版本号唯一真源（关于页等展示用）
-const APP_VERSION = '1.1.4'
+// ⚠️ 发版打 tag 时必须同步更新此值（见 tag-changelog-reconcile 发版约定）
+const APP_VERSION = '1.4.0'
 
 App({
   globalData: {
