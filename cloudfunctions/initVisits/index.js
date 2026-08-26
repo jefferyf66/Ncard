@@ -25,6 +25,62 @@ function filterCardByVisibility(card, fv, isOwner, isAuthorized) {
   return out
 }
 
+// 方案 A：访客身份读时解析（resolve-on-read）
+// 读取时实时解析访客最新身份，覆盖 visits 文档里的陈旧快照，根治访客升级身份后
+// 名片主人看到的用户名/头像不刷新的 staleness bug。不依赖写入时快照。
+// 优先级：L3（有自己名片的访客）覆盖 L2（有授权昵称但无名片），不降级。
+async function resolveVisitorIdentities(openids) {
+  const ids = Array.from(new Set((openids || []).filter(Boolean)))
+  const map = {}
+  if (ids.length === 0) return map
+
+  // L3：有自己名片的访客（cards._openid 命中）
+  try {
+    const cardRes = await db.collection('cards')
+      .where({ _openid: db.command.in(ids) })
+      .limit(100)
+      .get()
+    for (const c of (cardRes.data || [])) {
+      if (c._openid) {
+        map[c._openid] = {
+          visitorName: c.name || '',
+          visitorAvatar: c.avatar || '',
+          visitorPosition: c.position || '',
+          visitorCompany: c.company || '',
+          visitorLevel: 3
+        }
+      }
+    }
+  } catch (e) {
+    // 查询失败不中断主流程
+    console.warn('[initVisits] resolveVisitorIdentities L3 查询失败:', e.message)
+  }
+
+  // L2：有授权昵称但无名片（visitor_profiles.openid 命中，且非 L3 才写入，避免降级）
+  try {
+    const profileRes = await db.collection('visitor_profiles')
+      .where({ openid: db.command.in(ids) })
+      .limit(100)
+      .get()
+    for (const p of (profileRes.data || [])) {
+      if (p.openid && !map[p.openid]) {
+        map[p.openid] = {
+          visitorName: p.nickname || '',
+          visitorAvatar: p.avatarUrl || '',
+          visitorPosition: '',
+          visitorCompany: '',
+          visitorLevel: 2
+        }
+      }
+    }
+  } catch (e) {
+    // 查询失败不中断主流程
+    console.warn('[initVisits] resolveVisitorIdentities L2 查询失败:', e.message)
+  }
+
+  return map
+}
+
 exports.main = async (event, context) => {
   // 服务端身份（唯一可信来源，绝不读 event 传入的 openid）
   const { OPENID } = cloud.getWXContext()
@@ -235,9 +291,27 @@ exports.main = async (event, context) => {
         .limit(limit)
         .get()
 
+      const list = result.data || []
+      // 方案 A：读时解析访客最新身份，覆盖陈旧快照
+      const openids = list.map(v => v.visitorOpenId).filter(Boolean)
+      if (openids.length) {
+        const idMap = await resolveVisitorIdentities(openids)
+        for (const v of list) {
+          const r = idMap[v.visitorOpenId]
+          if (r) {
+            v.visitorName = r.visitorName || v.visitorName || ''
+            v.visitorAvatar = r.visitorAvatar || v.visitorAvatar || ''
+            v.visitorPosition = r.visitorPosition || v.visitorPosition || ''
+            v.visitorCompany = r.visitorCompany || v.visitorCompany || ''
+            v.visitorLevel = r.visitorLevel > (v.visitorLevel || 1) ? r.visitorLevel : v.visitorLevel
+          }
+        }
+      }
+      // 安全：无条件移除访客私密电话，防止向名片主人泄露（SEC-03 纵深防御，不依赖上面分支）
+      for (const v of list) delete v.visitorPhone
       return {
         ok: true,
-        list: result.data || []
+        list
       }
     }
 
@@ -265,11 +339,29 @@ exports.main = async (event, context) => {
           .get()
       ])
 
+      const recentList = recentResult.data || []
+      // 方案 A：读时解析访客最新身份，覆盖陈旧快照
+      const recentOpenids = recentList.map(v => v.visitorOpenId).filter(Boolean)
+      if (recentOpenids.length) {
+        const idMap = await resolveVisitorIdentities(recentOpenids)
+        for (const v of recentList) {
+          const r = idMap[v.visitorOpenId]
+          if (r) {
+            v.visitorName = r.visitorName || v.visitorName || ''
+            v.visitorAvatar = r.visitorAvatar || v.visitorAvatar || ''
+            v.visitorPosition = r.visitorPosition || v.visitorPosition || ''
+            v.visitorCompany = r.visitorCompany || v.visitorCompany || ''
+            v.visitorLevel = r.visitorLevel > (v.visitorLevel || 1) ? r.visitorLevel : v.visitorLevel
+          }
+        }
+      }
+      // 安全：无条件移除访客私密电话，防止向名片主人泄露（SEC-03 纵深防御，不依赖上面分支）
+      for (const v of recentList) delete v.visitorPhone
       return {
         ok: true,
         visitors: totalResult.total || 0,
         viewed: repeatResult.total || 0,
-        recentVisitors: recentResult.data || []
+        recentVisitors: recentList
       }
     }
 

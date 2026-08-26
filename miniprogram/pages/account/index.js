@@ -37,50 +37,82 @@ Page({
   onRealNameInput(e) { this.setData({ realName: e.detail.value }) },
 
   onChooseAvatar(e) {
-    const { avatarUrl } = e.detail
-    this.setData({ avatarUrl })
+    const tempPath = (e.detail && e.detail.avatarUrl) || ''
+    if (!tempPath) return
+    // 立即回显临时头像，保证「选完即见」（不依赖上传是否成功）
+    this.setData({ avatarUrl: tempPath })
+    if (!wx.cloud) return
+    const cloudPath = 'avatars/' + Date.now() + '.jpg'
+    const that = this
+    // 上传后存原始 cloud://（微信原生渲染，与编辑页头像一致），
+    // 避免 https CDN 不确定性导致「选完不显示」
+    this._pendingUpload = new Promise((resolve) => {
+      wx.cloud.uploadFile({
+        cloudPath: cloudPath,
+        filePath: tempPath,
+        success: (up) => {
+          that.setData({ avatarUrl: up.fileID })
+          resolve()
+        },
+        fail: () => {
+          // 上传失败保留临时回显，不阻断
+          resolve()
+        }
+      })
+    })
   },
 
   saveProfile() {
     const that = this
-    if (this.data.saving) return
-    this.setData({ saving: true })
-    app.showLoading('保存中...')
-    wx.cloud.callFunction({
-      name: 'accountManager',
-      data: {
-        action: 'updateMyProfile',
-        nickname: this.data.nickname,
-        realName: this.data.realName,
-        avatarUrl: this.data.avatarUrl
-      },
-      success: (res) => {
-        app.hideLoading()
-        that.setData({ saving: false })
-        if (res.result && res.result.success) {
-          try {
-            const u = wx.getStorageSync('user') || {}
-            u.nickname = that.data.nickname
-            u.realName = that.data.realName
-            u.avatarUrl = that.data.avatarUrl
-            wx.setStorageSync('user', u)
-            if (app.globalData.user) {
-              app.globalData.user.nickname = that.data.nickname
-              app.globalData.user.realName = that.data.realName
-              app.globalData.user.avatarUrl = that.data.avatarUrl
-            }
-          } catch (e) {}
-          wx.showToast({ title: '已保存', icon: 'success' })
-        } else {
-          wx.showToast({ title: (res.result && res.result.error) || '保存失败', icon: 'none' })
+    const doSave = () => {
+      if (that.data.saving) return
+      that.setData({ saving: true })
+      app.showLoading('保存中...')
+      wx.cloud.callFunction({
+        name: 'accountManager',
+        data: {
+          action: 'updateMyProfile',
+          nickname: that.data.nickname,
+          realName: that.data.realName,
+          avatarUrl: that.data.avatarUrl
+        },
+        success: (res) => {
+          app.hideLoading()
+          that.setData({ saving: false })
+          if (res.result && res.result.success) {
+            try {
+              const u = wx.getStorageSync('user') || {}
+              u.nickname = that.data.nickname
+              u.realName = that.data.realName
+              u.avatarUrl = that.data.avatarUrl
+              wx.setStorageSync('user', u)
+              if (app.globalData.user) {
+                app.globalData.user.nickname = that.data.nickname
+                app.globalData.user.realName = that.data.realName
+                app.globalData.user.avatarUrl = that.data.avatarUrl
+              }
+              // 清掉 ensureUser 缓存，下次 ensureUser 重跑能拿到云端最新头像（避免启动快照陈旧）
+              app._ensureUserPromise = null
+            } catch (e) {}
+            wx.showToast({ title: '已保存', icon: 'success' })
+          } else {
+            wx.showToast({ title: (res.result && res.result.error) || '保存失败', icon: 'none' })
+          }
+        },
+        fail: () => {
+          app.hideLoading()
+          that.setData({ saving: false })
+          wx.showToast({ title: '网络错误', icon: 'none' })
         }
-      },
-      fail: () => {
-        app.hideLoading()
-        that.setData({ saving: false })
-        wx.showToast({ title: '网络错误', icon: 'none' })
-      }
-    })
+      })
+    }
+    // 若头像上传仍在进行，先等其完成再保存，确保写入的是永久 HTTPS 而非旧值
+    if (this._pendingUpload) {
+      app.showLoading('上传头像中...')
+      this._pendingUpload.then(() => { this._pendingUpload = null; doSave() })
+    } else {
+      doSave()
+    }
   },
 
   exportData() {

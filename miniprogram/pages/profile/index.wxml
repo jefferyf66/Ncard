@@ -2,7 +2,7 @@
   <view class="user-card">
     <view class="user-bg"></view>
     <view class="user-content">
-      <image class="user-avatar" src="{{(userInfo && userInfo.avatarUrl) || '../../images/avatar.png'}}" mode="aspectFill"></image>
+      <image class="user-avatar" src="{{avatarUrl || '../../images/avatar.png'}}" mode="aspectFill"></image>
       <view class="user-info">
         <text class="user-name">{{(userInfo && userInfo.nickname) || '微信用户'}}</text>
         <text class="user-desc">{{openid ? '已登录' : '请登录以使用完整功能'}}</text>

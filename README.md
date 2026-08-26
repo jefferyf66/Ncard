@@ -161,6 +161,12 @@
 
 详见 [CHANGELOG.md](CHANGELOG.md)
 
+### v1.5.1 (2026-08-26)
+- 🔄 访客身份读时解析（方案 A）：新增 `resolveVisitorIdentities` 批量查 cards(L3)+visitor_profiles(L2) 覆盖回传，根治访客升级身份后列表不刷新
+- 🔒 封堵 SEC-03 访客电话泄露：`getRecentVisitors`/`getMyVisitorDashboard` 读取侧无条件 `delete v.visitorPhone`
+- 🐛 修复「我的」页 / 账号设置页头像不显示：改为 `cloud://` 原生渲染（对齐编辑页），绕过不可靠 https CDN，选完即回显
+- ☁️ `initVisits` 须重新上传部署；前端热重载即可
+
 ### v1.5.0 (2026-08-26)
 - 🔐 访客授权披露（D5 安全模型）：`fieldVisibility` 三级可见性 + 服务端 `getCardView` 强制过滤 + `authorizeVisit` 授权流；`edit` 三态可见性开关、`preview` 授权引导与锁定占位，越权读卡漏洞关闭
 - 📂 名片夹改走云函数读卡（`getCardsBatch`），`cards` 集合可安全收紧为「仅创建者可读写」而名片夹不再空白

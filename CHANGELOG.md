@@ -2,6 +2,17 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.5.1] - 2026-08-26
+
+### Added
+- **访客身份读时解析（方案 A）**：`initVisits` 新增 `resolveVisitorIdentities(openids)` 助手，按 distinct `visitorOpenId` 批量查 `cards`（L3 名片用户）+ `visitor_profiles`（L2 授权用户），取最新公开展示身份（name/avatar/position/company/level）覆盖回传；`getRecentVisitors` 与 `getMyVisitorDashboard` 读取时实时覆盖访客快照——根治「访客后来建卡/被授权，名片主人访客列表仍显示旧用户名/头像」的 staleness（L3 优先不降级、覆盖兜底旧值、level 只升不降）
+
+### Fixed
+- **访客电话泄露（SEC-03）**：原 `getRecentVisitors` / `getMyVisitorDashboard` 把 `visits.visitorPhone`（访客私密电话）原样回传给名片主人；现读取侧对每个 visit **无条件** `delete v.visitorPhone`，且 L2/L3 覆盖只取公开展示字段，绝不下发 phone/email
+- **「我的」页 / 账号设置页头像不显示**：两页此前把 `cloud://` 经 `resolveCloudUrl` 转 `https` 渲染，而本项目 https CDN 不可靠（同历史「分享预览图收不到」根），故选完微信头像也不显示；改为与编辑页一致直接渲染 `cloud://` 原生，并选头像时**立即回显**临时头像确保「选完即见」，上传 `cloud://` fileID 入库，加 `_pendingUpload` 异步竞态防护（选完立即保存不丢上传）
+
+> 本次 `initVisits` 云函数改动须**重新上传部署**方生效；`account` / `profile` 前端改动开发者工具热重载即可。
+
 ## [1.5.0] - 2026-08-26
 
 ### Added

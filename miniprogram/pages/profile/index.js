@@ -3,6 +3,7 @@ const app = getApp()
 Page({
   data: {
     userInfo: null,
+    avatarUrl: '',
     openid: '',
     userRole: '',
     isAdmin: false,
@@ -35,7 +36,8 @@ Page({
       openid: openid,
       userRole: role,
       isAdmin: role === 'root' || role === 'admin',
-      version: (app.globalData && app.globalData.version) || ''
+      version: (app.globalData && app.globalData.version) || '',
+      avatarUrl: (user && user.avatarUrl) || ''
     })
   },
 
