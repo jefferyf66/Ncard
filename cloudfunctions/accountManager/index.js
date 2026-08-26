@@ -1,6 +1,7 @@
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
+const _ = db.command
 
 /**
  * 用户自助账号管理（L1）
@@ -107,6 +108,42 @@ async function confirmDeleteAccount(OPENID) {
   })
   // 清理个人关联数据（保留 cards 内容归属，仅清收藏）
   await db.collection('user_save_cards').where({ _openid: OPENID }).remove()
+
+  // ERR-02 修复：级联清理团队关系与访客隐私残留
+  // 1) 删除该用户在 team_members 中的全部记录，并回退对应 teams.memberCount（避免团队人数虚高、团队列表显示已注销成员）
+  const teamIdSet = new Set()
+  let skip = 0
+  while (true) {
+    const memPage = await db.collection('team_members')
+      .where({ memberOpenId: OPENID }).limit(1000).skip(skip).get()
+    const rows = memPage.data || []
+    rows.forEach(function (m) { if (m.teamId) teamIdSet.add(m.teamId) })
+    if (rows.length < 1000) break
+    skip += 1000
+  }
+  // 逐团队回退 memberCount（可能多条同一 team，Set 已去重，每团队仅一次），等待全部完成
+  await Promise.all(Array.from(teamIdSet).map(function (tid) {
+    return db.collection('teams').doc(tid).update({ data: { memberCount: _.inc(-1) } }).catch(function () {})
+  }))
+  // 循环删除该用户全部成员记录（突破单次上限，可能多条）
+  while (true) {
+    const rm = await db.collection('team_members').where({ memberOpenId: OPENID }).limit(1000).remove()
+    const removed = (rm.stats && rm.stats.removed) || 0
+    if (removed === 0) break
+  }
+  // 2) 删除该用户作为访客的 visits 隐私残留（visitorOpenId 指向本人，防止被枚举追踪）
+  while (true) {
+    const rv = await db.collection('visits').where({ visitorOpenId: OPENID }).limit(1000).remove()
+    const removed = (rv.stats && rv.stats.removed) || 0
+    if (removed === 0) break
+  }
+  // 3) 彻底抹除：删除以本人为名片归属的 visits（cardOwnerId 指向本人，含第三方访客数据，注销即全量清除本人标识）
+  while (true) {
+    const rc = await db.collection('visits').where({ cardOwnerId: OPENID }).limit(1000).remove()
+    const removed = (rc.stats && rc.stats.removed) || 0
+    if (removed === 0) break
+  }
+
   await writeAudit(OPENID, 'self_delete', { openid: OPENID })
   return { success: true }
 }

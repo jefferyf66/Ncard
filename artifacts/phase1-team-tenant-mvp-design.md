@@ -103,7 +103,7 @@ singleUse:     boolean         // 默认 false
 ### 2.5 关键语义说明
 - **`_openid` vs 业务归属字段**：`teams._openid`/`team_members._openid`/`team_invites._openid` 仅用于「仅创建者可读写」权限匹配（显式写入创建者/成员 openid）；**业务归属与鉴权以 `ownerOpenId`/`memberOpenId` + 云函数 `OPENID` 为准**。
 - **`nameNorm` 设计微调（解决设计稿内部矛盾）**：v0.4 §12.7 写「存储保留原样」却又 `where({ownerOpenId, name: normalized})`，二者冲突。本设计**新增 `nameNorm` 字段**存放归一化结果，`name` 保留用户原样；L1/L2 比对用 `nameNorm`，既满足「存储原样」又不破坏查重。属实现细化，未推翻任何已确认决策。
-- **跨用户读**：非成员读团队信息一律走 `teamManager` 云函数（admin 上下文读），客户端不直连。云存储跨用户资源沿用既有 `resolveCloudUrls` 代理 + 「仅创建者可读写」策略。
+- **跨用户读**：非成员读团队信息一律走 `teamManager` 云函数（admin 上下文读），客户端不直连。云存储自 v1.1.x 起已设为「所有用户可读」，前端 `storage.resolveCloudUrl()` 直接拼永久 HTTPS URL，`resolveCloudUrls` 云函数代理已移除，不再依赖。
 
 ---
 

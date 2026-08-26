@@ -109,7 +109,7 @@ async function listTeams() {
     _id: t._id,
     name: t.name,
     ownerOpenId: t.ownerOpenId,
-    memberCount: (t.members || []).length,
+    memberCount: (t.memberCount) || 0,
     allowDirectoryShare: !!t.allowDirectoryShare
   }))
   return { success: true, data: { list } }

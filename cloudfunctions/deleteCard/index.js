@@ -4,6 +4,19 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+// 批量安全删除（突破 where().remove() 单次约 1000 条上限）
+// 循环 limit(1000).remove() 直到本次删除数为 0，返回累计删除条数
+async function removeAll(collectionName, where) {
+  let total = 0
+  while (true) {
+    const res = await db.collection(collectionName).where(where).limit(1000).remove()
+    const removed = (res.stats && res.stats.removed) || 0
+    total += removed
+    if (removed === 0) break
+  }
+  return total
+}
+
 exports.main = async (event, context) => {
   const { cardId } = event
   const wxContext = cloud.getWXContext()
@@ -53,17 +66,17 @@ exports.main = async (event, context) => {
       .catch(function (e) { return { step: 'cards', ok: false, error: e.errCode } })
   )
 
-  // 清理所有用户的保存记录
+  // 清理所有用户的保存记录（LOG-02 修复：分页循环删除，突破单次 1000 条上限）
   tasks.push(
-    db.collection('user_save_cards').where({ cardId: cardId }).remove()
-      .then(function (res) { return { step: 'user_save_cards', ok: true, deleted: (res.stats && res.stats.removed) || 0 } })
+    removeAll('user_save_cards', { cardId: cardId })
+      .then(function (deleted) { return { step: 'user_save_cards', ok: true, deleted: deleted } })
       .catch(function (e) { return { step: 'user_save_cards', ok: false, error: e.errCode } })
   )
 
-  // 清理访客记录
+  // 清理访客记录（LOG-02 修复：分页循环删除，突破单次 1000 条上限）
   tasks.push(
-    db.collection('visits').where({ cardId: cardId }).remove()
-      .then(function (res) { return { step: 'visits', ok: true, deleted: (res.stats && res.stats.removed) || 0 } })
+    removeAll('visits', { cardId: cardId })
+      .then(function (deleted) { return { step: 'visits', ok: true, deleted: deleted } })
       .catch(function (e) { return { step: 'visits', ok: false, error: e.errCode } })
   )
 

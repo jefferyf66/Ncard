@@ -268,7 +268,7 @@ async function joinByInvite(event, OPENID) {
   }
 
   const now = Date.now()
-  await db.collection('team_members').add({
+  const addRes = await db.collection('team_members').add({
     data: {
       _openid: OPENID,
       teamId: inv.teamId,
@@ -284,10 +284,25 @@ async function joinByInvite(event, OPENID) {
     }
   })
 
-  // 维护卡片 teamIds（冗余）+ 团队 memberCount + 邀请 usedCount
+  // 维护卡片 teamIds（冗余）+ 团队 memberCount
   await db.collection('cards').doc(card._id).update({ data: { teamIds: _.push(inv.teamId) } })
   await db.collection('teams').doc(inv.teamId).update({ data: { memberCount: _.inc(1) } })
-  await db.collection('team_invites').doc(inv._id).update({ data: { usedCount: _.inc(1) } })
+
+  // CON-01 修复：singleUse 邀请码 usedCount 自增改为条件更新，杜绝并发竞态被两人同时使用
+  if (inv.singleUse) {
+    const up = await db.collection('team_invites')
+      .where({ _id: inv._id, usedCount: 0, singleUse: true })
+      .update({ data: { usedCount: _.inc(1) } })
+    if (!up.stats || up.stats.updated === 0) {
+      // 条件更新未命中：邀请码已被其他实例占用，回滚本次加入避免残留
+      await db.collection('team_members').doc(addRes._id).remove().catch(() => {})
+      await db.collection('cards').doc(card._id).update({ data: { teamIds: _.pull(inv.teamId) } }).catch(() => {})
+      await db.collection('teams').doc(inv.teamId).update({ data: { memberCount: _.inc(-1) } }).catch(() => {})
+      return { success: false, error: 'INVITE_USED_UP', message: '邀请码已被使用' }
+    }
+  } else {
+    await db.collection('team_invites').doc(inv._id).update({ data: { usedCount: _.inc(1) } })
+  }
 
   return { success: true, data: { teamId: inv.teamId } }
 }
@@ -359,6 +374,19 @@ async function leaveTeam(event, OPENID) {
   return { success: true }
 }
 
+// ============ 批量安全删除（突破 where().remove() 单次约 1000 条上限）============
+// 循环 limit(1000).remove() 直到本次删除数为 0，适用于成员/邀请码等可能超千条的清理
+async function removeAll(collectionName, where) {
+  let total = 0
+  while (true) {
+    const res = await db.collection(collectionName).where(where).limit(1000).remove()
+    const removed = (res.stats && res.stats.removed) || 0
+    total += removed
+    if (removed === 0) break
+  }
+  return total
+}
+
 // ============ 解散团队（仅 owner，破坏性操作）============
 async function disbandTeam(event, OPENID) {
   const { teamId } = event
@@ -378,10 +406,10 @@ async function disbandTeam(event, OPENID) {
   cardIds.forEach(cid => {
     tasks.push(db.collection('cards').doc(cid).update({ data: { teamIds: _.pull(teamId) } }).catch(() => {}))
   })
-  // 2) 删除全部成员记录
-  tasks.push(db.collection('team_members').where({ teamId }).remove())
-  // 3) 删除该团队所有邀请码（使其立即失效）
-  tasks.push(db.collection('team_invites').where({ teamId }).remove())
+  // 2) 删除全部成员记录（LOG-02 修复：分页循环删除，突破单次 1000 条上限）
+  tasks.push(removeAll('team_members', { teamId }))
+  // 3) 删除该团队所有邀请码（使其立即失效）（LOG-02 修复：分页循环删除）
+  tasks.push(removeAll('team_invites', { teamId }))
   // 4) 删除团队本身
   tasks.push(db.collection('teams').doc(teamId).remove())
   await Promise.all(tasks)
@@ -625,6 +653,8 @@ async function getCardTeams(event) {
   const { cardId } = event
   if (!cardId) return { success: false, error: 'CARD_NOT_FOUND' }
 
+  const { OPENID } = cloud.getWXContext() // 可信身份，用于可见性判定（与 getCardsTeams 一致）
+
   const mem = await db.collection('team_members').where({ cardId, status: 'active' }).get()
   if (!mem.data.length) return { success: true, data: { teams: [] } }
 
@@ -633,22 +663,36 @@ async function getCardTeams(event) {
   const teamMap = {}
   teams.data.forEach(t => { teamMap[t._id] = t })
 
+  // 可见性判定：复用 getCardsTeams 一致的 isMember / isPublic 逻辑
+  // 私有团队且调用者非成员 → 不暴露任何团队信息（防止枚举 cardId 探测社交图谱）
+  const myMemRes = await db.collection('team_members')
+    .where({ teamId: _.in(teamIds), memberOpenId: OPENID, status: 'active' })
+    .get()
+  const myTeamIds = new Set(myMemRes.data.map(m => m.teamId))
+  const ownedTeamIds = new Set(teams.data.filter(t => t.ownerOpenId === OPENID).map(t => t._id))
+
   const result = mem.data
-    .map(m => ({
-      teamId: m.teamId,
-      team: teamMap[m.teamId]
-        ? {
-            _id: teamMap[m.teamId]._id,
-            name: teamMap[m.teamId].name,
-            shortId: teamMap[m.teamId].shortId,
-            memberCount: teamMap[m.teamId].memberCount
-          }
-        : null,
-      // 仅返回「可见」的托管字段：即便成员填了 phone/email 等，owner 在 cardSchema 中设为不可见则不对外暴露
-      managedFields: filterManagedByVisible(m.managedFields || emptyFields(), (teamMap[m.teamId] && teamMap[m.teamId].cardSchema) || defaultCardSchema()),
-      cardSchema: (teamMap[m.teamId] && teamMap[m.teamId].cardSchema) || defaultCardSchema()
-    }))
-    .filter(r => r.team)
+    .map(m => {
+      const team = teamMap[m.teamId]
+      if (!team) return null
+      const isMember = myTeamIds.has(m.teamId) || ownedTeamIds.has(m.teamId)
+      const isPublic = team.allowDirectoryShare === true
+      // 私有团队且调用者非成员：剔除该团队信息（安全边界，与 getCardsTeams 一致）
+      if (!isMember && !isPublic) return null
+      return {
+        teamId: m.teamId,
+        team: {
+          _id: team._id,
+          name: team.name,
+          shortId: team.shortId,
+          memberCount: team.memberCount
+        },
+        // 仅返回「可见」的托管字段：即便成员填了 phone/email 等，owner 在 cardSchema 中设为不可见则不对外暴露
+        managedFields: filterManagedByVisible(m.managedFields || emptyFields(), team.cardSchema || defaultCardSchema()),
+        cardSchema: team.cardSchema || defaultCardSchema()
+      }
+    })
+    .filter(r => r)
 
   return { success: true, data: { teams: result } }
 }

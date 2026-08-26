@@ -161,6 +161,10 @@
 
 详见 [CHANGELOG.md](CHANGELOG.md)
 
+### v1.4.2 (2026-08-26)
+- 🔒 安全/数据一致性审计修复（P1 Top5）：批量删除分页突破 1000 上限、注销级联清理团队与访客数据（彻底抹除本人标识）、getCardTeams 防社交图谱泄露、单用邀请码原子条件更新防并发复用、运营后台 memberCount 字段修正
+- ☁️ 改完须重新上传部署 `teamManager` / `deleteCard` / `accountManager` / `adminManager`
+
 ### v1.4.1 (2026-08-24)
 - 🐛 「我的」页指标卡接真数据（名片数 = cards.count、访客数 = initVisits 同口径），修复恒为 0；点击跳首页消除语义错位
 - 🧹 移除「主题颜色」「默认名片」两个只存不用的半成品设置项（含弹层与样式）

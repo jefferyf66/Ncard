@@ -2,6 +2,17 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.4.2] - 2026-08-26
+
+### Fixed
+- **批量删除超 1000 条上限残留（LOG-02）**：`teamManager.disbandTeam` 与 `deleteCard` 的级联删除改用分页循环（`limit(1000)` 删至 `removed===0`），防止超大团队（>1000 人）或超热名片（被保存 >1000 次）残留记录导致计数/展示错误
+- **注销账号数据残留（ERR-02）**：`accountManager.confirmDeleteAccount` 级联清理 `team_members`（并回退 `teams.memberCount`）+ `visits`（含 `visitorOpenId` 与 `cardOwnerId` 双向彻底抹除本人标识），满足"注销即清理"的隐私合规预期
+- **名片→团队归属图谱泄露（SEC-01）**：`teamManager.getCardTeams` 复用 `getCardsTeams` 的 `isMember/isPublic` 可见性判定，私有团队且调用者非成员时剔除，防止通过 cardId 枚举探测某人团队关系
+- **单用邀请码并发竞态（CON-01）**：`teamManager.joinByInvite` 的 `usedCount` 自增改为原子条件更新（`where({_id, usedCount:0, singleUse:true})`），未命中即回滚并拒绝，防止限量邀请被并发绕过
+- **运营后台团队人数恒为 0（LOG-01）**：`adminManager.listTeams` 修正为读取 `t.memberCount` 数字字段（原误读不存在的 `t.members` 数组）
+
+> 本次修复均位于云函数侧，改完须重新上传部署 `teamManager` / `deleteCard` / `accountManager` / `adminManager` 方生效。
+
 ## [1.4.1] - 2026-08-24
 
 ### Fixed
