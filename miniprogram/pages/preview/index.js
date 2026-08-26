@@ -1,4 +1,5 @@
 const app = getApp()
+const storage = require('../../config/storage')
 const team = require('../../utils/team')
 
 Page({
@@ -273,9 +274,10 @@ Page({
       id: v._id,
       visitorOpenId: v.visitorOpenId || '',
       name: v.visitorName || ('访客 #' + (v.visitorOpenId || '').slice(-4).toUpperCase()),
-      avatar: v.visitorAvatar || '',
+      avatar: storage.resolveCloudUrl(v.visitorAvatar),
       visitCount: v.visitCount || 1,
       visitorLevel: v.visitorLevel || 1,
+      cardName: v.cardName || '',
       lastVisit: app.formatTime(v.visitTime)
     }))
     const merged = this._mergeVisitorsByOpenId(visitors)

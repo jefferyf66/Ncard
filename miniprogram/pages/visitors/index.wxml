@@ -83,7 +83,8 @@
         </view>
         <view class="visitor-meta">
           <text class="visitor-time">{{item.lastVisit}}</text>
-          <text class="visitor-desc">{{item.description}}</text>
+          <text wx:if="{{mode === 'global' && item.description}}" class="visitor-desc visitor-card-link" bindtap="goToCard" data-cardid="{{item.cardId}}">{{item.description}}</text>
+          <text wx:elif="{{item.description}}" class="visitor-desc">{{item.description}}</text>
         </view>
       </view>
     </view>

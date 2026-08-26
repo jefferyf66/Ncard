@@ -42,9 +42,11 @@ exports.main = async (event, context) => {
       const visitorOpenId = OPENID
       // 名片归属以数据库为准，防止伪造 cardOwnerId
       let cardOwnerId = ''
+      let cardName = ''
       try {
         const cardRes = await db.collection('cards').doc(cardId).get()
         cardOwnerId = (cardRes.data && cardRes.data._openid) || ''
+        cardName = (cardRes.data && cardRes.data.name) || ''
       } catch (e) { /* 名片不存在 */ }
       if (!cardOwnerId) {
         return { ok: false, message: '名片不存在' }
@@ -132,7 +134,8 @@ exports.main = async (event, context) => {
               visitorPosition: visitorPosition || recent.data[0].visitorPosition || '',
               visitorCompany: visitorCompany || recent.data[0].visitorCompany || '',
               visitorPhone: visitorPhone || recent.data[0].visitorPhone || '',
-              visitorLevel: Math.max(visitorLevel, recent.data[0].visitorLevel || 1)
+              visitorLevel: Math.max(visitorLevel, recent.data[0].visitorLevel || 1),
+              cardName: cardName || recent.data[0].cardName || ''
             }
           })
           return { ok: true, updated: true, visitorLevel: visitorLevel }
@@ -154,6 +157,7 @@ exports.main = async (event, context) => {
           visitTime: now,
           visitCount: 1,
           actions: [],
+          cardName,
           source: source || 'direct'
         }
       })

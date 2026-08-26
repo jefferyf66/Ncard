@@ -161,6 +161,11 @@
 
 详见 [CHANGELOG.md](CHANGELOG.md)
 
+### v1.4.3 (2026-08-26)
+- ✨ 访客来源按名片区分：显示具体名片名并可点击跳转该卡详情，全局访客视图按名片归属一目了然
+- 🐛 修复访客头像裸 `cloud://` 渲染失败（visitorAvatar 未过 `storage.resolveCloudUrl`）
+- ☁️ `initVisits` 须重新上传部署；前端热重载即可
+
 ### v1.4.2 (2026-08-26)
 - 🔒 安全/数据一致性审计修复（P1 Top5）：批量删除分页突破 1000 上限、注销级联清理团队与访客数据（彻底抹除本人标识）、getCardTeams 防社交图谱泄露、单用邀请码原子条件更新防并发复用、运营后台 memberCount 字段修正
 - ☁️ 改完须重新上传部署 `teamManager` / `deleteCard` / `accountManager` / `adminManager`

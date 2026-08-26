@@ -1,4 +1,5 @@
 const app = getApp()
+const storage = require('../../config/storage')
 
 Page({
   data: {
@@ -126,16 +127,18 @@ Page({
       return {
         id: v._id,
         visitorOpenId: v.visitorOpenId || '',
+        cardId: v.cardId || '',
+        cardName: v.cardName || '',
         name: v.visitorName || ('访客 #' + (v.visitorOpenId || '').slice(-4).toUpperCase()),
         phone: v.visitorPhone || '',
         position: v.visitorPosition || '',
         company: v.visitorCompany || '',
-        avatar: v.visitorAvatar || '',
+        avatar: storage.resolveCloudUrl(v.visitorAvatar),
         visitCount: v.visitCount || 1,
         visitorLevel: v.visitorLevel || 1,
         actions: v.actions || [],
         lastVisit: app.formatTime(v.visitTime),
-        description: v.source ? '通过"' + v.source + '"查看了您' : ''
+        description: v.cardName ? ('查看了您的「' + v.cardName + '」') : (v.source === 'share' ? '通过分享查看了您' : '查看了您')
       }
     })
 
@@ -216,5 +219,15 @@ Page({
   goToProfile(e) {
     const item = e.currentTarget.dataset.item
     wx.showToast({ title: `查看 ${item.name} 的名片`, icon: 'none' })
+  },
+
+  /**
+   * 从访客项跳转到对应名片详情（全局视图下，每条访客记录归属不同名片）
+   */
+  goToCard(e) {
+    const cardId = e.currentTarget.dataset.cardid
+    if (cardId) {
+      wx.navigateTo({ url: '/pages/preview/index?id=' + cardId })
+    }
   }
 })

@@ -330,6 +330,12 @@
   color: #94A3B8;
 }
 
+/* 访客项中的名片名：可点击跳转至该名片详情（全局视图） */
+.visitor-card-link {
+  color: #3B82F6;
+  text-decoration: underline;
+}
+
 /* 操作按钮 — 品牌蓝 */
 .visitor-button {
   padding: 16rpx 28rpx;

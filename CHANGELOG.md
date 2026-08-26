@@ -2,6 +2,16 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.4.3] - 2026-08-26
+
+### Added
+- **访客来源按名片区分**：`initVisits.recordVisit` 在取整卡处顺手存 `cardName`；访客页 `description` 升级为「查看了您的「XX名片」」并渲染为可点击链接，跳该卡详情页（`/pages/preview/index?id=`）；全局访客视图下不同访客归属哪张名片一目了然，单卡视图（`?cardId=`）下不渲染链接避免自跳转；旧记录无 `cardName` 显示兜底文案
+
+### Fixed
+- **访客头像渲染失败**：`visitors` / `preview` 访客列表的 `visitorAvatar` 为裸 `cloud://` 串，未过 `storage.resolveCloudUrl()` 转 HTTPS，渲染层报 "Failed to load image"。两页补 `resolveCloudUrl` 转换
+
+> 本次 `initVisits` 云函数有改动，改完须重新上传部署方生效；`visitors` / `preview` 前端改动开发者工具热重载即可。
+
 ## [1.4.2] - 2026-08-26
 
 ### Fixed
