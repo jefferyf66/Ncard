@@ -106,6 +106,14 @@
           ></input>
         </view>
         <view class="form-error" wx:if="{{errors.phone}}">{{errors.phone}}</view>
+        <view class="visibility-picker">
+          <text class="vp-label">可见性</text>
+          <view class="vp-opts">
+            <text class="vp-opt {{fieldVisibility.phone==='public'?'on':''}}" data-field="phone" data-value="public" bindtap="onVisibilityChange">公开</text>
+            <text class="vp-opt {{fieldVisibility.phone==='authorized'?'on':''}}" data-field="phone" data-value="authorized" bindtap="onVisibilityChange">授权后</text>
+            <text class="vp-opt {{fieldVisibility.phone==='private'?'on':''}}" data-field="phone" data-value="private" bindtap="onVisibilityChange">仅自己</text>
+          </view>
+        </view>
       </view>
 
       <view class="form-divider"></view>
@@ -122,6 +130,14 @@
           ></input>
         </view>
         <view class="form-error" wx:if="{{errors.email}}">{{errors.email}}</view>
+        <view class="visibility-picker">
+          <text class="vp-label">可见性</text>
+          <view class="vp-opts">
+            <text class="vp-opt {{fieldVisibility.email==='public'?'on':''}}" data-field="email" data-value="public" bindtap="onVisibilityChange">公开</text>
+            <text class="vp-opt {{fieldVisibility.email==='authorized'?'on':''}}" data-field="email" data-value="authorized" bindtap="onVisibilityChange">授权后</text>
+            <text class="vp-opt {{fieldVisibility.email==='private'?'on':''}}" data-field="email" data-value="private" bindtap="onVisibilityChange">仅自己</text>
+          </view>
+        </view>
       </view>
 
       <view class="form-divider"></view>
@@ -137,6 +153,14 @@
             maxlength="100"
             auto-height
           ></textarea>
+          <view class="visibility-picker">
+            <text class="vp-label">可见性</text>
+            <view class="vp-opts">
+              <text class="vp-opt {{fieldVisibility.address==='public'?'on':''}}" data-field="address" data-value="public" bindtap="onVisibilityChange">公开</text>
+              <text class="vp-opt {{fieldVisibility.address==='authorized'?'on':''}}" data-field="address" data-value="authorized" bindtap="onVisibilityChange">授权后</text>
+              <text class="vp-opt {{fieldVisibility.address==='private'?'on':''}}" data-field="address" data-value="private" bindtap="onVisibilityChange">仅自己</text>
+            </view>
+          </view>
         </view>
       </view>
 

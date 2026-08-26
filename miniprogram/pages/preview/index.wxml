@@ -56,6 +56,15 @@
             <view class="contact-icon icon-map"></view>
           </view>
         </view>
+
+        <!-- D2 锁定占位区：仅非主人且存在被锁字段时展示 -->
+        <view class="locked-section" wx:if="{{!isOwner && lockedFields.length > 0}}">
+          <view class="lock-item" wx:for="{{lockedFields}}" wx:key="*this">
+            <text class="lock-icon">🔒</text>
+            <text class="lock-text">登录后查看{{fieldLabel[item]}}</text>
+          </view>
+          <view class="auth-cta" bindtap="showAuthModal">登录查看完整名片</view>
+        </view>
       </view>
     </view>
 
@@ -262,10 +271,10 @@
       <text class="auth-banner-desc">授权微信昵称后，名片主人可以看到您的身份</text>
     </view>
   </view>
-  <view class="auth-banner-actions">
-    <view class="auth-btn-dismiss" bindtap="dismissAuthBanner">暂不</view>
-    <view class="auth-btn-agree" bindtap="onAuthUserInfo">授权</view>
-  </view>
+    <view class="auth-banner-actions">
+      <view class="auth-btn-dismiss" bindtap="dismissAuthBanner">暂不</view>
+      <view class="auth-btn-agree" bindtap="showAuthModal">授权</view>
+    </view>
 </view>
 
 <!-- 团队名片视图（T12）：个人 card 真相源 + 托管字段覆盖层合并 -->
@@ -287,5 +296,31 @@
       <view class="tc-note">个人字段（姓名/私人手机/微信/私人邮箱/地址）始终以本人名片为准，不被团队覆盖。</view>
     </view>
     <view class="tc-close" bindtap="closeTeamCard">关闭</view>
+  </view>
+</view>
+
+<!-- 访客授权弹窗（D1：微信原生 chooseAvatar + nickname input） -->
+<view class="auth-modal" wx:if="{{showAuthModal}}" catchtap="closeAuthModal">
+  <view class="modal-content" catchtap="stopPropagation">
+    <text class="modal-title">登录查看完整名片</text>
+    <text class="modal-desc">授权后名片主人可看到您的身份，您也能查看授权内容</text>
+    <button class="avatar-btn" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
+      <image wx:if="{{authAvatar}}" class="avatar-preview" src="{{authAvatar}}" mode="aspectFill"></image>
+      <view wx:else class="avatar-placeholder"><view class="icon-user"></view></view>
+      <text class="avatar-btn-text">点击选择头像</text>
+    </button>
+    <input
+      class="nickname-input"
+      type="nickname"
+      placeholder="点击填写昵称"
+      placeholder-class="nickname-ph"
+      value="{{authNickname}}"
+      bindinput="onNicknameInput"
+      bind:blur="onNicknameInput"
+    ></input>
+    <view class="modal-actions">
+      <view class="modal-btn cancel" bindtap="closeAuthModal">取消</view>
+      <view class="modal-btn confirm" bindtap="confirmAuth">确认授权</view>
+    </view>
   </view>
 </view>

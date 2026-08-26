@@ -1,6 +1,7 @@
 const app = getApp()
 const storage = require('../../config/storage')
 const team = require('../../utils/team')
+const { FIELD_LABELS } = require('../../config/cardVisibility')
 
 Page({
   data: {
@@ -13,6 +14,15 @@ Page({
     isOwner: false,
     isSaved: false,
     showAuthBanner: false,
+    // P2/D5：服务端卡片视图返回的分级状态
+    isAuthorized: false,
+    lockedFields: [],
+    fieldVisibility: {},
+    fieldLabel: FIELD_LABELS,
+    // 授权弹窗（微信原生 chooseAvatar + nickname）
+    showAuthModal: false,
+    authNickname: '',
+    authAvatar: '',
     // 访客分析（按单卡维度，仅名片主人可见）
     visitorStats: { visitors: 0, viewed: 0 },
     recentVisitors: [],
@@ -65,11 +75,8 @@ Page({
           }
         },
         success: function (result) {
-          // 云函数返回 visitorLevel，用于决定是否展示授权引导
-          var res = result.result || {}
-          if (res.visitorLevel && res.visitorLevel < 2) {
-            that._checkAuthBanner()
-          }
+          // 授权引导改由 loadCard 的 getCardView 返回 isAuthorized 统一判定（P2/D5）
+          // recordVisit 保持原有采集逻辑（P3 才收敛），此处不再触发 banner
         },
         fail: function (err) {
           // 云函数未部署时静默忽略
@@ -115,58 +122,72 @@ Page({
       })
     }, 10000)
 
-    wx.cloud.database().collection('cards').doc(id).get()
-      .then(res => {
-        clearTimeout(this._loadTimer)
-        if (res.data) {
-          var card = {
-            ...res.data,
-            experiences: res.data.experiences || [],
-            attachments: res.data.attachments || [],
-            personalIntro: res.data.personalIntro || '',
-            businessIntro: res.data.businessIntro || '',
-            wechatOfficial: res.data.wechatOfficial || {},
-            companyWebsite: res.data.companyWebsite || {},
-            publicSettings: res.data.publicSettings || {}
-          }
-
-          this.setData({
-            card: card,
-            isLoading: false,
-            isError: false
-          })
-
-          // 记录访问（在卡片数据就绪后调用，确保 cardOwnerId 正确）
-          this.recordVisit(id, this._shareOptions || {})
-
-          // 转换云文件 cloud:// ID 为临时 HTTPS URL（跨设备名片分享时头像可见性修复）
-          this._resolveCardAvatar(card)
-
-          // 判断名片所有权和保存状态
-          this._checkCardOwnership(id)
-
-          // 加载团队徽章（跨用户读，经 teamManager 云函数 admin 上下文）
-          this._loadTeamBadges(id)
-
-          // 若是「从团队详情点成员名片」跳入，自动展开该团队下的托管名片视图
-          if (this._fromTeamId) this._autoOpenTeamCard(id)
-        } else {
-          this.setData({
+    var that = this
+    // D5：访客读卡改走服务端云函数 getCardView，按 fieldVisibility 只下发可见字段
+    wx.cloud.callFunction({
+      name: 'initVisits',
+      data: { action: 'getCardView', data: { cardId: id } },
+      success: function (res) {
+        clearTimeout(that._loadTimer)
+        var r = res.result || {}
+        if (!r.ok || !r.card) {
+          that.setData({
             isLoading: false,
             isError: true,
-            errorMsg: '名片不存在'
+            errorMsg: r.message || '名片不存在'
           })
+          return
         }
-      })
-      .catch(err => {
-        clearTimeout(this._loadTimer)
-        console.error('[Preview] 加载失败:', err)
-        this.setData({
+        var card = Object.assign({}, r.card, {
+          experiences: r.card.experiences || [],
+          attachments: r.card.attachments || [],
+          personalIntro: r.card.personalIntro || '',
+          businessIntro: r.card.businessIntro || '',
+          wechatOfficial: r.card.wechatOfficial || {},
+          companyWebsite: r.card.companyWebsite || {},
+          publicSettings: r.card.publicSettings || {}
+        })
+
+        that.setData({
+          card: card,
+          isOwner: r.isOwner,
+          isAuthorized: r.isAuthorized,
+          lockedFields: r.lockedFields || [],
+          fieldVisibility: r.fieldVisibility || {},
+          isLoading: false,
+          isError: false
+        })
+
+        // 记录访问（在卡片数据就绪后调用，确保 cardOwnerId 正确）
+        that.recordVisit(id, that._shareOptions || {})
+
+        // 转换云文件 cloud:// ID 为临时 HTTPS URL（跨设备名片分享时头像可见性修复）
+        that._resolveCardAvatar(card)
+
+        // 判断名片所有权和保存状态
+        that._checkCardOwnership(id)
+
+        // 加载团队徽章（跨用户读，经 teamManager 云函数 admin 上下文）
+        that._loadTeamBadges(id)
+
+        // 若是「从团队详情点成员名片」跳入，自动展开该团队下的托管名片视图
+        if (that._fromTeamId) that._autoOpenTeamCard(id)
+
+        // 未授权访客 → 展示授权引导（替代原 visitorLevel<2 判定）
+        if (!r.isAuthorized && !r.isOwner) {
+          that._checkAuthBanner()
+        }
+      },
+      fail: function (err) {
+        clearTimeout(that._loadTimer)
+        console.error('[Preview] getCardView 调用失败:', err)
+        that.setData({
           isLoading: false,
           isError: true,
           errorMsg: '加载失败，请重试'
         })
-      })
+      }
+    })
   },
 
   /**
@@ -786,6 +807,69 @@ Page({
       wx.setStorageSync('auth_banner_dismissed_date',
         today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate())
     } catch (e) {}
+  },
+
+  // P2/D1：打开微信原生授权弹窗
+  showAuthModal() {
+    this.setData({ showAuthModal: true })
+  },
+
+  closeAuthModal() {
+    this.setData({ showAuthModal: false })
+  },
+
+  // 微信原生头像授权（button open-type="chooseAvatar"）
+  onChooseAvatar(e) {
+    this.setData({ authAvatar: (e.detail && e.detail.avatarUrl) || '' })
+  },
+
+  // 微信原生昵称输入（type="nickname" input）
+  onNicknameInput(e) {
+    var v = (e.detail && (e.detail.value !== undefined ? e.detail.value : e.detail.nickname)) || ''
+    this.setData({ authNickname: v })
+  },
+
+  // 确认授权：调 authorizeVisit，成功后解锁授权字段
+  confirmAuth() {
+    var that = this
+    var id = this.data.id
+    if (!id) return
+    wx.cloud.callFunction({
+      name: 'initVisits',
+      data: {
+        action: 'authorizeVisit',
+        data: {
+          cardId: id,
+          nickname: this.data.authNickname,
+          avatarUrl: this.data.authAvatar
+        }
+      },
+      success: function (res) {
+        var r = res.result || {}
+        if (r.ok) {
+          that.setData({
+            card: Object.assign({}, r.card, {
+              experiences: r.card.experiences || [],
+              attachments: r.card.attachments || [],
+              personalIntro: r.card.personalIntro || '',
+              businessIntro: r.card.businessIntro || '',
+              wechatOfficial: r.card.wechatOfficial || {},
+              companyWebsite: r.card.companyWebsite || {}
+            }),
+            isAuthorized: true,
+            lockedFields: [],
+            showAuthModal: false
+          })
+          wx.showToast({ title: '已解锁完整名片', icon: 'success' })
+        } else {
+          wx.showToast({ title: r.message || '授权失败', icon: 'none' })
+        }
+      },
+      fail: function (err) {
+        console.error('[Preview] authorizeVisit 调用失败:', err)
+        wx.showToast({ title: '授权失败，请重试', icon: 'none' })
+      }
+    })
   },
 
   /**

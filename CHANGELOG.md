@@ -2,6 +2,18 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.5.0] - 2026-08-26
+
+### Added
+- **访客授权披露（D5 安全模型）**：`cards` 新增 `fieldVisibility`（public/authorized/private 三级）；新增 `initVisits.getCardView`（服务端按 fieldVisibility 过滤下发，越权读卡彻底封堵）+ `authorizeVisit`（访客授权后标记 `visits.authorized` 并回传授权字段）；`edit` 页新增电话/邮箱/地址三态可见性选择器（公开/授权后/仅自己）；`preview` 页读取改走 `getCardView`，未授权访客展示授权引导弹窗与锁定占位区；前端共享 `config/cardVisibility.js` 与云函数 `visibility.js` 双端常量保持一致
+- **名片夹改走云函数读卡（SEC-00 配套）**：`initVisits` 新增 `getCardsBatch`，`list` 页经其 admin 读取他人名片（按 fieldVisibility 只下发公开字段），使 `cards` 集合可安全收紧为「仅创建者可读写」而名片夹不再空白——彻底消除历史「分享后看不到」坑
+
+### Fixed
+- **访客全字段泄露**：原 preview 对访客直连 `cards` 可读完整名片（含私密电话/邮箱），D5 改服务端 `getCardView` 强制过滤后该漏洞关闭
+- **名片夹权限耦合**：移除 `list` 页前端直读 `cards` 集合的残留代码
+
+> 本次 `initVisits` 云函数改动较大（新增 `getCardView` / `authorizeVisit` / `getCardsBatch` + `visibility.js`），改完须**重新上传部署**方生效；`edit` / `preview` / `list` 前端改动开发者工具热重载即可。另：`cards` 等集合权限建议在云开发控制台核验为「仅创建者可读写」（详见审计 `artifacts/security-audit-8dim-2026-08-26.md` 的 SEC-00）。
+
 ## [1.4.3] - 2026-08-26
 
 ### Added

@@ -1,6 +1,7 @@
 const app = getApp()
 var storage = require('../../config/storage')
 const team = require('../../utils/team')
+const { DEFAULT_FIELD_VISIBILITY } = require('../../config/cardVisibility')
 
 Page({
   data: {
@@ -36,7 +37,9 @@ Page({
     managedFieldMap: {},
     hasManagedFields: false,
     inviteCode: '',
-    isJoining: false
+    isJoining: false,
+    // 字段级可见性（P1）：敏感字段默认 authorized，其余默认 public
+    fieldVisibility: { ...DEFAULT_FIELD_VISIBILITY }
   },
 
   onLoad(options) {
@@ -95,6 +98,7 @@ Page({
               showCompanyWebsite: true,
               showAttachments: true
             },
+            fieldVisibility: data.fieldVisibility || { ...DEFAULT_FIELD_VISIBILITY },
             isLoading: false
           })
         } else {
@@ -367,6 +371,14 @@ Page({
     })
   },
 
+  // P1 字段级可见性三态切换：public / authorized / private
+  onVisibilityChange(e) {
+    const field = e.currentTarget.dataset.field
+    const value = e.currentTarget.dataset.value
+    if (!field || !value) return
+    this.setData({ [`fieldVisibility.${field}`]: value })
+  },
+
   clearError(field) {
     const errors = { ...this.data.errors }
     delete errors[field]
@@ -404,6 +416,7 @@ Page({
       wechatOfficial: this.data.wechatOfficial,
       companyWebsite: this.data.companyWebsite,
       publicSettings: this.data.publicSettings,
+      fieldVisibility: this.data.fieldVisibility,
       updateTime: new Date()
     }
 

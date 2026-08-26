@@ -67,61 +67,83 @@ Page({
     })
   },
 
-  /**
-   * 根据 ID 列表批量获取名片
-   */
+  // 经云函数 admin 读卡（cards 集合权限为「仅创建者可读写」后，前端不可直读他人卡）
   _fetchCardsByIds(cardIds) {
-    var db = wx.cloud.database()
-    var _ = db.command
+    if (!wx.cloud) {
+      this.setData({ isLoading: false, isEmpty: true })
+      wx.showToast({ title: '云开发未初始化', icon: 'none' })
+      return
+    }
+    if (!cardIds || cardIds.length === 0) {
+      this.setData({ cards: [], isLoading: false, isEmpty: true })
+      return
+    }
 
-    db.collection('cards')
-      .where({ _id: _.in(cardIds) })
-      .get()
-      .then((res) => {
-        var cards = res.data || []
+    var that = this
+    wx.cloud.callFunction({
+      name: 'initVisits',
+      data: { action: 'getCardsBatch', data: { cardIds: cardIds } },
+      success: function (res) {
+        var r = res.result || {}
+        if (!r.ok) {
+          console.error('[List] getCardsBatch 失败:', r.message)
+          that.setData({ isLoading: false, isEmpty: true })
+          wx.showToast({ title: '获取失败，请下拉刷新', icon: 'none' })
+          return
+        }
+        that._onCardsLoaded(r.cards || [])
+      },
+      fail: function (err) {
+        console.error('[List] getCardsBatch 调用失败:', err)
+        that.setData({ isLoading: false, isEmpty: true })
+        wx.showToast({ title: '获取失败，请下拉刷新', icon: 'none' })
+      }
+    })
+  },
 
-        // 转换 cloud:// 头像为临时 HTTPS URL（跨设备可见性修复）
-        var cloudAvatars = []
+  // 名片数据就绪后的统一处理：转换 cloud:// 头像 + 合并团队信息 + 渲染
+  _onCardsLoaded(cards) {
+    if (!cards || cards.length === 0) {
+      this.setData({ cards: [], isLoading: false, isEmpty: true })
+      return
+    }
+
+    // 转换 cloud:// 头像为临时 HTTPS URL（跨设备可见性修复）
+    var cloudAvatars = []
+    cards.forEach(function (c) {
+      if (c.avatar && c.avatar.indexOf('cloud://') === 0) {
+        cloudAvatars.push(c.avatar)
+      }
+    })
+
+    var finishLoad = function (cards) {
+      this._mergeTeamInfo(cards).then(function (cardsWithTeams) {
+        this.setData({
+          cards: cardsWithTeams,
+          isLoading: false,
+          isEmpty: cardsWithTeams.length === 0
+        })
+        this._applyFilter()
+      }.bind(this))
+    }.bind(this)
+
+    if (cloudAvatars.length > 0) {
+      app.resolveCloudFileIDs(cloudAvatars).then(function (urlMap) {
         cards.forEach(function (c) {
-          if (c.avatar && c.avatar.indexOf('cloud://') === 0) {
-            cloudAvatars.push(c.avatar)
+          if (urlMap[c.avatar]) {
+            c.avatar = urlMap[c.avatar]
           }
         })
-
-        var finishLoad = function (cards) {
-          this._mergeTeamInfo(cards).then(function (cardsWithTeams) {
-            this.setData({
-              cards: cardsWithTeams,
-              isLoading: false,
-              isEmpty: cardsWithTeams.length === 0
-            })
-            this._applyFilter()
-          }.bind(this))
-        }.bind(this)
-
-        if (cloudAvatars.length > 0) {
-          app.resolveCloudFileIDs(cloudAvatars).then(function (urlMap) {
-            cards.forEach(function (c) {
-              if (urlMap[c.avatar]) {
-                c.avatar = urlMap[c.avatar]
-              }
-            })
-            // 兜底：将未解析成功的 cloud:// URL 替换为默认头像，避免渲染层加载失败
-            this._fallbackCloudAvatars(cards)
-            finishLoad(cards)
-          }.bind(this)).catch(function () {
-            this._fallbackCloudAvatars(cards)
-            finishLoad(cards)
-          }.bind(this))
-        } else {
-          finishLoad(cards)
-        }
-      })
-      .catch((err) => {
-        console.error('[List] 获取名片失败:', err)
-        this.setData({ isLoading: false })
-        wx.showToast({ title: '获取失败，请下拉刷新', icon: 'none' })
-      })
+        // 兜底：将未解析成功的 cloud:// URL 替换为默认头像，避免渲染层加载失败
+        this._fallbackCloudAvatars(cards)
+        finishLoad(cards)
+      }.bind(this)).catch(function () {
+        this._fallbackCloudAvatars(cards)
+        finishLoad(cards)
+      }.bind(this))
+    } else {
+      finishLoad(cards)
+    }
   },
 
   /**

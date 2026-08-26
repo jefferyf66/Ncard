@@ -3,6 +3,28 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
+// 字段级可见性默认配置（与前端 miniprogram/config/cardVisibility.js 保持一致）
+const DEFAULT_FIELD_VISIBILITY = require('./visibility').DEFAULT_FIELD_VISIBILITY
+
+// 按 fieldVisibility 服务端过滤：只返回访客可见字段
+// public 恒返；authorized 仅 isOwner||isAuthorized 返；private 永不返（D5 安全模型）
+function filterCardByVisibility(card, fv, isOwner, isAuthorized) {
+  const out = { _id: card._id }
+  if (isOwner && card._openid) out._openid = card._openid
+  const fields = Object.keys(card)
+  for (const k of fields) {
+    if (k === '_id' || k === '_openid' || k === 'fieldVisibility') continue
+    const vis = (fv && fv[k]) || DEFAULT_FIELD_VISIBILITY[k] || 'public'
+    if (vis === 'public') {
+      out[k] = card[k]
+    } else if (vis === 'authorized' && (isOwner || isAuthorized)) {
+      out[k] = card[k]
+    }
+    // private 或未授权的 authorized → 跳过，不下发
+  }
+  return out
+}
+
 exports.main = async (event, context) => {
   // 服务端身份（唯一可信来源，绝不读 event 传入的 openid）
   const { OPENID } = cloud.getWXContext()
@@ -249,6 +271,166 @@ exports.main = async (event, context) => {
         viewed: repeatResult.total || 0,
         recentVisitors: recentResult.data || []
       }
+    }
+
+    // D5 服务端卡片视图：访客读卡改走云函数，按 fieldVisibility 只下发可见字段
+    case 'getCardView': {
+      const { cardId } = data || {}
+      if (!cardId || !OPENID) return { ok: false, message: '参数不完整' }
+
+      let cardDoc
+      try {
+        cardDoc = await db.collection('cards').doc(cardId).get()
+      } catch (e) {
+        return { ok: false, message: '名片不存在' }
+      }
+      const card = cardDoc.data
+      const isOwner = card._openid === OPENID
+      const fv = card.fieldVisibility || null
+
+      let isAuthorized = false
+      let lockedFields = []
+      if (!isOwner) {
+        // 该访客是否存在已授权访问记录
+        const v = await db.collection('visits')
+          .where({ cardId, visitorOpenId: OPENID, authorized: true })
+          .limit(1)
+          .get()
+        isAuthorized = !!(v.data && v.data.length > 0)
+        // 计算被锁字段（authorized 且当前不可见）
+        const visMap = fv || DEFAULT_FIELD_VISIBILITY
+        for (const [k, vis] of Object.entries(visMap)) {
+          if (vis === 'authorized') lockedFields.push(k)
+        }
+      }
+
+      const visible = filterCardByVisibility(card, fv, isOwner, isAuthorized)
+      return {
+        ok: true,
+        card: visible,
+        isOwner,
+        isAuthorized,
+        fieldVisibility: fv || DEFAULT_FIELD_VISIBILITY,
+        lockedFields
+      }
+    }
+
+    // 名片夹批量读卡：cards 集合权限收紧为「仅创建者可读写」后，前端不可直读他人卡
+    // 经云函数 admin 读取，按 fieldVisibility 只下发公开字段（isOwner=false, isAuthorized=false）
+    case 'getCardsBatch': {
+      const { cardIds = [] } = data || {}
+      if (!Array.isArray(cardIds) || cardIds.length === 0) {
+        return { ok: true, cards: [] }
+      }
+      // 封顶，避免超大请求
+      const ids = cardIds.slice(0, 100)
+      const cardRes = await db.collection('cards')
+        .where({ _id: db.command.in(ids) })
+        .limit(100)
+        .get()
+      const cards = (cardRes.data || []).map(card => {
+        const fv = card.fieldVisibility || null
+        return filterCardByVisibility(card, fv, false, false)
+      })
+      return { ok: true, cards }
+    }
+
+    // 访客授权：标记 visit.authorized=true + 按 L2 enrich + 回传授权后可见字段（D1/D2）
+    case 'authorizeVisit': {
+      const { cardId, nickname, avatarUrl } = data || {}
+      if (!cardId || !OPENID) return { ok: false, message: '参数不完整' }
+      const visitorOpenId = OPENID
+
+      // 名片归属以数据库为准
+      let cardOwnerId = ''
+      let cardName = ''
+      let cardDoc
+      try {
+        cardDoc = await db.collection('cards').doc(cardId).get()
+        cardOwnerId = (cardDoc.data && cardDoc.data._openid) || ''
+        cardName = (cardDoc.data && cardDoc.data.name) || ''
+      } catch (e) { /* 名片不存在 */ }
+      if (!cardOwnerId) return { ok: false, message: '名片不存在' }
+
+      // 主人自己的名片无需授权（前端也不会触发），直接返回全字段
+      if (visitorOpenId === cardOwnerId) {
+        const visible = filterCardByVisibility(cardDoc.data, cardDoc.data.fieldVisibility, true, false)
+        return { ok: true, authorized: true, isOwner: true, card: visible, lockedFields: [] }
+      }
+
+      // 1) 写/更新 visitor_profiles（L2 身份源）
+      const profileRes = await db.collection('visitor_profiles')
+        .where({ openid: visitorOpenId })
+        .limit(1)
+        .get()
+      if (profileRes.data && profileRes.data.length > 0) {
+        await db.collection('visitor_profiles').doc(profileRes.data[0]._id).update({
+          data: {
+            nickname: nickname || '',
+            avatarUrl: avatarUrl || '',
+            authorizedAt: new Date()
+          }
+        })
+      } else {
+        await db.collection('visitor_profiles').add({
+          data: {
+            openid: visitorOpenId,
+            nickname: nickname || '',
+            avatarUrl: avatarUrl || '',
+            authorizedAt: new Date()
+          }
+        })
+      }
+
+      // 2) 找/建本次 visit 并标 authorized=true（复用 30 分钟同一次逻辑）
+      const now = new Date()
+      const recent = await db.collection('visits')
+        .where({ cardId, visitorOpenId })
+        .orderBy('visitTime', 'desc')
+        .limit(1)
+        .get()
+
+      let visitId
+      if (recent.data && recent.data.length > 0) {
+        const lastVisit = new Date(recent.data[0].visitTime)
+        const diffMin = (now - lastVisit) / 1000 / 60
+        if (diffMin < 30) {
+          visitId = recent.data[0]._id
+          await db.collection('visits').doc(visitId).update({
+            data: {
+              authorized: true,
+              visitorName: nickname || '',
+              visitorAvatar: avatarUrl || '',
+              visitorLevel: Math.max(recent.data[0].visitorLevel || 1, 2),
+              visitTime: now
+            }
+          })
+        }
+      }
+      if (!visitId) {
+        const r = await db.collection('visits').add({
+          data: {
+            cardId,
+            cardOwnerId,
+            visitorOpenId,
+            authorized: true,
+            visitorName: nickname || '',
+            visitorAvatar: avatarUrl || '',
+            visitorLevel: 2,
+            visitTime: now,
+            visitCount: 1,
+            actions: [],
+            cardName,
+            source: 'authorized'
+          }
+        })
+        visitId = r._id
+      }
+
+      // 3) 返回授权后可见字段（同 getCardView 过滤，isAuthorized=true）
+      const afterRes = await db.collection('cards').doc(cardId).get()
+      const visible = filterCardByVisibility(afterRes.data, afterRes.data.fieldVisibility, false, true)
+      return { ok: true, authorized: true, card: visible, lockedFields: [] }
     }
 
     default:

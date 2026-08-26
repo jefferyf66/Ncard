@@ -161,6 +161,11 @@
 
 详见 [CHANGELOG.md](CHANGELOG.md)
 
+### v1.5.0 (2026-08-26)
+- 🔐 访客授权披露（D5 安全模型）：`fieldVisibility` 三级可见性 + 服务端 `getCardView` 强制过滤 + `authorizeVisit` 授权流；`edit` 三态可见性开关、`preview` 授权引导与锁定占位，越权读卡漏洞关闭
+- 📂 名片夹改走云函数读卡（`getCardsBatch`），`cards` 集合可安全收紧为「仅创建者可读写」而名片夹不再空白
+- ☁️ `initVisits` 须重新上传部署（覆盖 getCardView/authorizeVisit/getCardsBatch + visibility.js）
+
 ### v1.4.3 (2026-08-26)
 - ✨ 访客来源按名片区分：显示具体名片名并可点击跳转该卡详情，全局访客视图按名片归属一目了然
 - 🐛 修复访客头像裸 `cloud://` 渲染失败（visitorAvatar 未过 `storage.resolveCloudUrl`）
