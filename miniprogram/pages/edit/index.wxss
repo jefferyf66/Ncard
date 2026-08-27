@@ -654,3 +654,39 @@
   font-size: 28rpx; font-weight: 600; padding: 20rpx 32rpx; border-radius: 12rpx;
 }
 .join-btn.disabled { opacity: 0.6; }
+
+/* ===== 公众号二维码上传 ===== */
+.qr-item { align-items: flex-start; }
+.qr-uploader {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.qr-thumb {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 4rpx;
+  border: 2rpx solid #E2E8F0;
+}
+.qr-placeholder {
+  width: 160rpx;
+  height: 160rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx dashed #CBD5E1;
+  border-radius: 4rpx;
+  font-size: 22rpx;
+  color: #94A3B8;
+  padding: 0 12rpx;
+  text-align: center;
+}
+.qr-placeholder:active { border-color: #3B82F6; }
+.form-hint {
+  display: block;
+  font-size: 22rpx;
+  color: #94A3B8;
+  padding: 8rpx 0 0;
+  line-height: 1.5;
+}

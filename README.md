@@ -161,6 +161,11 @@
 
 详见 [CHANGELOG.md](CHANGELOG.md)
 
+### v1.5.2 (2026-08-27)
+- 🟢 名片公众号二维码展示与关注：`wechatOfficial` 新增 `qrcode` 字段，编辑页可上传二维码；对外页点公众号卡片弹出二维码弹窗，收卡人长按识别关注（合规跨主体，聊转/扫码全可用），无码降级复制链接
+- 💡 编辑页新增公众号二维码获取指引文案，消除主人"不知去哪拿二维码"卡点
+- 🖥️ 纯前端改动，开发者工具热重载即可；无需部署云函数
+
 ### v1.5.1 (2026-08-26)
 - 🔄 访客身份读时解析（方案 A）：新增 `resolveVisitorIdentities` 批量查 cards(L3)+visitor_profiles(L2) 覆盖回传，根治访客升级身份后列表不刷新
 - 🔒 封堵 SEC-03 访客电话泄露：`getRecentVisitors`/`getMyVisitorDashboard` 读取侧无条件 `delete v.visitorPhone`

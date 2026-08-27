@@ -286,6 +286,15 @@
           <text class="form-label">公众号链接</text>
           <input class="form-input" placeholder="https://mp.weixin.qq.com/..." value="{{wechatOfficial.url}}" bindinput="onWechatInput" data-field="url" />
         </view>
+        <view class="form-item qr-item">
+          <text class="form-label">公众号二维码</text>
+          <view class="qr-uploader" bindtap="onChooseOfficialQR">
+            <image wx:if="{{wechatOfficial.qrcode}}" class="qr-thumb" src="{{wechatOfficial.qrcode}}" mode="aspectFit" />
+            <view wx:else class="qr-placeholder">点击上传二维码图片</view>
+          </view>
+        </view>
+        <text class="form-hint">获取方式：微信中打开你的公众号 → 右上角··· → 更多信息 → 公众号二维码 → 长按保存图片，回到此处上传即可</text>
+        <text class="form-hint">访客在名片页点击后可长按二维码识别关注</text>
       </view>
 
       <view class="form-divider"></view>

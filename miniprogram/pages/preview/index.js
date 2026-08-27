@@ -30,7 +30,10 @@ Page({
     teamBadges: [],
     showTeamCard: false,
     teamCardView: null,
-    teamCardName: ''
+    teamCardName: '',
+    // 公众号二维码弹窗（长按识别关注）
+    showOfficialQR: false,
+    officialQRUrl: ''
   },
 
   onLoad(options) {
@@ -473,21 +476,37 @@ Page({
 
   openWechatOfficial() {
     const { wechatOfficial } = this.data.card
-    if (!wechatOfficial?.url) {
-      app.showError('暂无公众号链接')
+    if (!wechatOfficial) {
+      app.showError('暂无公众号信息')
       return
     }
-    
-    wx.setClipboardData({
-      data: wechatOfficial.url,
-      success: () => {
-        app.showSuccess('链接已复制，请在微信中打开')
-      },
-      fail: (err) => {
-        if (!app.showPrivacyError(err)) app.showError('复制失败')
-      }
-    })
+    // 优先展示二维码：点击弹出，访客长按识别关注（合规路径）
+    if (wechatOfficial.qrcode) {
+      this.setData({ showOfficialQR: true, officialQRUrl: wechatOfficial.qrcode })
+      return
+    }
+    // 降级：仅有链接时复制（极少用）
+    if (wechatOfficial.url) {
+      wx.setClipboardData({
+        data: wechatOfficial.url,
+        success: () => {
+          app.showSuccess('链接已复制，请在微信中打开')
+        },
+        fail: (err) => {
+          if (!app.showPrivacyError(err)) app.showError('复制失败')
+        }
+      })
+      return
+    }
+    app.showError('暂无公众号链接')
   },
+
+  closeOfficialQR() {
+    this.setData({ showOfficialQR: false, officialQRUrl: '' })
+  },
+
+  // 阻止冒泡：点击弹窗内部不关闭
+  noop() {},
 
   openCompanyWebsite() {
     const { companyWebsite } = this.data.card

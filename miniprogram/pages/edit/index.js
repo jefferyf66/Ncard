@@ -20,7 +20,7 @@ Page({
     businessIntro: '',
     experiences: [],
     attachments: [],
-    wechatOfficial: { name: '', desc: '', url: '' },
+    wechatOfficial: { name: '', desc: '', url: '', qrcode: '' },
     companyWebsite: { name: '', url: '', desc: '' },
     publicSettings: {
       showPersonalIntro: true,
@@ -88,7 +88,7 @@ Page({
             businessIntro: data.businessIntro || '',
             experiences: data.experiences || [],
             attachments: data.attachments || [],
-            wechatOfficial: data.wechatOfficial || { name: '', desc: '', url: '' },
+            wechatOfficial: data.wechatOfficial || { name: '', desc: '', url: '', qrcode: '' },
             companyWebsite: data.companyWebsite || { name: '', url: '', desc: '' },
             publicSettings: data.publicSettings || {
               showPersonalIntro: true,
@@ -345,6 +345,46 @@ Page({
       wechatOfficial: {
         ...this.data.wechatOfficial,
         [field]: value
+      }
+    })
+  },
+
+  // 上传公众号二维码：存为 cloud:// fileID（微信原生渲染 + 长按识别关注）
+  onChooseOfficialQR() {
+    wx.chooseImage({
+      count: 1,
+      sizeType: ['original', 'compressed'],
+      sourceType: ['album', 'camera'],
+      success: (res) => {
+        const temp = (res.tempFilePaths && res.tempFilePaths[0]) || ''
+        if (!temp) return
+        app.showLoading('上传中')
+        const oldQR = this.data.wechatOfficial.qrcode
+        const cloudPath = 'qrcodes/' + Date.now() + '.jpg'
+        wx.cloud.uploadFile({
+          cloudPath,
+          filePath: temp,
+          success: (up) => {
+            app.hideLoading()
+            this.setData({
+              wechatOfficial: Object.assign({}, this.data.wechatOfficial, { qrcode: up.fileID })
+            })
+            if (oldQR && oldQR.indexOf('cloud://') === 0) {
+              wx.cloud.deleteFile({ fileList: [oldQR] }).catch(function () {})
+            }
+            app.showSuccess('二维码已上传')
+          },
+          fail: () => {
+            app.hideLoading()
+            app.showError('二维码上传失败，请重试')
+          }
+        })
+      },
+      fail: (err) => {
+        const errMsg = (err && err.errMsg) || ''
+        if (errMsg.indexOf('cancel') > -1) return
+        if (app.showPrivacyError(err)) return
+        app.showError('选择图片失败')
       }
     })
   },

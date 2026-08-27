@@ -2,6 +2,15 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.5.2] - 2026-08-27
+
+### Added
+- **名片公众号二维码展示与关注**：`wechatOfficial` 字段新增 `qrcode`（cloud:// 图片，存于云存储 `qrcodes/`）；编辑页新增二维码上传控件（`onChooseOfficialQR` 选图→上传→持久化）；对外页 `preview` 点击公众号卡片弹出二维码弹窗（`<image show-menu-by-longpress>` 支持收卡人**长按识别关注**，合规跨主体、聊转分享均可用）；无二维码时降级为复制链接
+- **编辑页获取指引**：公众号二维码上传框下方新增面向名片主人的获取文案（"微信中打开你的公众号 → 右上角··· → 更多信息 → 公众号二维码 → 长按保存图片，回到此处上传即可"），消除"不知去哪拿二维码"卡点
+
+### Changed
+- 对外页公众号卡片展示条件放宽（有 `url` 或 `qrcode` 即显示）；`openWechatOfficial` 由"复制链接"升级为"有二维码优先弹窗、否则降级复制"
+
 ## [1.5.1] - 2026-08-26
 
 ### Added
