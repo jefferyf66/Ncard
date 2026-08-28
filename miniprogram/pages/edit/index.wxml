@@ -285,7 +285,7 @@
             <view wx:else class="qr-placeholder">点击上传二维码图片</view>
           </view>
         </view>
-        <text class="form-hint">获取方式：微信中打开你的公众号 → 右上角··· → 更多信息 → 公众号二维码 → 长按保存图片，回到此处上传即可</text>
+        <text class="form-hint">获取方式（高清·推荐）：电脑登录 mp.weixin.qq.com → 设置与开发 → 公众号设置 → 账号详情 → 下载二维码；手机端公众号主页「更多资料」部分账号不显示二维码，统一以电脑端后台为准</text>
         <text class="form-hint">访客在名片页点击后可长按二维码识别关注</text>
       </view>
 
