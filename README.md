@@ -161,6 +161,12 @@
 
 详见 [CHANGELOG.md](CHANGELOG.md)
 
+### v1.5.3 (2026-08-28)
+- 🧹 后台「未命名」用户批量归档（仅 root）：`adminManager.batchArchiveUnnamed` 查 `nickname='' AND active` 普通用户（排除 admin/root/本人），默认 dryRun 仅返回候选清单，显式 `dryRun=false` 才归档并写审计
+- 🎯 启动昵称补全软引导：`app.js` 对用户昵称为空且非 admin/root 时跳账号设置页"请先完善昵称"，已有昵称不骚扰
+- ✂️ 编辑页 A+B 配置精简：`wechatOfficial` 改为 `{name,qrcode}`（去 url/desc）、`companyWebsite` 去 desc
+- ☁️ `adminManager` 须重新上传部署；app.js 热重载即可
+
 ### v1.5.2 (2026-08-27)
 - 🟢 名片公众号二维码展示与关注：`wechatOfficial` 新增 `qrcode` 字段，编辑页可上传二维码；对外页点公众号卡片弹出二维码弹窗，收卡人长按识别关注（合规跨主体，聊转/扫码全可用），无码降级复制链接
 - 💡 编辑页新增公众号二维码获取指引文案，消除主人"不知去哪拿二维码"卡点

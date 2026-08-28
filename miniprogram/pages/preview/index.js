@@ -476,29 +476,12 @@ Page({
 
   openWechatOfficial() {
     const { wechatOfficial } = this.data.card
-    if (!wechatOfficial) {
-      app.showError('暂无公众号信息')
+    if (!wechatOfficial || !wechatOfficial.qrcode) {
+      app.showError('请上传公众号二维码')
       return
     }
-    // 优先展示二维码：点击弹出，访客长按识别关注（合规路径）
-    if (wechatOfficial.qrcode) {
-      this.setData({ showOfficialQR: true, officialQRUrl: wechatOfficial.qrcode })
-      return
-    }
-    // 降级：仅有链接时复制（极少用）
-    if (wechatOfficial.url) {
-      wx.setClipboardData({
-        data: wechatOfficial.url,
-        success: () => {
-          app.showSuccess('链接已复制，请在微信中打开')
-        },
-        fail: (err) => {
-          if (!app.showPrivacyError(err)) app.showError('复制失败')
-        }
-      })
-      return
-    }
-    app.showError('暂无公众号链接')
+    // 展示二维码：点击弹出，访客长按识别关注（合规路径）
+    this.setData({ showOfficialQR: true, officialQRUrl: wechatOfficial.qrcode })
   },
 
   closeOfficialQR() {

@@ -22,7 +22,8 @@ exports.main = async (event, context) => {
     listTeams: listTeams,
     setUserRole: setUserRole,
     transferRoot: transferRoot,
-    disbandTeam: disbandTeam
+    disbandTeam: disbandTeam,
+    batchArchiveUnnamed: batchArchiveUnnamed
   }
   const fn = handlers[action]
   if (!fn) return { success: false, error: 'unknown action: ' + action }
@@ -37,7 +38,7 @@ exports.main = async (event, context) => {
 
   // 权限门槛
   const needAdmin = ['getUserStats', 'listUsers', 'getUserDetail', 'listTeams', 'disbandTeam']
-  const needRoot = ['setUserRole', 'transferRoot']
+  const needRoot = ['setUserRole', 'transferRoot', 'batchArchiveUnnamed']
   if (needAdmin.indexOf(action) > -1 && ROLE_LEVEL[myRole] < ROLE_LEVEL.admin) {
     return { success: false, error: '需要 admin 及以上权限' }
   }
@@ -167,6 +168,66 @@ async function disbandTeam(OPENID, myRole, event) {
   await db.collection('team_invites').where({ teamId }).remove()
   await writeAudit(OPENID, 'disband_team', { teamId, name: team.data.name })
   return { success: true }
+}
+
+/**
+ * 批量归档「未命名」用户（仅 root）
+ * 仅把 nickname='' 且 status='active' 的普通用户（排除 root/admin、排除操作者本人）置为 status='deleted'。
+ * 默认 dryRun=true：只返回候选清单，不动库，避免误清。
+ * 真实模式：逐用户归档 + 单条审计日志。
+ */
+async function batchArchiveUnnamed(OPENID, myRole, event) {
+  const dryRun = event.dryRun !== false // 默认 true，必须显式传 false 才真跑
+  const PAGE = 1000
+
+  // 候选筛选：未命名 + 活跃 + 非运营角色；调用者本人单独排除在循环内
+  const where = {
+    nickname: '',
+    status: 'active',
+    role: _.neq('admin') // 直接排除 admin/root 角色（role 字段存字符串）
+  }
+  // 注意：role 可能是 'user'/'admin'/'root' 字符串，_.neq('admin') 仍会命中 root；
+  // 为安全起见循环内再显式跳过 root，双保险。
+  const candidates = []
+  let skip = 0
+  while (true) {
+    const page = await db.collection('users').where(where).skip(skip).limit(PAGE).get()
+    const rows = page.data || []
+    for (const u of rows) {
+      if (u._openid === OPENID) continue       // 不归档自己
+      if (u.role === 'root' || u.role === 'admin') continue // 双保险排除运营账号
+      candidates.push({
+        _id: u._id,
+        openid: u._openid,
+        role: u.role || 'user',
+        loginCount: u.loginCount || 0,
+        registeredAt: u.registeredAt || 0,
+        lastLoginAt: u.lastLoginAt || 0
+      })
+    }
+    if (rows.length < PAGE) break
+    skip += PAGE
+  }
+
+  if (dryRun) {
+    return { success: true, data: { dryRun: true, count: candidates.length, candidates } }
+  }
+
+  // 真实归档：逐用户 status='deleted' + 审计
+  let archived = 0
+  const failed = []
+  for (const c of candidates) {
+    try {
+      await db.collection('users').doc(c._id).update({
+        data: { status: 'deleted', deletedAt: Date.now(), updatedAt: Date.now() }
+      })
+      await writeAudit(OPENID, 'archive_unnamed', { target: c.openid, role: c.role })
+      archived++
+    } catch (e) {
+      failed.push({ openid: c.openid, error: (e && e.message) || String(e) })
+    }
+  }
+  return { success: true, data: { dryRun: false, archived, total: candidates.length, failed } }
 }
 
 async function writeAudit(operatorOpenid, action, detail) {

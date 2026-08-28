@@ -2,6 +2,17 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.5.3] - 2026-08-28
+
+### Added
+- **后台「未命名」用户批量归档（仅 root）**：`adminManager` 新增 `batchArchiveUnnamed` action；查询 `nickname='' AND status='active'` 的活跃普通用户（自动排除 admin/root 角色与操作者本人），默认 `dryRun=true` 仅返回候选清单不动库，显式传 `dryRun=false` 才真归档（`status='deleted'` + 单条 `admin_audit_log`），并回报 `archived/total/failed` 计数；管理员可据此一键清理历史测试/小号噪声账号
+- **启动昵称补全软引导**：`app.js` 在 `ensureUser` 成功后检测——仅当 `nickname` 为空且 `status='active'` 且角色非 admin/root 且当前不处于账号设置页时，延迟跳 `account` 页并提示「请先完善昵称」；已有昵称用户（含 root 本人）绝不打扰，根治"未来新用户空昵称不提示"的增量问题
+
+### Changed
+- 编辑页 `wechatOfficial` 精简为 `{name, qrcode}`（移除 `url`/`desc` 冗余配置项）；`companyWebsite` 移除 `desc` 字段；对外页公众号无二维码时由"复制链接"降级为提示"请上传公众号二维码"（A+B 配置精简，并入本版打 tag）
+
+> 本次 `adminManager` 云函数改动须**重新上传部署**方生效；`app.js` 前端改动开发者工具热重载即可。批量归档为不可逆操作，执行前务必先以 `dryRun=true` 审阅候选清单。
+
 ## [1.5.2] - 2026-08-27
 
 ### Added

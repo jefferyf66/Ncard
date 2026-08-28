@@ -20,8 +20,8 @@ Page({
     businessIntro: '',
     experiences: [],
     attachments: [],
-    wechatOfficial: { name: '', desc: '', url: '', qrcode: '' },
-    companyWebsite: { name: '', url: '', desc: '' },
+    wechatOfficial: { name: '', qrcode: '' },
+    companyWebsite: { name: '', url: '' },
     publicSettings: {
       showPersonalIntro: true,
       showBusinessIntro: true,
@@ -88,8 +88,8 @@ Page({
             businessIntro: data.businessIntro || '',
             experiences: data.experiences || [],
             attachments: data.attachments || [],
-            wechatOfficial: data.wechatOfficial || { name: '', desc: '', url: '', qrcode: '' },
-            companyWebsite: data.companyWebsite || { name: '', url: '', desc: '' },
+            wechatOfficial: data.wechatOfficial || { name: '', qrcode: '' },
+            companyWebsite: data.companyWebsite || { name: '', url: '' },
             publicSettings: data.publicSettings || {
               showPersonalIntro: true,
               showBusinessIntro: true,

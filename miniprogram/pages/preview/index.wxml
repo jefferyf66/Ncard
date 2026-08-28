@@ -131,14 +131,14 @@
       </view>
     </view>
 
-    <view class="section-card" wx:if="{{card.wechatOfficial && card.wechatOfficial.name && (card.wechatOfficial.url || card.wechatOfficial.qrcode) && (!card.publicSettings || card.publicSettings.showWechatOfficial !== false)}}">
+    <view class="section-card" wx:if="{{card.wechatOfficial && card.wechatOfficial.name && card.wechatOfficial.qrcode && (!card.publicSettings || card.publicSettings.showWechatOfficial !== false)}}">
       <view class="link-card" bindtap="openWechatOfficial">
         <view class="link-icon-wrap">
           <view class="icon-wechat"></view>
         </view>
         <view class="link-info">
           <text class="link-name">{{card.wechatOfficial.name}}</text>
-          <text class="link-desc">{{card.wechatOfficial.desc || '点击查看二维码'}}</text>
+          <text class="link-desc">点击查看二维码</text>
         </view>
         <view class="link-arrow">
           <view class="icon-arrow-right"></view>
@@ -162,7 +162,7 @@
         </view>
         <view class="link-info">
           <text class="link-name">{{card.companyWebsite.name || '公司主页'}}</text>
-          <text class="link-desc">{{card.companyWebsite.desc || '访问公司官网'}}</text>
+          <text class="link-desc">访问公司官网</text>
         </view>
         <view class="link-arrow">
           <view class="icon-arrow-right"></view>

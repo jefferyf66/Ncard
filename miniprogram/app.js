@@ -2,7 +2,7 @@ var storage = require('./config/storage')
 
 // 应用版本号唯一真源（关于页等展示用）
 // ⚠️ 发版打 tag 时必须同步更新此值（见 tag-changelog-reconcile 发版约定）
-const APP_VERSION = '1.5.2'
+const APP_VERSION = '1.5.3'
 
 App({
   globalData: {
@@ -18,7 +18,35 @@ App({
     this.getSystemInfo()
     this.initCloud()
     // 启动即确保账号存在（fire-and-forget，失败不影响启动）
-    this.ensureUser()
+    this.ensureUser().then((user) => {
+      if (user) this.guideIfUnnamed(user)
+    })
+  },
+
+  /**
+   * 启动软引导：未命名用户跳账号设置页补全昵称
+   * 触发条件严控（Q2：仅未归档的活跃普通用户，跳过 admin/root）：
+   *   1) ensureUser 成功且返回 user
+   *   2) status==='active' 且 nickname 为空字符串
+   *   3) role 非 admin/root（运营账号放行，避免假阳性打扰 root 本人）
+   *   4) 当前页面栈顶部已非 account 页（防循环跳转）
+   * 已有昵称的用户（如 root 本人）绝不打扰。
+   */
+  guideIfUnnamed(user) {
+    if (!user || user.status === 'deleted') return
+    if (user.nickname && user.nickname.trim()) return // 已有昵称，不骚扰
+    const role = user.role || 'user'
+    if (role === 'admin' || role === 'root') return
+    // 延迟到页面栈稳定后再判断与跳转（onLaunch 阶段 getCurrentPages 可能为空）
+    setTimeout(() => {
+      try {
+        const pages = getCurrentPages()
+        const top = pages[pages.length - 1]
+        if (top && top.route && top.route.indexOf('account/index') > -1) return
+      } catch (e) {}
+      wx.showToast({ title: '请先完善昵称', icon: 'none', duration: 1500 })
+      wx.navigateTo({ url: '/pages/account/index' })
+    }, 1200)
   },
 
   getSystemInfo() {
