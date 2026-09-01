@@ -56,6 +56,37 @@ exports.main = async (event, context) => {
     })
   }
 
+  // 2.1 存储治理 A1：级联删除分享图（此前从不清理，是 sharecards/ 只增不减的主因）
+  // sharecards 路径由 cardId 确定性推导：sharecards/card_<cardId>.jpg
+  // fileID 前缀（cloud://<env>.<bucket>）从本名片任意已知 cloud:// 引用提取
+  try {
+    var shareFileIDs = {}
+    var prefix = ''
+    var probe = [card.avatar, card.shareImageFileID].concat((card.attachments || []).map(function (a) { return a.url }))
+    for (var i = 0; i < probe.length; i++) {
+      var p = String(probe[i] || '')
+      var parts = p.split('/')
+      if (p.indexOf('cloud://') === 0 && parts.length >= 3 && parts[2]) {
+        prefix = parts[0] + '//' + parts[2] // cloud://<env>.<bucket>
+        break
+      }
+    }
+    if (card.shareImageFileID && String(card.shareImageFileID).indexOf('cloud://') === 0) {
+      shareFileIDs[card.shareImageFileID] = true
+    } else if (card.shareImageUrl && prefix) {
+      // 兼容旧数据：shareImageUrl 存的是 HTTPS，反解路径后拼回 fileID
+      var m = String(card.shareImageUrl).match(/^https:\/\/[^/]+\/(sharecards\/[^?#]+)/)
+      if (m) shareFileIDs[prefix + '/' + m[1]] = true
+    }
+    if (prefix) {
+      // 确定性兜底：即使 shareImageUrl 回写失败（上传成功但 DB 未落），也能清掉
+      shareFileIDs[prefix + '/sharecards/card_' + cardId + '.jpg'] = true
+    }
+    Object.keys(shareFileIDs).forEach(function (fid) {
+      if (filesToDelete.indexOf(fid) === -1) filesToDelete.push(fid)
+    })
+  } catch (e) { /* 分享图清理失败不阻断主删除流程 */ }
+
   // 3. 并行执行所有清理操作（allSettled 避免单点失败阻塞）
   var tasks = []
 

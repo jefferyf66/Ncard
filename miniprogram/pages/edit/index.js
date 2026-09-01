@@ -110,6 +110,8 @@ Page({
             fieldVisibility: fv,
             isLoading: false
           })
+          // 存储治理 A3：记录「已落库头像」基线，保存成功后据此清理旧文件
+          this._savedAvatar = data.avatar || ''
         } else {
           this.setData({ isLoading: false })
           app.showError('名片不存在')
@@ -164,7 +166,6 @@ Page({
 
   _uploadAvatar(tempFilePath) {
     app.showLoading('上传中')
-    var oldAvatarFileID = this.data.avatar
     const cloudPath = 'avatars/' + Date.now() + '.jpg'
     wx.cloud.uploadFile({
       cloudPath,
@@ -172,16 +173,8 @@ Page({
       success: (uploadRes) => {
         app.hideLoading()
         this.setData({ avatar: uploadRes.fileID })
-        // 删除旧头像文件，避免云存储冗余
-        if (oldAvatarFileID && oldAvatarFileID.indexOf('cloud://') === 0) {
-          wx.cloud.deleteFile({ fileList: [oldAvatarFileID] })
-            .then(function () {
-              // 清理成功，无需处理
-            })
-            .catch(function () {
-              // 静默失败，不影响主流程
-            })
-        }
+        // 存储治理 A3：旧头像文件不在上传时立即删除（避免用户取消/保存失败导致
+        // DB 悬空引用 + 半途孤儿）。改为 saveCard 写库成功后统一删除（见 _cleanupOldAvatar）
         app.showSuccess('头像更新成功')
       },
       fail: (err) => {
@@ -190,6 +183,17 @@ Page({
         app.showError('头像上传失败，请重试')
       }
     })
+  },
+
+  // 存储治理 A3：写库成功后删除「上一版已落库头像」，多选几次头像也只留最终一张
+  _cleanupOldAvatar(currentAvatar) {
+    var prev = this._savedAvatar || ''
+    if (prev && prev !== currentAvatar && prev.indexOf('cloud://') === 0) {
+      wx.cloud.deleteFile({ fileList: [prev] })
+        .then(function () {})
+        .catch(function () {})
+    }
+    this._savedAvatar = currentAvatar || ''
   },
 
   chooseAttachment() {
@@ -541,6 +545,9 @@ Page({
         this.setData({ isSaving: false })
         app.showSuccess(this.data.isEdit ? '修改成功' : '创建成功')
 
+        // 存储治理 A3：写库成功后再清理上一版已落库头像（消除「先删后存」竞态）
+        this._cleanupOldAvatar(data.avatar)
+
         // 同步更新 visitor_profiles：创建/编辑名片后升级为 L3 卡片用户身份
         if (!this.data.isEdit) {
           this._syncVisitorProfile()
@@ -611,7 +618,7 @@ Page({
               var cloudFileID = uploadRes.fileID
               var shareUrl = storage.resolveCloudUrl(cloudFileID)
               wx.cloud.database().collection('cards').doc(cardId).update({
-                data: { shareImageUrl: shareUrl }
+                data: { shareImageUrl: shareUrl, shareImageFileID: cloudFileID }
               }).then(function () {
                 if (settled) return
                 settled = true

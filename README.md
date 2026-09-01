@@ -161,6 +161,14 @@
 
 详见 [CHANGELOG.md](CHANGELOG.md)
 
+### v1.5.5 (2026-09-01)
+- 🧹 云存储冗余治理闭环：堵增量 + 清存量
+- 🔧 `deleteCard` 级联删分享图（fileID/HTTPS 反解/确定式兜底三层依据），根治「删卡分享图永久孤儿」P0 泄漏；`cards` 新增 `shareImageFileID` 冗余字段
+- 🔧 换头像删旧收拢服务端 `accountManager.updateMyProfile`（删前查引用安全），「我的」页与编辑页两入口自动对齐；edit 页删旧挪到 saveCard 成功后，消除「先删后存」悬空引用竞态
+- 📊 `adminManager` 新增 `storageAudit`（对账报告，只读）与 `storagePurge`（dryRun 预览 + execute 真删，现算现复核、断点重跑安全），仅 root、写审计日志
+- 🗑️ 首轮清理：经对账+人工确认删 70/70 孤儿（avatars 11→4、sharecards 66→3，约 4MB），零误删
+- ☁️ `accountManager` / `deleteCard` / `adminManager` 须重新上传部署（adminManager 必勾「云端安装依赖」）；前端热重载即可
+
 ### v1.5.4 (2026-09-01)
 - 🔀 首页名片句柄拖拽排序：每张卡右侧 ≡ 句柄按住拖动调整顺序，松手自动持久化（每卡写 `order`，复用「仅创建者可读写」直连 update，无新增云函数）
 - 🎛️ 编辑页字段可见性三态开关落地：废弃 `publicSettings`，姓名/职位/公司/电话/邮箱改 `fieldVisibility` 三档图标（公开/授权后/仅自己），点击循环切换并气泡提示；兼容旧数据

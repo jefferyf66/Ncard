@@ -512,7 +512,7 @@ Page({
             var shareUrl = storage.resolveCloudUrl(cloudFileID)
             console.log('[Share] 后台已生成分享图:', shareUrl)
             wx.cloud.database().collection('cards').doc(id).update({
-              data: { shareImageUrl: shareUrl }
+              data: { shareImageUrl: shareUrl, shareImageFileID: cloudFileID }
               }).then(function () {
                 console.log('[Share] shareImageUrl 已回写，下次分享直接用')
               }).catch(function () {})

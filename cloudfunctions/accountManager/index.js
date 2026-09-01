@@ -50,8 +50,34 @@ async function updateMyProfile(OPENID, event) {
   }
   if (Object.keys(patch).length === 0) return { success: false, error: '无有效更新字段' }
   patch.updatedAt = Date.now()
+
+  // 存储治理 A2：更新前读旧头像，更新成功后由服务端统一删除旧文件
+  // （覆盖 account / 未来所有改头像入口；前端不再各自删，避免漏删与竞态）
+  const beforeRes = await db.collection('users').where({ _openid: OPENID }).limit(1).get()
+  const oldAvatar = (beforeRes.data && beforeRes.data[0] && beforeRes.data[0].avatarUrl) || ''
+
   await db.collection('users').where({ _openid: OPENID }).limit(1).update({ data: patch })
   const updated = await db.collection('users').where({ _openid: OPENID }).limit(1).get()
+
+  // 删旧头像：仅当旧值是 cloud:// 且与新值不同；删前做引用安全检查
+  if (oldAvatar && typeof patch.avatarUrl === 'string' &&
+      oldAvatar !== patch.avatarUrl && oldAvatar.indexOf('cloud://') === 0) {
+    try {
+      const stillUsed = await Promise.all([
+        db.collection('cards').where({ avatar: oldAvatar }).limit(1).get(),
+        db.collection('users').where({ avatarUrl: oldAvatar }).limit(2).get(),
+        db.collection('visitor_profiles').where({ avatarUrl: oldAvatar }).limit(1).get()
+      ])
+      const referenced = stillUsed.some((r, i) => {
+        const rows = (r.data || []).filter(u => i !== 1 || u._openid !== OPENID)
+        return rows.length > 0
+      })
+      if (!referenced) {
+        await cloud.deleteFile({ fileList: [oldAvatar] })
+      }
+    } catch (e) { /* 清理失败不阻断保存主流程 */ }
+  }
+
   return { success: true, data: updated.data[0] }
 }
 

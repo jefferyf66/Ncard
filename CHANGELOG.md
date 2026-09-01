@@ -2,6 +2,22 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.5.5] - 2026-09-01
+
+### Added
+- **云存储对账与清理工具（仅 root）**：`adminManager` 新增 `storageAudit`（列 avatars/+sharecards/ 全量文件与 DB 引用集对账，输出孤儿/悬空引用清单，只报告不删）与 `storagePurge`（dryRun 默认 true 预览，`execute:true` 才删；**每次调用现算现复核**只删当下孤儿，断点重跑安全；分批 20/次）；对账计算抽成共享 `computeStorageRecon()`，全程写 `admin_audit_log`
+- **cards 新增冗余字段 `shareImageFileID`**（cloud:// 原始 fileID）：index/edit 两个分享图上传点同步落库，为删除提供可靠依据
+
+### Fixed
+- **删卡分享图永久孤儿（P0 泄漏）**：`deleteCard` 级联删除分享图——优先取 `shareImageFileID`，HTTPS `shareImageUrl` 反解路径，外加确定式兜底 `sharecards/card_<id>.jpg`
+- **「我的」页换头像永不删旧**：删除逻辑收拢到 `accountManager.updateMyProfile`（服务端，写库成功后删旧，删前查 cards/users/visitor_profiles 引用安全）；edit/account 两入口自动对齐
+- **「先删后存」悬空引用竞态**：edit 页删旧头像从上传回调挪到 `saveCard` 写库成功后（`_savedAvatar` 基线），消除选完头像取消导致 DB 头像 404 的正确性 bug
+
+### Removed
+- **首轮存量清理（运维）**：经 `storageAudit` 对账 + 人工确认后 `storagePurge` 删除 70/70 孤儿文件（avatars 11→4、sharecards 66→3，约 4MB），零误删，审计日志可溯
+
+> 本次 `accountManager` / `deleteCard` / `adminManager` 三个云函数须**重新上传部署**（adminManager 每次都要勾「云端安装依赖」，且函数超时已调 60s）；前端改动热重载即可。`qrcodes/` 目录同类问题未治理，后续可用对账框架覆盖。
+
 ## [1.5.4] - 2026-09-01
 
 ### Added
