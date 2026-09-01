@@ -22,14 +22,6 @@ Page({
     attachments: [],
     wechatOfficial: { name: '', qrcode: '' },
     companyWebsite: { name: '', url: '' },
-    publicSettings: {
-      showPersonalIntro: true,
-      showBusinessIntro: true,
-      showExperiences: true,
-      showWechatOfficial: true,
-      showCompanyWebsite: true,
-      showAttachments: true
-    },
     errors: {},
     dragStartIndex: -1,
     dragY: 0,
@@ -39,7 +31,22 @@ Page({
     inviteCode: '',
     isJoining: false,
     // 字段级可见性（P1）：敏感字段默认 authorized，其余默认 public
-    fieldVisibility: { ...DEFAULT_FIELD_VISIBILITY }
+    fieldVisibility: { ...DEFAULT_FIELD_VISIBILITY },
+    // 首次点选可见性图标时弹气泡提示（仅一次，wx.setStorageSync 标记）
+    showVisibilityTip: false,
+    // 可见性图标：SVG 矢量（base64 data-URI），真机/IDE 渲染零差异
+    // 三档：public(蓝地球) / authorized(绿眼睛) / private(灰锁)
+    visIcons: {
+      public: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9IiMzQjgyRjYiLz48ZWxsaXBzZSBjeD0iMTIiIGN5PSIxMiIgcng9IjUiIHJ5PSIxMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjEuNSIvPjxsaW5lIHgxPSIyIiB5MT0iMTIiIHgyPSIyMiIgeTI9IjEyIiBzdHJva2U9IiNGRkZGRkYiIHN0cm9rZS13aWR0aD0iMS41Ii8+PGxpbmUgeDE9IjEyIiB5MT0iMiIgeDI9IjEyIiB5Mj0iMjIiIHN0cm9rZT0iI0ZGRkZGRiIgc3Ryb2tlLXdpZHRoPSIxLjUiLz48L3N2Zz4=',
+      authorized: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTIgMTIgUTEyIDQgMjIgMTIgUTEyIDIwIDIgMTIgWiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMTBCOTgxIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIzIiBmaWxsPSIjMTBCOTgxIi8+PC9zdmc+',
+      private: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHJlY3QgeD0iNCIgeT0iMTAiIHdpZHRoPSIxNiIgaGVpZ2h0PSIxMSIgcng9IjIiIGZpbGw9IiM2NDc0OEIiLz48cGF0aCBkPSJNOCAxMCBWNyBhNCA0IDAgMCAxIDggMCBWMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzY0NzQ4QiIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+'
+    },
+    // 可见性状态文案（气泡提示用）
+    visLabels: {
+      public: '公开 — 全员可见',
+      authorized: '授权后 — 对方访问名片后可见',
+      private: '仅自己 — 仅本人可见'
+    }
   },
 
   onLoad(options) {
@@ -76,6 +83,16 @@ Page({
         clearTimeout(this._loadTimer)
         if (res.data) {
           const data = res.data
+          // 兼容旧数据：把 publicSettings.showXxx=false 转 fieldVisibility.X='private'
+          // 新数据：直接用 fieldVisibility（服务端 filterCardByVisibility 真源），不再写入 publicSettings
+          const fv = { ...DEFAULT_FIELD_VISIBILITY, ...(data.fieldVisibility || {}) }
+          const oldPS = data.publicSettings || {}
+          if (oldPS.showPersonalIntro === false) fv.personalIntro = 'private'
+          if (oldPS.showBusinessIntro === false) fv.businessIntro = 'private'
+          if (oldPS.showExperiences === false) fv.experiences = 'private'
+          if (oldPS.showWechatOfficial === false) fv.wechatOfficial = 'private'
+          if (oldPS.showCompanyWebsite === false) fv.companyWebsite = 'private'
+          if (oldPS.showAttachments === false) fv.attachments = 'private'
           this.setData({
             avatar: data.avatar || '',
             name: data.name || '',
@@ -90,15 +107,7 @@ Page({
             attachments: data.attachments || [],
             wechatOfficial: data.wechatOfficial || { name: '', qrcode: '' },
             companyWebsite: data.companyWebsite || { name: '', url: '' },
-            publicSettings: data.publicSettings || {
-              showPersonalIntro: true,
-              showBusinessIntro: true,
-              showExperiences: true,
-              showWechatOfficial: true,
-              showCompanyWebsite: true,
-              showAttachments: true
-            },
-            fieldVisibility: data.fieldVisibility || { ...DEFAULT_FIELD_VISIBILITY },
+            fieldVisibility: fv,
             isLoading: false
           })
         } else {
@@ -246,6 +255,26 @@ Page({
     }
   },
 
+  // 二次确认删除名片附件（防误触）
+  confirmDeleteAttachment(e) {
+    const index = parseInt(e.currentTarget.dataset.index)
+    const att = this.data.attachments[index]
+    if (!att) return
+    const name = att.name || '此附件'
+    wx.showModal({
+      title: '删除这个附件？',
+      content: `${name} 将从名片中移除，同时删除云端文件`,
+      confirmText: '删除',
+      confirmColor: '#EF4444',
+      cancelText: '取消',
+      success: (res) => {
+        if (res.confirm) {
+          this.deleteAttachment(e)
+        }
+      }
+    })
+  },
+
   onNameInput(e) {
     const value = e.detail.value.trim()
     this.setData({ name: value })
@@ -306,6 +335,26 @@ Page({
     const index = parseInt(e.currentTarget.dataset.index)
     const experiences = this.data.experiences.filter((_, i) => i !== index)
     this.setData({ experiences })
+  },
+
+  // 二次确认删除过往经历（防误触）
+  confirmDeleteExperience(e) {
+    const index = parseInt(e.currentTarget.dataset.index)
+    const exp = this.data.experiences[index]
+    if (!exp) return
+    const label = (exp.company || exp.position) ? `${exp.company || ''}${exp.position ? ' · ' + exp.position : ''}` : '这段经历'
+    wx.showModal({
+      title: '删除这段经历？',
+      content: `${label} 删除后将无法恢复`,
+      confirmText: '删除',
+      confirmColor: '#EF4444',
+      cancelText: '取消',
+      success: (res) => {
+        if (res.confirm) {
+          this.deleteExperience(e)
+        }
+      }
+    })
   },
 
   onExpTouchStart(e) {
@@ -400,23 +449,32 @@ Page({
     })
   },
 
-  togglePublic(e) {
-    const field = e.currentTarget.dataset.field
-    if (!field) return
-    this.setData({
-      publicSettings: {
-        ...this.data.publicSettings,
-        [field]: !this.data.publicSettings[field]
-      }
-    })
-  },
-
   // P1 字段级可见性三态切换：public / authorized / private
   onVisibilityChange(e) {
     const field = e.currentTarget.dataset.field
     const value = e.currentTarget.dataset.value
     if (!field || !value) return
     this.setData({ [`fieldVisibility.${field}`]: value })
+  },
+
+  // 可见性图标点击：3 档循环切换（仅自己 → 授权后 → 公开 → 仅自己）
+  // 弹出气泡显示当前态含义（用户已学会后可选关闭）
+  onVisibilityIconTap(e) {
+    const field = e.currentTarget.dataset.field
+    if (!field) return
+    const current = this.data.fieldVisibility[field] || 'public'
+    const next = current === 'private' ? 'authorized' : current === 'authorized' ? 'public' : 'private'
+    this.setData({ [`fieldVisibility.${field}`]: next })
+    this._showVisibilityTip(this.data.visLabels[next])
+  },
+
+  _showVisibilityTip(text) {
+    if (this._visTipTimer) clearTimeout(this._visTipTimer)
+    this.setData({ showVisibilityTip: text })
+    this._visTipTimer = setTimeout(() => {
+      this.setData({ showVisibilityTip: false })
+      this._visTipTimer = null
+    }, 1800)
   },
 
   clearError(field) {
@@ -427,10 +485,19 @@ Page({
 
   validate() {
     const errors = {}
+    // v1.5.4 必填项收敛：仅 姓名 / 电话 / 邮箱 必填（含格式校验）
+    // 公司 / 职位 等组织字段改为选填 —— 部分团队用户并非公司职员
     if (!this.data.name.trim()) errors.name = '请输入姓名'
-    if (!this.data.company.trim()) errors.company = '请输入公司名称'
-    if (this.data.phone && !/^1[3-9]\d{9}$/.test(this.data.phone)) errors.phone = '请输入正确的手机号码'
-    if (this.data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.data.email)) errors.email = '请输入正确的邮箱地址'
+    if (!this.data.phone.trim()) {
+      errors.phone = '请输入手机号码'
+    } else if (!/^1[3-9]\d{9}$/.test(this.data.phone)) {
+      errors.phone = '请输入正确的手机号码'
+    }
+    if (!this.data.email.trim()) {
+      errors.email = '请输入邮箱地址'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.data.email)) {
+      errors.email = '请输入正确的邮箱地址'
+    }
     this.setData({ errors })
     return Object.keys(errors).length === 0
   },
@@ -455,7 +522,7 @@ Page({
       attachments: this.data.attachments,
       wechatOfficial: this.data.wechatOfficial,
       companyWebsite: this.data.companyWebsite,
-      publicSettings: this.data.publicSettings,
+      // v1.5.4 配置一致性收敛：服务端只认 fieldVisibility 物理过滤 cards；废弃 publicSettings
       fieldVisibility: this.data.fieldVisibility,
       updateTime: new Date()
     }

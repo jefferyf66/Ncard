@@ -138,90 +138,215 @@
 }
 
 .form-group {
-  padding: 8rpx 0;
+  padding: 0;
+}
+.form-group .form-group {
+  padding: 0;
 }
 
-.form-item {
-  display: flex;
-  align-items: center;
-  padding: 20rpx 0;
+/* 内层 form-group：与基本信息字段样式对齐（label-row + form-input） */
+.form-group-inner {
+  margin-top: 16rpx;
 }
 
-.label-wrapper {
+.form-label-row {
   display: flex;
-  align-items: center;
-  gap: 6rpx;
+  align-items: flex-start;   /* 顶部对齐：避免 center 把 label 推到 input 内部 */
+  gap: 8rpx;
+  margin-bottom: 12rpx;       /* label ↔ input 之间稳定间距 */
 }
 
 .form-label {
-  width: 180rpx;
-  font-size: 30rpx;
-  color: #334155;
+  font-size: 26rpx;
+  color: #64748B;
   font-weight: 500;
-  flex-shrink: 0;
+  line-height: 1.4;
 }
 
 .required {
   color: #EF4444;
-  font-size: 28rpx;
+  font-size: 24rpx;
+  line-height: 1.4;
+}
+
+.managed-hint-inline {
+  display: flex;
+  align-items: center;
+  font-size: 22rpx;
+  color: #B45309;
+  margin-left: 8rpx;
+  gap: 6rpx;
+}
+
+/* ===== 输入框（统一完整边框圆角风格，与 textarea 对齐）=====
+   真机原生 <input> 在「border-bottom + padding 0」模式下，
+   iOS webview 把 1px 下边框吃进 padding，挤压上方 label 视觉。
+   改完整四向边框 + 圆角 + 灰底，input/textarea/wrap 三档统一：
+   - input           单行字段（姓名/职位/公司）
+   - form-input-wrap 单行 + 右侧 visibility-toggle 按钮
+   - form-textarea   多行字段
+   所有 box 都用 border-radius:8rpx + background:#F8FAFC，
+   真机原生 input padding 渲染稳，label 在上方独立行不再被推入。 */
+.form-input,
+.form-input-wrap,
+.form-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  font-size: 30rpx;
+  line-height: 1.5;
+  color: #0F172A;
+  text-align: left;
 }
 
 .form-input {
-  flex: 1;
-  font-size: 30rpx;
-  color: #0F172A;
-  text-align: right;
-  padding: 16rpx 24rpx;
-  background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
-  border-radius: 4rpx;
-  transition: background 0.2s;
+  display: block;
+  padding: 18rpx 20rpx;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 4rpx;          /* 4rpx 锐角,贴合 Hybrid 风格 */
+  min-height: 80rpx;            /* 撑出垂直空间,稳基线 */
+  transition: border-color 0.2s, background 0.2s;
 }
-
 .form-input:focus {
   background: #FFFFFF;
-  outline: 2rpx solid rgba(59, 130, 246, 0.3);
+  border-color: #3B82F6;
+  outline: none;
 }
-
 .form-input.input-error {
-  color: #6B7280;
-  background: #FEF2F2;
+  border-color: #EF4444;
 }
-
 .form-input::placeholder {
   color: #94A3B8;
+  font-size: 28rpx;
+  line-height: 1.5;
 }
 
 .form-textarea {
-  flex: 1;
-  font-size: 30rpx;
-  color: #0F172A;
+  display: block;
   padding: 20rpx 24rpx;
-  background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
-  border-radius: 4rpx;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 4rpx;          /* 4rpx 锐角，与 input 统一 */
   min-height: 160rpx;
-  transition: background 0.2s;
+  transition: border-color 0.2s, background 0.2s;
 }
-
 .form-textarea:focus {
   background: #FFFFFF;
-  outline: 2rpx solid rgba(59, 130, 246, 0.3);
+  border-color: #3B82F6;
+  outline: none;
 }
-
 .form-textarea::placeholder {
   color: #94A3B8;
+  font-size: 28rpx;
+  line-height: 1.5;
 }
 
 .form-error {
   font-size: 24rpx;
   color: #EF4444;
-  padding-top: 8rpx;
-  text-align: right;
+  padding-top: 6rpx;
+  text-align: left;
 }
 
 .form-divider {
-  height: 2rpx;
-  background: linear-gradient(90deg, transparent 0%, #E2E8F0 20%, #E2E8F0 80%, transparent 100%);
-  margin: 8rpx 0;
+  height: 1px;
+  background: #F1F5F9;
+  margin: 4rpx 0;
+}
+
+/* ===== 可见性图标按钮（input 右侧） ===== */
+.form-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 0 20rpx;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 4rpx;          /* 与 input 一致 */
+  min-height: 80rpx;
+  transition: border-color 0.2s, background 0.2s;
+}
+.form-input-wrap:focus-within {
+  background: #FFFFFF;
+  border-color: #3B82F6;
+}
+/* wrap 内的 input 必须去掉自己的边框/灰底,否则双重 box
+   关键修复（v1.5.4）：
+   - 去掉 min-height:56rpx（border-box 下 padding 18rpx*2=36rpx，仅剩 20rpx 文本区，
+     把 30rpx 字号纵向裁掉一半 → 真机「邮箱栏挡」根因）
+   - 改 min-height 继承外层 .form-input 的 80rpx（内容区 44rpx ≥ 字号，不再裁切）
+   - padding-right:12rpx + min-width:0：长文本（如邮箱）不与右侧可见性图标重叠 */
+.form-input-wrap .form-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 18rpx 12rpx 18rpx 0;
+}
+.form-input-wrap .form-input:focus {
+  border: none;
+  outline: none;
+}
+
+.form-textarea-wrap {
+  position: relative;
+}
+.form-textarea-wrap .form-textarea {
+  padding-bottom: 56rpx;
+}
+
+.visibility-toggle {
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4rpx;
+  background: #F1F5F9;
+  flex-shrink: 0;
+  transition: background 0.2s, transform 0.1s;
+  position: relative;
+}
+.visibility-toggle:active {
+  transform: scale(0.92);
+  background: #E2E8F0;
+}
+.visibility-toggle-corner {
+  position: absolute;
+  right: 8rpx;
+  bottom: 8rpx;
+}
+
+/* ===== 可见性 SVG 矢量图标（base64 data-URI，真机零渲染差异）=====
+   三档语义：
+   - public        蓝色地球     全员可见
+   - authorized    绿色眼睛     对方访问名片后可见
+   - private       灰色锁       仅自己可见
+   SVG 在 setData.visIcons 中按状态切换 src
+*/
+.vi-svg {
+  width: 36rpx;
+  height: 36rpx;
+  display: block;
+}
+
+/* ===== 可见性首次提示气泡 ===== */
+.visibility-tip {
+  position: fixed;
+  left: 50%;
+  bottom: 180rpx;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.92);
+  color: #FFFFFF;
+  font-size: 24rpx;
+  padding: 20rpx 32rpx;
+  border-radius: 12rpx;
+  z-index: 998;
+  line-height: 1.6;
+  max-width: 560rpx;
+  text-align: center;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
 }
 
 /* ===== 经历编辑器 ===== */
@@ -656,12 +781,12 @@
 .join-btn.disabled { opacity: 0.6; }
 
 /* ===== 公众号二维码上传 ===== */
-.qr-item { align-items: flex-start; }
+.qr-group { margin-top: 24rpx; }
 .qr-uploader {
-  flex: 1;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  margin-top: 12rpx;
 }
 .qr-thumb {
   width: 160rpx;
@@ -670,7 +795,7 @@
   border: 2rpx solid #E2E8F0;
 }
 .qr-placeholder {
-  width: 160rpx;
+  width: 200rpx;
   height: 160rpx;
   display: flex;
   align-items: center;

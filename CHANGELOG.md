@@ -2,6 +2,20 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.5.4] - 2026-09-01
+
+### Added
+- **首页名片句柄拖拽排序**：首页「我的名片」每张卡片右侧新增 ≡ 拖拽句柄，按住即可手动调整名片排列顺序；松手自动持久化（每张卡写 `order` 整数，复用「仅创建者可读写」权限 owner 直连 `update`，**无新增云函数**）。新卡不写 `order`、未手动排序时按创建时间倒序（最新最上），手动排序后新建卡自然追加到末尾
+- **编辑页字段可见性三态开关（UI 落地）**：废弃 `publicSettings` 开关，姓名/职位/公司/电话/邮箱每段改为 `fieldVisibility` 三档图标（公开蓝地球 / 授权后绿眼睛 / 仅自己灰锁，纯 SVG 矢量零渲染差异），点击循环切换并弹气泡提示当前态含义；`loadCard` 兼容旧数据（`publicSettings.showXxx=false` → `fieldVisibility.X='private'`）
+- **删除二次确认**：编辑页删除附件 / 删除过往经历新增 `wx.showModal` 二次确认，防误触
+
+### Changed
+- **必填项收敛**：仅 姓名 / 电话 / 邮箱 为必填且做格式校验，公司 / 职位等组织字段改为选填（部分团队用户并非公司职员）
+- **配置一致性收敛**：`saveCard` 不再写入废弃的 `publicSettings`，服务端只认 `fieldVisibility` 物理过滤 cards；对外页 `preview` 各区块展示条件移除 `publicSettings` 判断，改为依赖服务端 `getCardView` 已过滤的字段直接 `wx:if`
+- **邮箱栏遮挡修复**：编辑页邮箱输入区样式修正（去 min-height 裁切 + 长文本贴图标问题）
+
+> 本次为**纯前端改动**（edit / preview / index 页），开发者工具热重载即可生效，**无需部署云函数**。
+
 ## [1.5.3] - 2026-08-28
 
 ### Added

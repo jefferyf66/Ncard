@@ -31,18 +31,21 @@
       </view>
       
       <view class="form-group">
-        <view class="form-item">
-          <view class="label-wrapper">
-            <text class="form-label">姓名</text>
-            <text class="required">*</text>
-          </view>
-          <input 
-            class="form-input {{errors.name ? 'input-error' : ''}}" 
-            placeholder="请输入姓名" 
-            value="{{name}}" 
-            bindinput="onNameInput" 
+        <view class="form-label-row">
+          <text class="form-label">姓名</text>
+          <text class="required">*</text>
+        </view>
+        <view class="form-input-wrap">
+          <input
+            class="form-input {{errors.name ? 'input-error' : ''}}"
+            placeholder="请输入姓名"
+            value="{{name}}"
+            bindinput="onNameInput"
             maxlength="20"
           ></input>
+          <view class="visibility-toggle" data-field="name" bindtap="onVisibilityIconTap">
+            <image class="vi-svg" src="{{visIcons[fieldVisibility.name || 'public']}}" mode="aspectFit"></image>
+          </view>
         </view>
         <view class="form-error" wx:if="{{errors.name}}">{{errors.name}}</view>
       </view>
@@ -50,116 +53,116 @@
       <view class="form-divider"></view>
 
       <view class="form-group">
-        <view class="form-item">
+        <view class="form-label-row">
           <text class="form-label">职位</text>
-          <input 
-            class="form-input" 
-            placeholder="请输入职位" 
-            value="{{position}}" 
-            bindinput="onPositionInput" 
+          <view class="managed-hint-inline" wx:if="{{managedFieldMap.position}}">
+            <view class="lock-icon-sm"></view>
+            <text>由「{{managedFieldMap.position}}」管理</text>
+          </view>
+        </view>
+        <view class="form-input-wrap">
+          <input
+            class="form-input"
+            placeholder="请输入职位"
+            value="{{position}}"
+            bindinput="onPositionInput"
             disabled="{{managedFieldMap.position}}"
             maxlength="30"
           ></input>
-        </view>
-        <view class="managed-hint" wx:if="{{managedFieldMap.position}}">
-          <view class="lock-icon-sm"></view>
-          <text>由「{{managedFieldMap.position}}」管理</text>
+          <view class="visibility-toggle" wx:if="{{!managedFieldMap.position}}" data-field="position" bindtap="onVisibilityIconTap">
+            <image class="vi-svg" src="{{visIcons[fieldVisibility.position || 'public']}}" mode="aspectFit"></image>
+          </view>
         </view>
       </view>
 
       <view class="form-divider"></view>
 
       <view class="form-group">
-        <view class="form-item">
-          <view class="label-wrapper">
-            <text class="form-label">公司</text>
-            <text class="required">*</text>
+        <view class="form-label-row">
+          <text class="form-label">公司</text>
+          <view class="managed-hint-inline" wx:if="{{managedFieldMap.company}}">
+            <view class="lock-icon-sm"></view>
+            <text>由「{{managedFieldMap.company}}」管理</text>
           </view>
-          <input 
-            class="form-input {{errors.company ? 'input-error' : ''}}" 
-            placeholder="请输入公司名称" 
-            value="{{company}}" 
-            bindinput="onCompanyInput" 
+        </view>
+        <view class="form-input-wrap">
+          <input
+            class="form-input {{errors.company ? 'input-error' : ''}}"
+            placeholder="请输入公司名称（选填）"
+            value="{{company}}"
+            bindinput="onCompanyInput"
             disabled="{{managedFieldMap.company}}"
             maxlength="50"
           ></input>
+          <view class="visibility-toggle" wx:if="{{!managedFieldMap.company}}" data-field="company" bindtap="onVisibilityIconTap">
+            <image class="vi-svg" src="{{visIcons[fieldVisibility.company || 'public']}}" mode="aspectFit"></image>
+          </view>
         </view>
         <view class="form-error" wx:if="{{errors.company}}">{{errors.company}}</view>
-        <view class="managed-hint" wx:if="{{managedFieldMap.company}}">
-          <view class="lock-icon-sm"></view>
-          <text>由「{{managedFieldMap.company}}」管理</text>
-        </view>
       </view>
 
       <view class="form-divider"></view>
 
       <view class="form-group">
-        <view class="form-item">
+        <view class="form-label-row">
           <text class="form-label">电话</text>
-          <input 
-            class="form-input {{errors.phone ? 'input-error' : ''}}" 
-            placeholder="请输入手机号码" 
-            value="{{phone}}" 
-            bindinput="onPhoneInput" 
+          <text class="required">*</text>
+        </view>
+        <view class="form-input-wrap">
+          <input
+            class="form-input {{errors.phone ? 'input-error' : ''}}"
+            placeholder="请输入手机号码"
+            value="{{phone}}"
+            bindinput="onPhoneInput"
             type="number"
             maxlength="11"
           ></input>
+          <view class="visibility-toggle" data-field="phone" bindtap="onVisibilityIconTap">
+            <image class="vi-svg" src="{{visIcons[fieldVisibility.phone || 'public']}}" mode="aspectFit"></image>
+          </view>
         </view>
         <view class="form-error" wx:if="{{errors.phone}}">{{errors.phone}}</view>
-        <view class="visibility-picker">
-          <text class="vp-label">可见性</text>
-          <view class="vp-opts">
-            <text class="vp-opt {{fieldVisibility.phone==='public'?'on':''}}" data-field="phone" data-value="public" bindtap="onVisibilityChange">公开</text>
-            <text class="vp-opt {{fieldVisibility.phone==='authorized'?'on':''}}" data-field="phone" data-value="authorized" bindtap="onVisibilityChange">授权后</text>
-            <text class="vp-opt {{fieldVisibility.phone==='private'?'on':''}}" data-field="phone" data-value="private" bindtap="onVisibilityChange">仅自己</text>
-          </view>
-        </view>
       </view>
 
       <view class="form-divider"></view>
 
       <view class="form-group">
-        <view class="form-item">
+        <view class="form-label-row">
           <text class="form-label">邮箱</text>
-          <input 
-            class="form-input {{errors.email ? 'input-error' : ''}}" 
-            placeholder="请输入邮箱地址" 
-            value="{{email}}" 
-            bindinput="onEmailInput" 
+          <text class="required">*</text>
+        </view>
+        <view class="form-input-wrap">
+          <input
+            class="form-input {{errors.email ? 'input-error' : ''}}"
+            placeholder="请输入邮箱地址"
+            value="{{email}}"
+            bindinput="onEmailInput"
             maxlength="50"
           ></input>
-        </view>
-        <view class="form-error" wx:if="{{errors.email}}">{{errors.email}}</view>
-        <view class="visibility-picker">
-          <text class="vp-label">可见性</text>
-          <view class="vp-opts">
-            <text class="vp-opt {{fieldVisibility.email==='public'?'on':''}}" data-field="email" data-value="public" bindtap="onVisibilityChange">公开</text>
-            <text class="vp-opt {{fieldVisibility.email==='authorized'?'on':''}}" data-field="email" data-value="authorized" bindtap="onVisibilityChange">授权后</text>
-            <text class="vp-opt {{fieldVisibility.email==='private'?'on':''}}" data-field="email" data-value="private" bindtap="onVisibilityChange">仅自己</text>
+          <view class="visibility-toggle" data-field="email" bindtap="onVisibilityIconTap">
+            <image class="vi-svg" src="{{visIcons[fieldVisibility.email || 'public']}}" mode="aspectFit"></image>
           </view>
         </view>
+        <view class="form-error" wx:if="{{errors.email}}">{{errors.email}}</view>
       </view>
 
       <view class="form-divider"></view>
 
       <view class="form-group">
-        <view class="form-item">
+        <view class="form-label-row">
           <text class="form-label">地址</text>
-          <textarea 
-            class="form-textarea" 
-            placeholder="请输入地址" 
-            value="{{address}}" 
-            bindinput="onAddressInput" 
+        </view>
+        <view class="form-textarea-wrap">
+          <textarea
+            class="form-textarea"
+            placeholder="请输入地址"
+            value="{{address}}"
+            bindinput="onAddressInput"
             maxlength="100"
             auto-height
           ></textarea>
-          <view class="visibility-picker">
-            <text class="vp-label">可见性</text>
-            <view class="vp-opts">
-              <text class="vp-opt {{fieldVisibility.address==='public'?'on':''}}" data-field="address" data-value="public" bindtap="onVisibilityChange">公开</text>
-              <text class="vp-opt {{fieldVisibility.address==='authorized'?'on':''}}" data-field="address" data-value="authorized" bindtap="onVisibilityChange">授权后</text>
-              <text class="vp-opt {{fieldVisibility.address==='private'?'on':''}}" data-field="address" data-value="private" bindtap="onVisibilityChange">仅自己</text>
-            </view>
+          <view class="visibility-toggle visibility-toggle-corner" data-field="address" bindtap="onVisibilityIconTap">
+            <image class="vi-svg" src="{{visIcons[fieldVisibility.address || 'public']}}" mode="aspectFit"></image>
           </view>
         </view>
       </view>
@@ -169,23 +172,18 @@
       <view class="form-group">
         <view class="form-header">
           <text class="form-title">个人介绍</text>
-          <view class="switch-wrapper" bindtap="togglePublic" data-field="showPersonalIntro">
-            <view class="switch {{publicSettings.showPersonalIntro ? 'switch-on' : ''}}">
-              <view class="switch-thumb"></view>
-            </view>
-            <text class="switch-text">{{publicSettings.showPersonalIntro ? '公开' : '隐藏'}}</text>
+          <view class="visibility-toggle" data-field="personalIntro" bindtap="onVisibilityIconTap">
+            <image class="vi-svg" src="{{visIcons[fieldVisibility.personalIntro || 'public']}}" mode="aspectFit"></image>
           </view>
         </view>
-        <view class="form-item">
-          <textarea 
-            class="form-textarea" 
-            placeholder="介绍一下您自己" 
-            value="{{personalIntro}}" 
-            bindinput="onPersonalIntroInput" 
-            maxlength="500"
-            auto-height
-          ></textarea>
-        </view>
+        <textarea
+          class="form-textarea"
+          placeholder="介绍一下您自己"
+          value="{{personalIntro}}"
+          bindinput="onPersonalIntroInput"
+          maxlength="500"
+          auto-height
+        ></textarea>
       </view>
 
       <view class="form-divider"></view>
@@ -193,23 +191,18 @@
       <view class="form-group">
         <view class="form-header">
           <text class="form-title">业务介绍</text>
-          <view class="switch-wrapper" bindtap="togglePublic" data-field="showBusinessIntro">
-            <view class="switch {{publicSettings.showBusinessIntro ? 'switch-on' : ''}}">
-              <view class="switch-thumb"></view>
-            </view>
-            <text class="switch-text">{{publicSettings.showBusinessIntro ? '公开' : '隐藏'}}</text>
+          <view class="visibility-toggle" data-field="businessIntro" bindtap="onVisibilityIconTap">
+            <image class="vi-svg" src="{{visIcons[fieldVisibility.businessIntro || 'public']}}" mode="aspectFit"></image>
           </view>
         </view>
-        <view class="form-item">
-          <textarea 
-            class="form-textarea" 
-            placeholder="介绍您的业务范围和能力" 
-            value="{{businessIntro}}" 
-            bindinput="onBusinessIntroInput" 
-            maxlength="1000"
-            auto-height
-          ></textarea>
-        </view>
+        <textarea
+          class="form-textarea"
+          placeholder="介绍您的业务范围和能力"
+          value="{{businessIntro}}"
+          bindinput="onBusinessIntroInput"
+          maxlength="1000"
+          auto-height
+        ></textarea>
       </view>
 
       <view class="form-divider"></view>
@@ -218,22 +211,19 @@
         <view class="form-header">
           <text class="form-title">过往经历</text>
           <view class="header-right">
-            <view class="switch-wrapper" bindtap="togglePublic" data-field="showExperiences">
-              <view class="switch {{publicSettings.showExperiences ? 'switch-on' : ''}}">
-                <view class="switch-thumb"></view>
-              </view>
-              <text class="switch-text">{{publicSettings.showExperiences ? '公开' : '隐藏'}}</text>
+            <view class="visibility-toggle" data-field="experiences" bindtap="onVisibilityIconTap">
+              <image class="vi-svg" src="{{visIcons[fieldVisibility.experiences || 'public']}}" mode="aspectFit"></image>
             </view>
             <text class="add-btn" bindtap="addExperience">+ 添加</text>
           </view>
         </view>
         <view class="experience-editor">
-          <view 
-            class="exp-item" 
-            wx:for="{{experiences}}" 
+          <view
+            class="exp-item"
+            wx:for="{{experiences}}"
             wx:key="index"
           >
-            <view 
+            <view
               class="exp-drag-handle"
               bindtouchstart="onExpTouchStart"
               bindtouchmove="onExpTouchMove"
@@ -255,7 +245,7 @@
               <view class="exp-row">
                 <textarea class="exp-textarea" placeholder="工作描述" value="{{item.desc}}" bindinput="onExpInput" data-index="{{index}}" data-field="desc" />
               </view>
-              <view class="exp-delete" bindtap="deleteExperience" data-index="{{index}}">删除</view>
+              <view class="exp-delete" bindtap="confirmDeleteExperience" data-index="{{index}}">删除</view>
             </view>
           </view>
           <view class="empty-tip" wx:if="{{experiences.length === 0}}">暂无经历，点击上方添加</view>
@@ -267,26 +257,27 @@
       <view class="form-group">
         <view class="form-header">
           <text class="form-title">公众号信息</text>
-          <view class="switch-wrapper" bindtap="togglePublic" data-field="showWechatOfficial">
-            <view class="switch {{publicSettings.showWechatOfficial ? 'switch-on' : ''}}">
-              <view class="switch-thumb"></view>
-            </view>
-            <text class="switch-text">{{publicSettings.showWechatOfficial ? '公开' : '隐藏'}}</text>
+          <view class="visibility-toggle" data-field="wechatOfficial" bindtap="onVisibilityIconTap">
+            <image class="vi-svg" src="{{visIcons[fieldVisibility.wechatOfficial || 'public']}}" mode="aspectFit"></image>
           </view>
         </view>
-        <view class="form-item">
-          <text class="form-label">公众号名称</text>
+        <view class="form-group-inner">
+          <view class="form-label-row">
+            <text class="form-label">公众号名称</text>
+          </view>
           <input class="form-input" placeholder="输入公众号名称" value="{{wechatOfficial.name}}" bindinput="onWechatInput" data-field="name" />
         </view>
-        <view class="form-item qr-item">
-          <text class="form-label">公众号二维码</text>
+        <view class="form-group-inner qr-group">
+          <view class="form-label-row">
+            <text class="form-label">公众号二维码</text>
+          </view>
           <view class="qr-uploader" bindtap="onChooseOfficialQR">
             <image wx:if="{{wechatOfficial.qrcode}}" class="qr-thumb" src="{{wechatOfficial.qrcode}}" mode="aspectFit" />
             <view wx:else class="qr-placeholder">点击上传二维码图片</view>
           </view>
+          <text class="form-hint">获取方式（高清·推荐）：电脑登录 mp.weixin.qq.com → 设置与开发 → 公众号设置 → 账号详情 → 下载二维码；手机端公众号主页「更多资料」部分账号不显示二维码，统一以电脑端后台为准</text>
+          <text class="form-hint">访客在名片页点击后可长按二维码识别关注</text>
         </view>
-        <text class="form-hint">获取方式（高清·推荐）：电脑登录 mp.weixin.qq.com → 设置与开发 → 公众号设置 → 账号详情 → 下载二维码；手机端公众号主页「更多资料」部分账号不显示二维码，统一以电脑端后台为准</text>
-        <text class="form-hint">访客在名片页点击后可长按二维码识别关注</text>
       </view>
 
       <view class="form-divider"></view>
@@ -294,19 +285,20 @@
       <view class="form-group">
         <view class="form-header">
           <text class="form-title">公司主页</text>
-          <view class="switch-wrapper" bindtap="togglePublic" data-field="showCompanyWebsite">
-            <view class="switch {{publicSettings.showCompanyWebsite ? 'switch-on' : ''}}">
-              <view class="switch-thumb"></view>
-            </view>
-            <text class="switch-text">{{publicSettings.showCompanyWebsite ? '公开' : '隐藏'}}</text>
+          <view class="visibility-toggle" data-field="companyWebsite" bindtap="onVisibilityIconTap">
+            <image class="vi-svg" src="{{visIcons[fieldVisibility.companyWebsite || 'public']}}" mode="aspectFit"></image>
           </view>
         </view>
-        <view class="form-item">
-          <text class="form-label">网站名称</text>
+        <view class="form-group-inner">
+          <view class="form-label-row">
+            <text class="form-label">网站名称</text>
+          </view>
           <input class="form-input" placeholder="输入网站名称" value="{{companyWebsite.name}}" bindinput="onWebsiteInput" data-field="name" />
         </view>
-        <view class="form-item">
-          <text class="form-label">网站地址</text>
+        <view class="form-group-inner">
+          <view class="form-label-row">
+            <text class="form-label">网站地址</text>
+          </view>
           <input class="form-input" placeholder="https://..." value="{{companyWebsite.url}}" bindinput="onWebsiteInput" data-field="url" disabled="{{managedFieldMap.companyWebsite}}" />
         </view>
       </view>
@@ -317,11 +309,8 @@
         <view class="form-header">
           <text class="form-title">名片附件</text>
           <view class="header-right">
-            <view class="switch-wrapper" bindtap="togglePublic" data-field="showAttachments">
-              <view class="switch {{publicSettings.showAttachments ? 'switch-on' : ''}}">
-                <view class="switch-thumb"></view>
-              </view>
-              <text class="switch-text">{{publicSettings.showAttachments ? '公开' : '隐藏'}}</text>
+            <view class="visibility-toggle" data-field="attachments" bindtap="onVisibilityIconTap">
+              <image class="vi-svg" src="{{visIcons[fieldVisibility.attachments || 'public']}}" mode="aspectFit"></image>
             </view>
             <text class="add-btn" bindtap="chooseAttachment">+ 添加</text>
           </view>
@@ -332,7 +321,7 @@
               <view class="icon-file"></view>
             </view>
             <text class="attach-name-small">{{item.name}}</text>
-            <view class="attach-delete" bindtap="deleteAttachment" data-index="{{index}}">删除</view>
+            <view class="attach-delete" bindtap="confirmDeleteAttachment" data-index="{{index}}">删除</view>
           </view>
           <view class="empty-tip" wx:if="{{attachments.length === 0}}">暂无附件，点击上方添加</view>
         </view>
@@ -351,6 +340,9 @@
         </view>
       </view>
     </view>
+
+  <!-- 可见性点选提示气泡（显示当前选中态名称） -->
+  <view class="visibility-tip" wx:if="{{showVisibilityTip}}">{{showVisibilityTip}}</view>
 
   <view class="bottom-bar">
     <view class="save-btn" bindtap="saveCard">

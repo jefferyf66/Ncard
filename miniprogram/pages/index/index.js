@@ -30,7 +30,11 @@ Page({
     })(),
     // 分享相关状态
     shareCardId: '',
-    shareCardData: null
+    shareCardData: null,
+    // 拖拽排序状态（首页名片顺序调整）
+    dragStartIndex: -1,
+    dragStartY: 0,
+    isDragging: false
   },
 
   onLoad() {
@@ -198,7 +202,8 @@ Page({
         clearTimeout(this._loadTimer)
 
         const newCards = res.data || []
-        const cards = isRefresh ? newCards : [...this.data.cards, ...newCards]
+        const rawCards = isRefresh ? newCards : [...this.data.cards, ...newCards]
+        const cards = this._sortCards(rawCards)
         const hasMore = newCards.length >= this.data.pageSize
         const isEmpty = isRefresh && newCards.length === 0
 
@@ -232,11 +237,127 @@ Page({
     const cache = app.getCache('cardsCache')
     if (cache && cache.value && cache.value.length > 0) {
       this.setData({
-        cards: cache.value,
+        cards: this._sortCards(cache.value),
         isLoading: false,
         isEmpty: cache.value.length === 0
       })
     }
+  },
+
+  /**
+   * 客户端排序：有 order 的卡片按 order 升序（手动排序优先），
+   * 无 order 的卡片（含新创建未排过序的）排在后面，彼此按 createTime 降序（最新在前）。
+   * 这样：
+   *  - 用户从未手动排序时，等同于原来的 createTime desc（最新名片在最上）
+   *  - 一旦手动拖拽，所有已加载卡片获得显式 order，保持手动顺序
+   *  - 之后新建的名片（无 order）自然追加到末尾
+   */
+  _sortCards(cards) {
+    if (!cards || !cards.length) return cards || []
+    const arr = cards.slice()
+    arr.sort((a, b) => {
+      const oa = (typeof a.order === 'number') ? a.order : Infinity
+      const ob = (typeof b.order === 'number') ? b.order : Infinity
+      if (oa !== ob) return oa - ob
+      const ta = a.createTime ? new Date(a.createTime).getTime() : 0
+      const tb = b.createTime ? new Date(b.createTime).getTime() : 0
+      return tb - ta
+    })
+    return arr
+  },
+
+  /**
+   * 拖拽排序 —— 句柄 touchstart
+   * 记录起点索引与手指 Y，并测量卡片实际高度（用于计算跨过几张卡）
+   */
+  onCardTouchStart(e) {
+    if (e.touches.length !== 1) return
+    const index = parseInt(e.currentTarget.dataset.index)
+    if (isNaN(index) || index < 0 || index >= this.data.cards.length) return
+
+    const that = this
+    wx.createSelectorQuery().in(this).select('.card-item').boundingClientRect(function (rect) {
+      if (rect && rect.height) that._cardItemH = rect.height
+    }).exec()
+
+    this.setData({
+      dragStartIndex: index,
+      dragStartY: e.touches[0].clientY,
+      isDragging: true
+    })
+  },
+
+  /**
+   * 拖拽中 —— 仅让被拖卡片跟手（translateY），列表在松手时一次性重排，
+   * 避免在 move 中频繁 splice 引起的抖动。句柄用 catchtouchmove 不冒泡，
+   * 不会触发卡片内其他按钮。
+   */
+  onCardTouchMove(e) {
+    if (this.data.dragStartIndex === -1 || !this.data.isDragging) return
+    if (e.touches.length !== 1) return
+    const deltaY = e.touches[0].clientY - this.data.dragStartY
+    const idx = this.data.dragStartIndex
+    this.setData({
+      ['cards[' + idx + ']._dragOffset']: deltaY
+    })
+  },
+
+  /**
+   * 松手 —— 依据累计位移计算目标位置，splice 重排后回写 order:0..n-1，再批量持久化
+   */
+  onCardTouchEnd(e) {
+    if (this.data.dragStartIndex === -1) return
+    const startIndex = this.data.dragStartIndex
+    const cards = this.data.cards.slice()
+    const step = this._cardItemH || 300
+    const endY = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientY : this.data.dragStartY
+    const deltaY = endY - this.data.dragStartY
+
+    let moveIndex = startIndex + Math.round(deltaY / step)
+    moveIndex = Math.max(0, Math.min(cards.length - 1, moveIndex))
+
+    if (moveIndex !== startIndex) {
+      const [dragged] = cards.splice(startIndex, 1)
+      delete dragged._dragOffset
+      delete dragged._dragging
+      cards.splice(moveIndex, 0, dragged)
+    } else {
+      delete cards[startIndex]._dragOffset
+      delete cards[startIndex]._dragging
+    }
+
+    // 清掉所有拖拽瞬态字段，并写入显式顺序
+    cards.forEach((c, i) => {
+      delete c._dragOffset
+      delete c._dragging
+      c.order = i
+    })
+
+    this.setData({
+      cards,
+      dragStartIndex: -1,
+      dragStartY: 0,
+      isDragging: false
+    })
+
+    this._persistCardOrder(cards)
+  },
+
+  /**
+   * 批量持久化顺序：每张卡直连 update order（仅写 order，保留其余字段）。
+   * 首页只展示自己的卡，集合权限「仅创建者可读写」保证只有本人能改自己的卡。
+   */
+  _persistCardOrder(cards) {
+    if (!wx.cloud) return
+    const db = wx.cloud.database()
+    const updates = cards.map(function (c) {
+      return db.collection('cards').doc(c._id).update({ data: { order: c.order } })
+    })
+    Promise.all(updates).then(function () {
+      console.log('[Index] 名片顺序已持久化，共', cards.length, '张')
+    }).catch(function (err) {
+      console.warn('[Index] 名片顺序持久化失败:', err)
+    })
   },
 
   retryLoad() {

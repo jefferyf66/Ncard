@@ -42,8 +42,20 @@
     <view
       wx:for="{{cards}}"
       wx:key="_id"
-      class="card-item"
+      class="card-item {{item._dragging ? 'dragging' : ''}}"
+      style="{{item._dragOffset ? 'transform: translateY(' + item._dragOffset + 'px); z-index: 10;' : ''}}"
     >
+      <!-- 拖拽句柄（≡）：拖动可调整名片顺序，仅绑定在句柄上，不干扰卡片内按钮 -->
+      <view
+        class="card-drag-handle"
+        catchtouchstart="onCardTouchStart"
+        catchtouchmove="onCardTouchMove"
+        catchtouchend="onCardTouchEnd"
+        data-index="{{index}}"
+      >
+        <view class="drag-icon"></view>
+        <view class="drag-icon"></view>
+      </view>
       <!-- 优化后卡片布局：参考设计稿 -->
       <view class="card-wrapper">
         <view class="card-top">

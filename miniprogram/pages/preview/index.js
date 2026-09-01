@@ -147,8 +147,9 @@ Page({
           personalIntro: r.card.personalIntro || '',
           businessIntro: r.card.businessIntro || '',
           wechatOfficial: r.card.wechatOfficial || {},
-          companyWebsite: r.card.companyWebsite || {},
-          publicSettings: r.card.publicSettings || {}
+          companyWebsite: r.card.companyWebsite || {}
+          // 注：v1.5.4 起服务端 filterCardByVisibility 按 fieldVisibility 物理过滤卡片字段；
+          // 不再读取 publicSettings（v1.5.x 之前存在但未真正生效的旧字段）
         })
 
         that.setData({
