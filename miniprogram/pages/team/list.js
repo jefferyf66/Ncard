@@ -17,6 +17,11 @@ Page({
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 2 })
     }
+    // F21 修复：onLoad 已触发首次加载（ensureUser 后），首次 onShow 跳过，避免双重 loadTeams
+    if (!this._shownOnce) {
+      this._shownOnce = true
+      return
+    }
     // 返回页面时刷新（创建/加入后）
     if (app.getUser()) this.loadTeams()
   },

@@ -202,8 +202,12 @@ Page({
         clearTimeout(this._loadTimer)
 
         const newCards = res.data || []
+        // F19 降级方案：翻页期间跳过重排触发 —— 仅刷新时全量按 order 重排，翻页只追加保持展示稳定。
+        // 理由：分页键（createTime）与展示键（order）无法在 order 历史数据缺失下统一——
+        // 云数据库 orderBy('order','asc') 会把缺失字段排最前，与展示「无 order 排最后」语义冲突，
+        // 统一排序键需先迁移存量数据，风险过高，故按审计允许的降级路径处理。
         const rawCards = isRefresh ? newCards : [...this.data.cards, ...newCards]
-        const cards = this._sortCards(rawCards)
+        const cards = isRefresh ? this._sortCards(rawCards) : rawCards
         const hasMore = newCards.length >= this.data.pageSize
         const isEmpty = isRefresh && newCards.length === 0
 
@@ -234,12 +238,13 @@ Page({
   },
 
   tryLoadCache() {
+    // F05 修复：getCache 已内部解包并做过期判断，这里直接拿 value（原 cache.value 双重取值恒 undefined）
     const cache = app.getCache('cardsCache')
-    if (cache && cache.value && cache.value.length > 0) {
+    if (cache && cache.length > 0) {
       this.setData({
-        cards: this._sortCards(cache.value),
+        cards: this._sortCards(cache),
         isLoading: false,
-        isEmpty: cache.value.length === 0
+        isEmpty: false
       })
     }
   },
@@ -503,6 +508,8 @@ Page({
           pageContext: self
         }).then(function (res) {
           var cloudPath = 'sharecards/card_' + id + '.jpg'
+          // F20 注记：分享图存在首页分享后台生成与本页保存(edit)两个写入入口，写同一路径
+          // sharecards/card_<cardId>.jpg，last-write-wins 为已知接受行为（架构审计确认）。
           wx.cloud.uploadFile({
             cloudPath: cloudPath,
             filePath: res.tempFilePath,

@@ -88,11 +88,16 @@ async function exportMyData(OPENID) {
   const visits = await db.collection('visits').where({ cardOwnerId: OPENID }).limit(1000).get()
   const memberOf = await db.collection('team_members').where({ memberOpenId: OPENID }).limit(100).get()
   const u = (user.data && user.data[0]) || null
+  // SEC-03：导出数据中的访客记录剔除访客私人手机号（与 initVisits getRecentVisitors/getMyVisitorDashboard 同口径）
+  const visitsClean = (visits.data || []).map(function (v) {
+    delete v.visitorPhone
+    return v
+  })
   const data = {
     user: u,
     cards: cards.data,
     savedCards: saves.data,
-    visitsReceived: visits.data,
+    visitsReceived: visitsClean,
     teams: memberOf.data
   }
   const csv = [

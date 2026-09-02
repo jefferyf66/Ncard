@@ -1,6 +1,7 @@
 const app = getApp()
 const storage = require('../../config/storage')
 const team = require('../../utils/team')
+const visitorsUtil = require('../../utils/visitors')
 const { FIELD_LABELS } = require('../../config/cardVisibility')
 
 Page({
@@ -66,14 +67,13 @@ Page({
       }
 
       // 调用 initVisits 云函数记录访问（云函数端会做三级身份 enrichment）
+      // F22③：visitorOpenId/cardOwnerId 为死参数（服务端以 getWXContext().OPENID 与库内归属为准），不再传递
       wx.cloud.callFunction({
         name: 'initVisits',
         data: {
           action: 'recordVisit',
           data: {
             cardId: cardId,
-            visitorOpenId: visitorOpenId,
-            cardOwnerId: cardOwnerId,
             source: options && options.source || 'direct'
           }
         },
@@ -269,9 +269,10 @@ Page({
   loadVisitorAnalytics(cardId, cardOwnerId) {
     if (!wx.cloud || !cardOwnerId || !cardId) return
     var that = this
+    // F22③：cardOwnerId 为死参数（服务端以 getWXContext().OPENID 为准），不再传递
     wx.cloud.callFunction({
       name: 'initVisits',
-      data: { action: 'getMyVisitorStats', data: { cardOwnerId: cardOwnerId, cardId: cardId } }
+      data: { action: 'getMyVisitorStats', data: { cardId: cardId } }
     }).then(function (statsRes) {
       if (statsRes.result && statsRes.result.ok) {
         that.setData({
@@ -281,7 +282,7 @@ Page({
       }
       return wx.cloud.callFunction({
         name: 'initVisits',
-        data: { action: 'getRecentVisitors', data: { cardOwnerId: cardOwnerId, cardId: cardId, limit: 5 } }
+        data: { action: 'getRecentVisitors', data: { cardId: cardId, limit: 5 } }
       })
     }).then(function (res) {
       if (res.result && res.result.ok) {
@@ -305,21 +306,9 @@ Page({
       cardName: v.cardName || '',
       lastVisit: app.formatTime(v.visitTime)
     }))
-    const merged = this._mergeVisitorsByOpenId(visitors)
+    // F22①：去重聚合收敛到 utils/visitors 公共实现（与 visitors 页同源）
+    const merged = visitorsUtil.mergeVisitorsByOpenId(visitors)
     this.setData({ recentVisitors: merged })
-  },
-
-  _mergeVisitorsByOpenId(visitors) {
-    const map = {}
-    visitors.forEach((v) => {
-      const key = v.visitorOpenId || ('anon_' + v.id)
-      if (!map[key]) {
-        map[key] = { ...v }
-      } else {
-        map[key].visitCount = (map[key].visitCount || 1) + (v.visitCount || 1)
-      }
-    })
-    return Object.values(map)
   },
 
   /**
@@ -375,6 +364,21 @@ Page({
             savedAt: new Date()
           }
         })
+      })
+      .then((addRes) => {
+        // F11 修复：快速双击可能写两条 —— add 后按相同条件复查，删掉多写的记录（客户端侧尽力而为）
+        return db.collection('user_save_cards')
+          .where({ cardId: cardId })
+          .get()
+          .then(function (chk) {
+            var rows = chk.data || []
+            if (rows.length <= 1) return rows
+            var keepId = (addRes && addRes._id) || rows[0]._id
+            var dels = rows
+              .filter(function (r) { return r._id !== keepId })
+              .map(function (r) { return db.collection('user_save_cards').doc(r._id).remove() })
+            return Promise.all(dels).then(function () { return [keepId] })
+          })
       })
       .then(() => {
         app.hideLoading()

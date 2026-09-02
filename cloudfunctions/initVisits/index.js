@@ -220,6 +220,29 @@ exports.main = async (event, context) => {
         }
       }
 
+      // F10 修复：插入前按同 cardId+visitorOpenId+30 分钟时间窗再查一次，
+      // 收窄 check-then-insert 竞态窗口（并发双写时合并到已有记录，不重复插入）
+      const dupCheck = await db.collection('visits')
+        .where({
+          cardId,
+          visitorOpenId,
+          visitTime: db.command.gte(new Date(now.getTime() - 30 * 60 * 1000))
+        })
+        .limit(1)
+        .get()
+      if (dupCheck.data && dupCheck.data.length > 0) {
+        await db.collection('visits').doc(dupCheck.data[0]._id).update({
+          data: {
+            visitTime: now,
+            visitCount: db.command.inc(1),
+            visitorName: visitorName || dupCheck.data[0].visitorName || '',
+            visitorAvatar: visitorAvatar || dupCheck.data[0].visitorAvatar || '',
+            visitorLevel: Math.max(visitorLevel, dupCheck.data[0].visitorLevel || 1)
+          }
+        })
+        return { ok: true, updated: true, visitorLevel: visitorLevel }
+      }
+
       // 新记录（含 enrichment 数据）
       await db.collection('visits').add({
         data: {
@@ -431,6 +454,9 @@ exports.main = async (event, context) => {
     case 'authorizeVisit': {
       const { cardId, nickname, avatarUrl } = data || {}
       if (!cardId || !OPENID) return { ok: false, message: '参数不完整' }
+      // F14 修复：与 accountManager.updateMyProfile 同口径 —— nickname trim+限长 30、avatarUrl 限长 500
+      const nick = (typeof nickname === 'string') ? nickname.trim().slice(0, 30) : ''
+      const avatar = (typeof avatarUrl === 'string') ? avatarUrl.slice(0, 500) : ''
       const visitorOpenId = OPENID
 
       // 名片归属以数据库为准
@@ -458,8 +484,8 @@ exports.main = async (event, context) => {
       if (profileRes.data && profileRes.data.length > 0) {
         await db.collection('visitor_profiles').doc(profileRes.data[0]._id).update({
           data: {
-            nickname: nickname || '',
-            avatarUrl: avatarUrl || '',
+            nickname: nick,
+            avatarUrl: avatar,
             authorizedAt: new Date()
           }
         })
@@ -467,8 +493,8 @@ exports.main = async (event, context) => {
         await db.collection('visitor_profiles').add({
           data: {
             openid: visitorOpenId,
-            nickname: nickname || '',
-            avatarUrl: avatarUrl || '',
+            nickname: nick,
+            avatarUrl: avatar,
             authorizedAt: new Date()
           }
         })
@@ -491,8 +517,8 @@ exports.main = async (event, context) => {
           await db.collection('visits').doc(visitId).update({
             data: {
               authorized: true,
-              visitorName: nickname || '',
-              visitorAvatar: avatarUrl || '',
+              visitorName: nick,
+              visitorAvatar: avatar,
               visitorLevel: Math.max(recent.data[0].visitorLevel || 1, 2),
               visitTime: now
             }
@@ -506,8 +532,8 @@ exports.main = async (event, context) => {
             cardOwnerId,
             visitorOpenId,
             authorized: true,
-            visitorName: nickname || '',
-            visitorAvatar: avatarUrl || '',
+            visitorName: nick,
+            visitorAvatar: avatar,
             visitorLevel: 2,
             visitTime: now,
             visitCount: 1,

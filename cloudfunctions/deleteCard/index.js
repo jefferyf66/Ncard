@@ -39,7 +39,8 @@ exports.main = async (event, context) => {
   }
 
   // 校验所有权：只有名片创建者才能删除
-  if (card._openid && card._openid !== openid) {
+  // F12 修复：改严格校验（卡片均由客户端 add 自动注入 _openid，_openid 缺失也拒绝，杜绝空值放行）
+  if (card._openid !== openid) {
     return { ok: false, message: '无权删除此名片' }
   }
 

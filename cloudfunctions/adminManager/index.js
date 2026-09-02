@@ -167,10 +167,25 @@ async function disbandTeam(OPENID, myRole, event) {
   const team = await db.collection('teams').doc(teamId).get()
   if (!team.data) return { success: false, error: '团队不存在' }
   await db.collection('teams').doc(teamId).remove()
-  await db.collection('team_members').where({ teamId }).remove()
-  await db.collection('team_invites').where({ teamId }).remove()
+  // F17 修复：分页循环删除，突破 where().remove() 单次约 1000 条上限
+  // （与 teamManager/deleteCard 同模式，云函数独立部署单元，各自内联）
+  await removeAll('team_members', { teamId })
+  await removeAll('team_invites', { teamId })
   await writeAudit(OPENID, 'disband_team', { teamId, name: team.data.name })
   return { success: true }
+}
+
+// 批量安全删除（F17 修复：突破 where().remove() 单次约 1000 条上限）
+// 循环 limit(1000).remove() 直到本次删除数为 0，返回累计删除条数
+async function removeAll(collectionName, where) {
+  let total = 0
+  while (true) {
+    const res = await db.collection(collectionName).where(where).limit(1000).remove()
+    const removed = (res.stats && res.stats.removed) || 0
+    total += removed
+    if (removed === 0) break
+  }
+  return total
 }
 
 /**

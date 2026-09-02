@@ -2,6 +2,31 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.5.6] - 2026-09-02
+
+> 全面代码审计（v1.5.5 基线，八维：安全/并发/资源/错误处理/边界/性能/逻辑/可维护性）——0 P0，5 P1 + 17 P2 全部修复闭环，QA 两轮回归通过。完整报告见 `artifacts/code-audit-2026-09-02.md`。
+
+### Security / Privacy
+- **导出数据泄露访客手机号（P1）**：`accountManager.exportMyData` 返回前逐条剔除 `visits.visitorPhone`（与 SEC-03 同口径，堵住隐私闸旁路）
+- **删卡所有权校验加固**：`deleteCard` 改严格 `card._openid !== openid`，杜绝 `_openid` 为空的存量记录被任意调用者删除
+- **getTeam 非成员信息收敛**：非成员分支 cardSchema 逐项剔除 `defaultValue`（防团队 shortId 探测预填内容）
+
+### Fixed
+- **编辑页二维码/附件「先删后存」竞态（P1×2）**：二维码照头像 A3 模式（`_savedOfficialQR` 基线，`saveCard` 成功后清理）；附件改纯 UI 移除 + 差集延迟清理，消除放弃保存导致的悬空引用（访客端裂图/404）
+- **名片夹 >20 张静默截断（P1）**：`list` 页 user_save_cards 改 limit(20)+skip 分页拉全量
+- **缓存包装不一致（P1）**：`app.js getCache` 改内部解包（返回 `.value` + 过期判断），修复首页每次 onShow 恒强制全量重载、团队计数缓存永不命中两个 bug；`tryLoadCache` 同步适配
+- **`_.in` 查询 20 上限（P2×6 处）**：teamManager 新增 `fetchAllPages`/`fetchByInIds` 分批聚合，listMembers / getTeamPublicDirectory / getMyTeams / getCardTeams / getCardsTeams / searchTeam 全覆盖，大团队 >20/100 条不再静默截断
+- **visitors 页假降级**：删除 visits 直读兜底（ACL 下恒空），云函数失败展示错误态（WXML 补 isError 分支 + 点击重试）；删 `visitorPhone` 死字段与 `item.phone` 死绑定
+- **admin 解散团队残留**：adminManager disbandTeam 改内联 `removeAll` 分页删除（对齐 teamManager，突破单次 1000 上限）
+
+### Changed
+- **并发竞态收敛**：邀请码限额改条件更新（`usedCount < maxUses`，失败回滚成员记录/teamIds/memberCount）；createTeam 配额 add 前复查；recordVisit 30min 窗口内命中合并更新；preview 收藏 add 后复查去重
+- **输入收敛**：authorizeVisit nickname trim+截断 30 字符、avatarUrl 截断 500
+- **资源收敛**：shareCard `_imageCache` 加 MAX=10 LRU；adminManager 新增 `config.json`（timeout 60s / 256M，超时配置固化进仓库防部署漂移）
+- **可维护性**：`_mergeVisitorsByOpenId` 抽到 `utils/visitors.js` 收敛两处重复；preview/visitors/profile 删除 4 处 `visitorOpenId/cardOwnerId` 死参数；首页翻页只追加不重排（排序键统一需迁移存量 order 数据，降级处理）；分享图双入口 last-write-wins 注记
+
+> 本次 **5 个云函数须重新上传部署**：`accountManager` / `teamManager` / `initVisits` / `deleteCard` / `adminManager`（adminManager 新增 config.json，部署后到控制台确认 60s 超时生效；每次部署都必勾「云端安装依赖」）；前端 9 文件开发者工具编译即生效。
+
 ## [1.5.5] - 2026-09-01
 
 ### Added

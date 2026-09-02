@@ -82,6 +82,9 @@ async function createTeam(event, OPENID) {
   } while ((await db.collection('teams').where({ shortId }).count()).total > 0)
 
   const now = Date.now()
+  // F09 修复：add 前复查配额一次，收窄 check-then-add 竞态窗口（低危，不引入重逻辑）
+  const recheck = await db.collection('teams').where({ ownerOpenId: OPENID }).count()
+  if (recheck.total >= MAX_TEAMS_PER_USER) return { success: false, error: 'TEAM_LIMIT' }
   const teamRes = await db.collection('teams').add({
     data: {
       _openid: OPENID, // 显式写入，匹配「仅创建者可读写」
@@ -289,16 +292,24 @@ async function joinByInvite(event, OPENID) {
   await db.collection('teams').doc(inv.teamId).update({ data: { memberCount: _.inc(1) } })
 
   // CON-01 修复：singleUse 邀请码 usedCount 自增改为条件更新，杜绝并发竞态被两人同时使用
+  // F08 修复：maxUses 限额邀请码同样改为条件更新（usedCount < maxUses），杜绝 check-then-inc 竞态；
+  // 两种条件更新共存：singleUse 优先（usedCount:0 更严格），maxUses 不限（0）时保持无条件自增
+  let usedUpCond = null
   if (inv.singleUse) {
+    usedUpCond = { _id: inv._id, usedCount: 0, singleUse: true }
+  } else if (inv.maxUses) {
+    usedUpCond = { _id: inv._id, usedCount: _.lt(inv.maxUses) }
+  }
+  if (usedUpCond) {
     const up = await db.collection('team_invites')
-      .where({ _id: inv._id, usedCount: 0, singleUse: true })
+      .where(usedUpCond)
       .update({ data: { usedCount: _.inc(1) } })
     if (!up.stats || up.stats.updated === 0) {
-      // 条件更新未命中：邀请码已被其他实例占用，回滚本次加入避免残留
+      // 条件更新未命中：邀请码已被占用或名额已满，回滚本次加入避免残留
       await db.collection('team_members').doc(addRes._id).remove().catch(() => {})
       await db.collection('cards').doc(card._id).update({ data: { teamIds: _.pull(inv.teamId) } }).catch(() => {})
       await db.collection('teams').doc(inv.teamId).update({ data: { memberCount: _.inc(-1) } }).catch(() => {})
-      return { success: false, error: 'INVITE_USED_UP', message: '邀请码已被使用' }
+      return { success: false, error: 'INVITE_USED_UP', message: '邀请码名额已满或已被使用' }
     }
   } else {
     await db.collection('team_invites').doc(inv._id).update({ data: { usedCount: _.inc(1) } })
@@ -315,8 +326,9 @@ async function listMembers(event, OPENID) {
   const me = await db.collection('team_members').where({ teamId, memberOpenId: OPENID, status: 'active' }).get()
   if (!me.data.length) return { success: false, error: 'NOT_MEMBER' }
 
-  const list = await db.collection('team_members').where({ teamId }).orderBy('joinedAt', 'asc').get()
-  return { success: true, data: { members: list.data, role: me.data[0].role } }
+  // F06 修复：分页聚合，避免大团队成员列表被单次 100 条默认上限静默截断
+  const list = await fetchAllPages('team_members', { teamId }, 'joinedAt', 'asc')
+  return { success: true, data: { members: list, role: me.data[0].role } }
 }
 
 // ============ 管理员更新成员组织字段（仅 D2 七个字段）============
@@ -387,6 +399,38 @@ async function removeAll(collectionName, where) {
   return total
 }
 
+// ============ F06 修复：分页读全量（云函数端 .get() 默认单次 100 条）============
+// 大团队/大列表静默截断 → limit(100)+skip 分页循环聚合，直到不足一批为止
+async function fetchAllPages(collectionName, where, orderField, orderDir) {
+  const PAGE = 100
+  let out = []
+  let skip = 0
+  while (true) {
+    let q = db.collection(collectionName).where(where)
+    if (orderField) q = q.orderBy(orderField, orderDir || 'asc')
+    const page = await q.skip(skip).limit(PAGE).get()
+    const rows = page.data || []
+    out = out.concat(rows)
+    if (rows.length < PAGE) break
+    skip += PAGE
+  }
+  return out
+}
+
+// ============ F06 补漏：_.in 单次上限 20 ============
+// 指定字段按 20 一组分批 _.in 查询并聚合（可附额外 where 条件），供 getCardTeams/getCardsTeams 复用
+async function fetchByInIds(collectionName, field, ids, extraWhere) {
+  let out = []
+  for (let i = 0; i < ids.length; i += 20) {
+    const chunk = ids.slice(i, i + 20)
+    const where = Object.assign({}, extraWhere || {})
+    where[field] = _.in(chunk)
+    const res = await db.collection(collectionName).where(where).get()
+    out = out.concat(res.data || [])
+  }
+  return out
+}
+
 // ============ 解散团队（仅 owner，破坏性操作）============
 async function disbandTeam(event, OPENID) {
   const { teamId } = event
@@ -419,13 +463,19 @@ async function disbandTeam(event, OPENID) {
 
 // ============ 我的团队（含角色/状态/托管字段）============
 async function getMyTeams(OPENID) {
-  const mem = await db.collection('team_members').where({ memberOpenId: OPENID }).get()
-  const teamIds = mem.data.map(m => m.teamId)
+  // F06 修复：分页聚合，避免用户加入大量团队后被单次 100 条默认上限静默截断
+  const mem = await fetchAllPages('team_members', { memberOpenId: OPENID })
+  const teamIds = mem.map(m => m.teamId)
   if (!teamIds.length) return { success: true, data: { teams: [] } }
 
-  const teams = await db.collection('teams').where({ _id: _.in(teamIds) }).get()
+  // F06 修复：_.in 单次上限 20，按 20 一组循环 + 分页聚合 teams
+  let teamsData = []
+  for (let i = 0; i < teamIds.length; i += 20) {
+    const chunk = teamIds.slice(i, i + 20)
+    teamsData = teamsData.concat(await fetchAllPages('teams', { _id: _.in(chunk) }))
+  }
   const map = {}
-  mem.data.forEach(m => {
+  mem.forEach(m => {
     map[m.teamId] = {
       role: m.role,
       status: m.status,
@@ -433,7 +483,7 @@ async function getMyTeams(OPENID) {
       managedFields: m.managedFields || emptyFields()
     }
   })
-  const result = teams.data.map(t => ({
+  const result = teamsData.map(t => ({
     ...t,
     myRole: map[t._id].role,
     myStatus: map[t._id].status,
@@ -487,7 +537,8 @@ async function getTeam(event, OPENID) {
         description: team.description,
         logoUrl: team.logoUrl,
         memberCount: team.memberCount,
-        cardSchema
+        // F13 修复：非成员分支逐项剔除 cardSchema 的 defaultValue（owner 预填内容不外泄，保留 key/label/visible/required）
+        cardSchema: stripSchemaDefaults(cardSchema)
       }
   return {
     success: true,
@@ -538,9 +589,8 @@ async function getTeamPublicDirectory(event) {
   // 未开启公开目录 → 拒绝（即便非成员也不得窥探）
   if (team.allowDirectoryShare !== true) return { success: false, error: 'TEAM_NOT_PUBLIC' }
 
-  // 仅取 active 成员
-  const memRes = await db.collection('team_members').where({ teamId: team._id, status: 'active' }).get()
-  const members = memRes.data || []
+  // 仅取 active 成员（F06 修复：分页聚合，避免大团队被单次 100 条默认上限静默截断）
+  const members = await fetchAllPages('team_members', { teamId: team._id, status: 'active' })
 
   // 批量取 cards：db.command.in 单次上限 20，必须按 20 一组循环
   const cardIds = members.map(m => m.cardId).filter(Boolean)
@@ -617,9 +667,10 @@ async function searchTeam(event) {
   const list = await db.collection('teams').where(cond).limit(limit).get()
 
   // L2 展示创建者昵称（来自 users，Phase B 才填充，v1 可能为空 → 兜底空串）
+  // F06 补漏：_.in 单次上限 20（limit 透传可 >20），按 20 一组分批查询
   const ownerIds = [...new Set(list.data.map(t => t.ownerOpenId))]
   const users = ownerIds.length
-    ? (await db.collection('users').where({ _openid: _.in(ownerIds) }).get()).data
+    ? await fetchByInIds('users', '_openid', ownerIds)
     : []
   const nickMap = {}
   users.forEach(u => { nickMap[u._openid] = u.nickname || '' })
@@ -655,23 +706,23 @@ async function getCardTeams(event) {
 
   const { OPENID } = cloud.getWXContext() // 可信身份，用于可见性判定（与 getCardsTeams 一致）
 
-  const mem = await db.collection('team_members').where({ cardId, status: 'active' }).get()
-  if (!mem.data.length) return { success: true, data: { teams: [] } }
+  // F06 修复：分页聚合，避免被单次 100 条默认上限静默截断
+  const mem = await fetchAllPages('team_members', { cardId, status: 'active' })
+  if (!mem.length) return { success: true, data: { teams: [] } }
 
-  const teamIds = mem.data.map(m => m.teamId)
-  const teams = await db.collection('teams').where({ _id: _.in(teamIds) }).get()
+  const teamIds = mem.map(m => m.teamId)
+  // F06 补漏：_.in 单次上限 20，单卡所属团队可能 >20，按 20 一组分批循环聚合
+  const teamsData = await fetchByInIds('teams', '_id', teamIds)
   const teamMap = {}
-  teams.data.forEach(t => { teamMap[t._id] = t })
+  teamsData.forEach(t => { teamMap[t._id] = t })
 
   // 可见性判定：复用 getCardsTeams 一致的 isMember / isPublic 逻辑
   // 私有团队且调用者非成员 → 不暴露任何团队信息（防止枚举 cardId 探测社交图谱）
-  const myMemRes = await db.collection('team_members')
-    .where({ teamId: _.in(teamIds), memberOpenId: OPENID, status: 'active' })
-    .get()
-  const myTeamIds = new Set(myMemRes.data.map(m => m.teamId))
-  const ownedTeamIds = new Set(teams.data.filter(t => t.ownerOpenId === OPENID).map(t => t._id))
+  const myMem = await fetchByInIds('team_members', 'teamId', teamIds, { memberOpenId: OPENID, status: 'active' })
+  const myTeamIds = new Set(myMem.map(m => m.teamId))
+  const ownedTeamIds = new Set(teamsData.filter(t => t.ownerOpenId === OPENID).map(t => t._id))
 
-  const result = mem.data
+  const result = mem
     .map(m => {
       const team = teamMap[m.teamId]
       if (!team) return null
@@ -714,17 +765,15 @@ async function getCardsTeams(event, OPENID) {
   }
   if (!memberRecords.length) return { success: true, data: { list: [] } }
 
-  // 2) 取涉及团队 + 判定访客成员身份（一次批量查）
+  // 2) 取涉及团队 + 判定访客成员身份（F06 补漏：_.in 单次上限 20，按 20 一组分批循环聚合）
   const teamIds = [...new Set(memberRecords.map(m => m.teamId))]
-  const teamsRes = await db.collection('teams').where({ _id: _.in(teamIds) }).get()
+  const teamsData = await fetchByInIds('teams', '_id', teamIds)
   const teamMap = {}
-  teamsRes.data.forEach(t => { teamMap[t._id] = t })
+  teamsData.forEach(t => { teamMap[t._id] = t })
 
-  const myMemRes = await db.collection('team_members')
-    .where({ teamId: _.in(teamIds), memberOpenId: OPENID, status: 'active' })
-    .get()
-  const myTeamIds = new Set(myMemRes.data.map(m => m.teamId))
-  const ownedTeamIds = new Set(teamsRes.data.filter(t => t.ownerOpenId === OPENID).map(t => t._id))
+  const myMem = await fetchByInIds('team_members', 'teamId', teamIds, { memberOpenId: OPENID, status: 'active' })
+  const myTeamIds = new Set(myMem.map(m => m.teamId))
+  const ownedTeamIds = new Set(teamsData.filter(t => t.ownerOpenId === OPENID).map(t => t._id))
 
   const byCard = {}
   for (const m of memberRecords) {
@@ -894,6 +943,16 @@ function filterManagedByVisible(raw, schema) {
     if (vis[k] && raw && raw[k]) out[k] = raw[k]
   })
   return out
+}
+
+// F13 修复：cardSchema 逐项剔除 defaultValue（owner 预填内容不对非成员外泄）
+function stripSchemaDefaults(schema) {
+  return (schema || []).map(f => ({
+    key: f.key,
+    label: f.label,
+    visible: f.visible,
+    required: f.required
+  }))
 }
 
 // 转义正则特殊字符

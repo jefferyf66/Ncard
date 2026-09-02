@@ -2,7 +2,7 @@ var storage = require('./config/storage')
 
 // 应用版本号唯一真源（关于页等展示用）
 // ⚠️ 发版打 tag 时必须同步更新此值（见 tag-changelog-reconcile 发版约定）
-const APP_VERSION = '1.5.5'
+const APP_VERSION = '1.5.6'
 
 App({
   globalData: {
@@ -96,8 +96,16 @@ App({
   },
 
   getCache(key) {
+    // F05 修复：与 setCache 的 {value, timestamp} 包装对称 —— 解包返回 value，
+    // timestamp 为过期时间点（写入时 Date.now()+expire），过期返回 null。
+    // 兼容非包装的原始 storage 数据（如 wx.setStorageSync('user', user)）原样返回。
     try {
-      return wx.getStorageSync(key)
+      const data = wx.getStorageSync(key)
+      if (data && typeof data === 'object' && 'value' in data && 'timestamp' in data) {
+        if (typeof data.timestamp === 'number' && Date.now() > data.timestamp) return null
+        return data.value
+      }
+      return data
     } catch (e) {
       return null
     }

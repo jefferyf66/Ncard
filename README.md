@@ -161,6 +161,14 @@
 
 详见 [CHANGELOG.md](CHANGELOG.md)
 
+### v1.5.6 (2026-09-02)
+- 🔍 全面代码审计（八维）：0 P0，5 P1 + 17 P2 全部修复闭环，QA 两轮回归通过（报告见 `artifacts/code-audit-2026-09-02.md`）
+- 🔒 隐私/越权：`exportMyData` 剔除访客手机号（SEC-03 旁路）；`deleteCard` 所有权严格校验；`getTeam` 非成员剔除 cardSchema 预填内容
+- 🔧 竞态/截断：编辑页二维码与附件「先删后存」改基线延迟清理；名片夹 >20 张分页拉全量；`app.getCache` 解包修复首页恒重载与缓存永不命中
+- 📈 teamManager 新增 `fetchAllPages`/`fetchByInIds` 分批聚合，六处查询突破 `_.in` 20 条与 get 100 条上限；admin 解散团队改分页删除
+- ⚙️ adminManager 新增 `config.json`（60s/256M 固化）；邀请码限额条件更新+回滚；visitors 页删假降级改错误态；输入截断、缓存 LRU、死参数/重复实现收敛
+- ☁️ `accountManager` / `teamManager` / `initVisits` / `deleteCard` / `adminManager` 五个云函数须重新上传部署（均必勾「云端安装依赖」）；前端 9 文件编译即生效
+
 ### v1.5.5 (2026-09-01)
 - 🧹 云存储冗余治理闭环：堵增量 + 清存量
 - 🔧 `deleteCard` 级联删分享图（fileID/HTTPS 反解/确定式兜底三层依据），根治「删卡分享图永久孤儿」P0 泄漏；`cards` 新增 `shareImageFileID` 冗余字段

@@ -41,13 +41,25 @@ Page({
       }
 
       // 2. 查询 user_save_cards，获取当前用户保存的他人名片 ID
+      // F04 修复：小程序端 .get() 默认单次 20 条，收藏 >20 会静默截断 → limit(20)+skip 分页循环拉全量
       var db = wx.cloud.database()
-      db.collection('user_save_cards')
-        .orderBy('savedAt', 'desc')
-        .get()
-        .then((res) => {
-          var savedRecords = res.data || []
-
+      var PAGE_SIZE = 20
+      var fetchSavedPage = function (skip) {
+        return db.collection('user_save_cards')
+          .orderBy('savedAt', 'desc')
+          .skip(skip)
+          .limit(PAGE_SIZE)
+          .get()
+          .then(function (res) {
+            var rows = res.data || []
+            if (rows.length < PAGE_SIZE) return rows
+            return fetchSavedPage(skip + PAGE_SIZE).then(function (next) {
+              return rows.concat(next)
+            })
+          })
+      }
+      fetchSavedPage(0)
+        .then((savedRecords) => {
           if (savedRecords.length === 0) {
             this.setData({ cards: [], isLoading: false, isEmpty: true })
             return

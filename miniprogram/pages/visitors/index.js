@@ -1,5 +1,6 @@
 const app = getApp()
 const storage = require('../../config/storage')
+const visitorsUtil = require('../../utils/visitors')
 
 Page({
   data: {
@@ -70,10 +71,8 @@ Page({
 
     this.setData({ isLoading: true, isError: false })
 
-    // 先获取用户 openId（用于过滤统计和访客数据）
-    app.getOpenId().then((myOpenId) => {
-      this._myOpenId = myOpenId
-
+    // 先获取用户 openId（F22③：不再向服务端传 cardOwnerId 死参数，服务端以 getWXContext().OPENID 为准）
+    app.getOpenId().then(() => {
       // 1. 名片数（仅全局模式有意义；单卡模式无需展示）
       if (!this._cardId) {
         wx.cloud.database().collection('user_save_cards').count()
@@ -84,14 +83,14 @@ Page({
       }
 
       // 构建请求体：单卡模式追加 cardId 维度（per-card 过滤）
-      const statsData = { cardOwnerId: myOpenId || '' }
-      const listData = { cardOwnerId: myOpenId || '', limit: 50 }
+      const statsData = {}
+      const listData = { limit: 50 }
       if (this._cardId) {
         statsData.cardId = this._cardId
         listData.cardId = this._cardId
       }
 
-      // 2. 访客统计（准确 count，按 cardOwnerId + 可选 cardId 过滤）
+      // 2. 访客统计（准确 count，按服务端 OPENID + 可选 cardId 过滤）
       wx.cloud.callFunction({
         name: 'initVisits',
         data: { action: 'getMyVisitorStats', data: statsData }
@@ -111,14 +110,29 @@ Page({
         if (res.result && res.result.ok) {
           this._processVisitors(res.result.list || [])
         } else {
-          this._loadVisitorsDirect()
+          // F15 修复：假降级分支已删除（visits 无 _openid，ACL 下直读恒空），直接展示错误态
+          this.setData({
+            isLoading: false,
+            isError: true,
+            errorMsg: (res.result && res.result.message) || '加载失败，请重试'
+          })
         }
-      }).catch(() => {
-        this._loadVisitorsDirect()
+      }).catch((err) => {
+        // F15 修复：云函数失败直接展示错误态，不再兜底直读 visits
+        console.error('[Visitors] 访客数据加载失败:', err)
+        this.setData({
+          isLoading: false,
+          isError: true,
+          errorMsg: '加载失败，请重试'
+        })
       })
     }).catch(() => {
-      // 无法获取 openId → 降级（不过滤）
-      this._loadVisitorsDirect()
+      // F15 修复：无法获取 openId 时同样展示错误态（不再假降级）
+      this.setData({
+        isLoading: false,
+        isError: true,
+        errorMsg: '加载失败，请重试'
+      })
     })
   },
 
@@ -130,7 +144,7 @@ Page({
         cardId: v.cardId || '',
         cardName: v.cardName || '',
         name: v.visitorName || ('访客 #' + (v.visitorOpenId || '').slice(-4).toUpperCase()),
-        phone: v.visitorPhone || '',
+        // F15 修复：visitorPhone 为死字段（服务端 SEC-03 已不返回），移除
         position: v.visitorPosition || '',
         company: v.visitorCompany || '',
         avatar: storage.resolveCloudUrl(v.visitorAvatar),
@@ -142,8 +156,8 @@ Page({
       }
     })
 
-    // 客户端聚合：按 visitorOpenId 去重（与首页逻辑对齐）
-    const merged = this._mergeVisitorsByOpenId(visitors)
+    // 客户端聚合：按 visitorOpenId 去重（F22①：收敛到 utils/visitors 公共实现）
+    const merged = visitorsUtil.mergeVisitorsByOpenId(visitors)
 
     // 注意：stats.visitors / stats.viewed 已由 getMyVisitorStats 写入，
     // 此处只更新列表，不覆盖统计数字（避免受 limit:50 截断影响）
@@ -153,67 +167,6 @@ Page({
       isEmpty: merged.length === 0,
       'stats.recent': merged.length
     })
-  },
-
-  /**
-   * 客户端聚合：同一 visitorOpenId 的多次访问归并为一条
-   * 与首页 _aggregateVisitors 逻辑保持一致
-   */
-  _mergeVisitorsByOpenId(visitors) {
-    const map = {}
-    visitors.forEach((v) => {
-      const key = v.visitorOpenId || ('anon_' + v.id)
-      if (!map[key]) {
-        map[key] = { ...v }
-      } else {
-        map[key].visitCount = (map[key].visitCount || 1) + (v.visitCount || 1)
-      }
-    })
-    return Object.values(map)
-  },
-
-  _loadVisitorsDirect() {
-    const db = wx.cloud.database()
-    const _ = db.command
-    const myOpenId = this._myOpenId || ''
-
-    // 构建查询条件：按 cardOwnerId 过滤（单卡模式追加 cardId）
-    const baseWhere = {}
-    if (myOpenId) baseWhere.cardOwnerId = myOpenId
-    if (this._cardId) baseWhere.cardId = this._cardId
-
-    // 统计：访客总数
-    let query = db.collection('visits')
-    if (myOpenId) query = query.where(baseWhere)
-    query.count()
-      .then((res) => {
-        this.setData({ 'stats.visitors': res.total || 0 })
-        // 多次来访
-        const repeatWhere = myOpenId
-          ? { cardOwnerId: myOpenId, visitCount: _.gt(1) }
-          : { visitCount: _.gt(1) }
-        return db.collection('visits').where(repeatWhere).count()
-      })
-      .then((res) => {
-        this.setData({ 'stats.viewed': res.total || 0 })
-        // 加载列表
-        let listQuery = db.collection('visits')
-        if (myOpenId) listQuery = listQuery.where(baseWhere)
-        return listQuery.orderBy('visitTime', 'desc').limit(50).get()
-      })
-      .then((res) => {
-        this._processVisitors(res.data || [])
-      })
-      .catch((err) => {
-        console.warn('[Visitors] visits 集合不存在或查询失败:', err)
-        this.setData({
-          visitors: [],
-          'stats.visitors': 0,
-          'stats.viewed': 0,
-          isLoading: false,
-          isEmpty: true
-        })
-      })
   },
 
   goToProfile(e) {

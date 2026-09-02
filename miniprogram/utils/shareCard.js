@@ -40,6 +40,7 @@ var ENABLE_SHARE_CACHE = true
 var _imageCache = {}                    // 分享图片缓存: versionedKey → { tempFilePath, expireAt }
 var _avatarImageCache = {}              // 头像图片缓存: avatarSrc → Image
 var CACHE_TTL = 10 * 60 * 1000          // 分享图片缓存 10 分钟
+var IMAGE_CACHE_MAX = 10                // F16 修复：分享图片缓存上限（超限清理最旧），与头像缓存同款
 var AVATAR_CACHE_MAX = 10               // 头像缓存最大数量
 var AVATAR_LOAD_TIMEOUT = 15000         // 头像加载超时 15 秒
 
@@ -471,6 +472,16 @@ function _putAvatarCache(key, image) {
   _avatarImageCache[key] = image
 }
 
+// F16 修复：分享图片缓存写入统一走 _putImageCache，超过 IMAGE_CACHE_MAX 清理最旧一条
+// （此前只写不清，长会话内存占用无界）
+function _putImageCache(key, entry) {
+  var keys = Object.keys(_imageCache)
+  if (keys.length >= IMAGE_CACHE_MAX) {
+    delete _imageCache[keys[0]]
+  }
+  _imageCache[key] = entry
+}
+
 // =========================================================================
 // cloud:// → HTTPS 转换（云存储已设为所有用户可读，直接拼永久 URL）
 // =========================================================================
@@ -517,10 +528,10 @@ function _exportAndResolve(canvas, versionedKey, now, layout, resolve, reject) {
     success: function (tempRes) {
       console.log('[shareCard] 图片导出成功, size:', (tempRes.tempFilePath || '').length)
       if (ENABLE_SHARE_CACHE) {
-        _imageCache[versionedKey] = {
+        _putImageCache(versionedKey, {
           tempFilePath: tempRes.tempFilePath,
           expireAt: now + CACHE_TTL
-        }
+        })
       }
       resolve({ tempFilePath: tempRes.tempFilePath })
     },

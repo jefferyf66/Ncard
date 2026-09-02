@@ -39,8 +39,17 @@
     <text class="section-title">最近访客</text>
   </view>
 
+  <!-- 错误态（F15：云函数失败直接展示错误态，不再假降级） -->
+  <view class="empty-state" wx:if="{{isError}}">
+    <view class="empty-icon">
+      <view class="icon-users-empty"></view>
+    </view>
+    <text class="empty-title">{{errorMsg || '加载失败，请重试'}}</text>
+    <text class="empty-desc" bindtap="loadVisitors">点击重试</text>
+  </view>
+
   <!-- 空状态 -->
-  <view class="empty-state" wx:if="{{isEmpty}}">
+  <view class="empty-state" wx:elif="{{isEmpty}}">
     <view class="empty-icon">
       <view class="icon-users-empty"></view>
     </view>
@@ -73,7 +82,6 @@
             <text wx:if="{{item.visitorLevel === 2}}">已授权</text>
             <text wx:else>匿名</text>
           </view>
-          <text class="visitor-phone" wx:if="{{item.phone}}">{{item.phone}}</text>
         </view>
         <text class="visitor-position" wx:if="{{item.position}}">{{item.position}}</text>
         <text class="visitor-company" wx:if="{{item.company}}">{{item.company}}</text>

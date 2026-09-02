@@ -62,10 +62,10 @@ Page({
         })
         .catch(function () {})
 
-      // 访客数（含多卡汇总，与访客页一致）
+      // 访客数（含多卡汇总，与访客页一致；F22③：cardOwnerId 为死参数，服务端以 OPENID 为准）
       wx.cloud.callFunction({
         name: 'initVisits',
-        data: { action: 'getMyVisitorStats', data: { cardOwnerId: myOpenId } }
+        data: { action: 'getMyVisitorStats', data: {} }
       }).then(function (res) {
         if (res.result && res.result.ok) {
           that.setData({ visitorCount: res.result.visitors || 0 })

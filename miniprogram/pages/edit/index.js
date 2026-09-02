@@ -112,6 +112,9 @@ Page({
           })
           // 存储治理 A3：记录「已落库头像」基线，保存成功后据此清理旧文件
           this._savedAvatar = data.avatar || ''
+          // 存储治理 F02/F03：记录「已落库公众号二维码 / 附件」基线，保存成功后据此清理旧文件
+          this._savedOfficialQR = (data.wechatOfficial && data.wechatOfficial.qrcode) || ''
+          this._savedAttachments = data.attachments || []
         } else {
           this.setData({ isLoading: false })
           app.showError('名片不存在')
@@ -196,6 +199,33 @@ Page({
     this._savedAvatar = currentAvatar || ''
   },
 
+  // 存储治理 F02：写库成功后删除「上一版已落库公众号二维码」（与头像 A3 同模式，消除先删后存竞态）
+  _cleanupOldOfficialQR(currentQR) {
+    var prev = this._savedOfficialQR || ''
+    if (prev && prev !== currentQR && prev.indexOf('cloud://') === 0) {
+      wx.cloud.deleteFile({ fileList: [prev] })
+        .then(function () {})
+        .catch(function () {})
+    }
+    this._savedOfficialQR = currentQR || ''
+  },
+
+  // 存储治理 F03：写库成功后按「保存时基线 vs 当前」差集删除被移除的附件文件
+  _cleanupRemovedAttachments(currentAttachments) {
+    var baseline = this._savedAttachments || []
+    var currentUrls = {}
+    ;(currentAttachments || []).forEach(function (a) { if (a && a.url) currentUrls[a.url] = true })
+    var orphans = baseline.filter(function (a) {
+      return a && a.url && a.url.indexOf('cloud://') === 0 && !currentUrls[a.url]
+    })
+    if (orphans.length > 0) {
+      wx.cloud.deleteFile({ fileList: orphans.map(function (a) { return a.url }) })
+        .then(function () {})
+        .catch(function () {})
+    }
+    this._savedAttachments = currentAttachments || []
+  },
+
   chooseAttachment() {
     wx.chooseImage({
       count: 1,
@@ -247,16 +277,9 @@ Page({
     const attachments = [...this.data.attachments]
     var removed = attachments.splice(index, 1)[0]
     this.setData({ attachments })
-    // 删除云存储中的附件文件，避免冗余
-    if (removed && removed.url && removed.url.indexOf('cloud://') === 0) {
-      wx.cloud.deleteFile({ fileList: [removed.url] })
-        .then(function () {
-          // 清理成功，无需处理
-        })
-        .catch(function () {
-          // 静默失败，不影响主流程
-        })
-    }
+    // 存储治理 F03：UI 移除时不再立即删云文件（避免保存失败/用户放弃后 DB 悬空引用与半途孤儿）。
+    // 改为基线差集延迟清理：saveCard 写库成功后按「保存时基线 vs 当前」差集删除被移除的文件
+    // （见 _cleanupRemovedAttachments）；保存前放弃的孤儿由既有对账工具收口，不在本次范围。
   },
 
   // 二次确认删除名片附件（防误触）
@@ -267,7 +290,7 @@ Page({
     const name = att.name || '此附件'
     wx.showModal({
       title: '删除这个附件？',
-      content: `${name} 将从名片中移除，同时删除云端文件`,
+      content: `${name} 将从名片中移除，保存后清理云端文件`,
       confirmText: '删除',
       confirmColor: '#EF4444',
       cancelText: '取消',
@@ -412,19 +435,18 @@ Page({
         const temp = (res.tempFilePaths && res.tempFilePaths[0]) || ''
         if (!temp) return
         app.showLoading('上传中')
-        const oldQR = this.data.wechatOfficial.qrcode
         const cloudPath = 'qrcodes/' + Date.now() + '.jpg'
         wx.cloud.uploadFile({
           cloudPath,
           filePath: temp,
           success: (up) => {
             app.hideLoading()
+            // 存储治理 F02：上传只 setData 不删旧 QR 文件（避免保存失败/取消后 DB 悬空引用）。
+            // 旧文件由 saveCard 写库成功后统一清理（见 _cleanupOldOfficialQR）；
+            // cloudPath 用 Date.now()，保存前放弃产生的孤儿由既有对账工具收口，不在本次范围。
             this.setData({
               wechatOfficial: Object.assign({}, this.data.wechatOfficial, { qrcode: up.fileID })
             })
-            if (oldQR && oldQR.indexOf('cloud://') === 0) {
-              wx.cloud.deleteFile({ fileList: [oldQR] }).catch(function () {})
-            }
             app.showSuccess('二维码已上传')
           },
           fail: () => {
@@ -547,6 +569,9 @@ Page({
 
         // 存储治理 A3：写库成功后再清理上一版已落库头像（消除「先删后存」竞态）
         this._cleanupOldAvatar(data.avatar)
+        // 存储治理 F02/F03：写库成功后统一清理旧二维码与被移除的附件文件
+        this._cleanupOldOfficialQR((data.wechatOfficial && data.wechatOfficial.qrcode) || '')
+        this._cleanupRemovedAttachments(data.attachments || [])
 
         // 同步更新 visitor_profiles：创建/编辑名片后升级为 L3 卡片用户身份
         if (!this.data.isEdit) {
@@ -608,6 +633,8 @@ Page({
         }).then(function (res) {
           if (settled) return
           var cloudPath = 'sharecards/card_' + cardId + '.jpg'
+          // F20 注记：分享图存在首页分享(onShareAppMessage 4b)与本页保存两个写入入口，
+          // 写同一路径 sharecards/card_<cardId>.jpg，last-write-wins 为已知接受行为（架构审计确认）。
           wx.cloud.uploadFile({
             cloudPath: cloudPath,
             filePath: res.tempFilePath,
