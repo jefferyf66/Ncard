@@ -5,7 +5,7 @@
  * 修改卡片样式时请同步更新 cardStyle.js 中的对应常量
  */
 page {
-  background: linear-gradient(165deg, #FFF7ED 0%, #FEF3E7 42%, #F1F5FB 100%);
+  background: #FFFFFF;
   min-height: 100vh;
 }
 

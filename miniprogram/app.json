@@ -21,7 +21,7 @@
     "navigationBarBackgroundColor": "#3B82F6",
     "navigationBarTitleText": "投贴儿",
     "navigationBarTextStyle": "white",
-    "backgroundColor": "#F5F7FA"
+    "backgroundColor": "#FFFFFF"
   },
   "tabBar": {
     "custom": true,

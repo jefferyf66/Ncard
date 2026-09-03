@@ -1,6 +1,6 @@
 .container {
   min-height: 100vh;
-  background: linear-gradient(175deg, #FAFBFC 0%, #FEFCF9 30%, #F6F8FC 100%);
+  background: #FFFFFF;
   padding: 24rpx;
   padding-bottom: 200rpx;
 }
@@ -10,7 +10,7 @@
 }
 
 .card-content {
-  background: linear-gradient(165deg, #FFFFFF 0%, #FEFCF9 30%, #F8FAFF 100%);
+  background: #FFFFFF;
   border-radius: var(--radius-lg);
   padding: 40rpx;
   padding-left: 48rpx;

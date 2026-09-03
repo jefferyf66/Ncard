@@ -5,7 +5,7 @@
 .container {
   min-height: 100vh;
   padding: 24rpx;
-  background: linear-gradient(175deg, #EFF6FF 0%, #F8FAFC 40%, #FEFCF7 100%);
+  background: #FFFFFF;
 }
 
 /* ============ SECTION HEADER ============ */
@@ -33,7 +33,7 @@
   display: flex;
   align-items: center;
   justify-content: space-around;
-  background: linear-gradient(170deg, #FFFFFF 0%, #FEFCF7 100%);
+  background: #FFFFFF;
   border-radius: var(--radius-sm);
   padding: 40rpx 0;
   margin-bottom: 28rpx;

@@ -1,4 +1,4 @@
-.page { padding: 24rpx 24rpx 60rpx; background: linear-gradient(175deg, #FAFBFC 0%, #FEFCF9 30%, #F6F8FC 100%); min-height: 100vh; box-sizing: border-box; }
+.page { padding: 24rpx 24rpx 60rpx; background: #FFFFFF; min-height: 100vh; box-sizing: border-box; }
 .card { background: #fff; border-radius: var(--radius-md); padding: 24rpx; margin-bottom: 20rpx; }
 .label { font-size: 26rpx; color: #475569; font-weight: 600; margin-bottom: 12rpx; }
 .label-gap { margin-top: 16rpx; }

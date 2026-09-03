@@ -1,6 +1,6 @@
 .container {
   min-height: 100vh;
-  background: linear-gradient(175deg, #FAFBFC 0%, #FEFCF9 30%, #F6F8FC 100%);
+  background: #FFFFFF;
 }
 
 /* 分享卡片 Canvas（隐藏，仅用于保存时生成分享图） */

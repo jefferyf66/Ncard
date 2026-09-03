@@ -1,7 +1,7 @@
 .page-container {
   padding: 24rpx;
   min-height: 100vh;
-  background: linear-gradient(175deg, #FAFBFC 0%, #FEFCF9 30%, #F6F8FC 100%);
+  background: #FFFFFF;
   padding-bottom: 180rpx;
 }
 
