@@ -3,15 +3,17 @@
   left: 0;
   right: 0;
   bottom: 0;
+  /* 显式 content-box：高度不含 safe-area 内边距，防止内容区被 env() 吃掉后 flex 压缩图标 */
+  box-sizing: content-box;
   height: 100rpx;
   padding-bottom: constant(safe-area-inset-bottom);
   padding-bottom: env(safe-area-inset-bottom);
-  background: #FFFFFF;
+  /* 悬浮效果：顶部渐变透明，内容可透出（各 tab 页已预留 160-180rpx 底部空间） */
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0, #FFFFFF 28rpx);
   display: flex;
   flex-direction: row;
   align-items: center;
-  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.06);
-  border-top: 1rpx solid #EEF1F5;
+  box-shadow: 0 -4rpx 20rpx rgba(15, 23, 42, 0.06);
   z-index: 1000;
 }
 
@@ -22,7 +24,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #888780;
+  color: #64748B;
 }
 
 .tab-item.active {
@@ -35,81 +37,14 @@
   line-height: 1;
 }
 
+/* 图标：本地 PNG（96x96，灰/蓝双色），<image> 组件加载，兼容性最稳 */
 .tab-icon {
   width: 44rpx;
   height: 44rpx;
-  position: relative;
-  color: inherit;
+  flex-shrink: 0; /* 禁止 flex 压缩图标 */
+  display: block;
 }
 
-/* 名片：卡片 + 横线 */
-.icon-card {
-  border: 3rpx solid currentColor;
-  border-radius: 6rpx;
-}
-.icon-card::after {
-  content: '';
-  position: absolute;
-  left: 7rpx;
-  right: 7rpx;
-  top: 9rpx;
-  height: 3rpx;
-  background: currentColor;
-  box-shadow: 0 9rpx 0 currentColor;
-}
-
-/* 名片夹：两叠卡片 */
-.icon-stack {
-  border: 3rpx solid currentColor;
-  border-radius: 6rpx;
-}
-.icon-stack::before {
-  content: '';
-  position: absolute;
-  left: 8rpx;
-  right: -6rpx;
-  top: -8rpx;
-  height: 100%;
-  border: 3rpx solid currentColor;
-  border-radius: 6rpx;
-  background: #FFFFFF;
-  z-index: -1;
-}
-
-/* 团队：两个圆（人） */
-.icon-team {
-  border: 3rpx solid currentColor;
-  border-radius: 50%;
-}
-.icon-team::before {
-  content: '';
-  position: absolute;
-  left: 10rpx;
-  top: 10rpx;
-  width: 24rpx;
-  height: 24rpx;
-  border: 3rpx solid currentColor;
-  border-radius: 50%;
-}
-
-/* 我的：头 + 肩 */
-.icon-user {
-  border: 3rpx solid currentColor;
-  border-radius: 50%;
-}
-.icon-user::after {
-  content: '';
-  position: absolute;
-  left: -4rpx;
-  right: -4rpx;
-  bottom: -10rpx;
-  height: 22rpx;
-  border: 3rpx solid currentColor;
-  border-bottom: none;
-  border-radius: 50% 50% 0 0;
-}
-
-/* 中央凸起＋按钮 */
 .tab-plus {
   flex: 1;
   height: 100%;

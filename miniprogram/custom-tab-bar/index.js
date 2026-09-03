@@ -3,6 +3,9 @@ Component({
     selected: 0
   },
   methods: {
+    onIconError(e) {
+      console.error('[TAB ICON ERROR] 加载失败:', e.currentTarget.dataset.name, e.detail)
+    },
     switchTab(e) {
       const path = e.currentTarget.dataset.path
       wx.switchTab({ url: path })
