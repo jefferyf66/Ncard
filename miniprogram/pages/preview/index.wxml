@@ -60,7 +60,7 @@
         <!-- D2 锁定占位区：仅非主人且存在被锁字段时展示 -->
         <view class="locked-section" wx:if="{{!isOwner && lockedFields.length > 0}}">
           <view class="lock-item" wx:for="{{lockedFields}}" wx:key="*this">
-            <text class="lock-icon">🔒</text>
+            <view class="lock-icon"></view>
             <text class="lock-text">登录后查看{{fieldLabel[item]}}</text>
           </view>
           <view class="auth-cta" bindtap="showAuthModal">登录查看完整名片</view>
@@ -148,10 +148,10 @@
 
     <!-- 公众号二维码弹窗：长按识别关注 -->
     <view class="delete-modal" wx:if="{{showOfficialQR}}" bindtap="closeOfficialQR">
-      <view class="modal-content" catchtap="noop" style="padding:40rpx;">
-        <image src="{{officialQRUrl}}" mode="aspectFit" show-menu-by-longpress="{{true}}" style="width:420rpx;height:420rpx;" />
-        <text style="font-size:26rpx;color:#64748B;margin-top:24rpx;text-align:center;">长按上方二维码，识别关注公众号</text>
-        <view style="margin-top:32rpx;padding:20rpx 64rpx;background:#3B82F6;color:#fff;border-radius:4rpx;font-size:30rpx;" bindtap="closeOfficialQR">关闭</view>
+      <view class="modal-content" catchtap="noop">
+        <image src="{{officialQRUrl}}" mode="aspectFit" show-menu-by-longpress="{{true}}" class="qr-image" />
+        <text class="qr-tip">长按上方二维码，识别关注公众号</text>
+        <view class="qr-close" bindtap="closeOfficialQR">关闭</view>
       </view>
     </view>
 
@@ -171,7 +171,7 @@
     </view>
 
     <!-- 访客分析（仅名片主人可见，按本名片维度聚合） -->
-    <view class="section-card visitor-analytics" wx:if="{{isOwner}}">
+    <view class="section-card" wx:if="{{isOwner}}">
       <view class="section-header">
         <view class="section-icon">
           <view class="icon-eye"></view>
@@ -329,7 +329,7 @@
     ></input>
     <view class="modal-actions">
       <view class="modal-btn cancel" bindtap="closeAuthModal">取消</view>
-      <view class="modal-btn confirm" bindtap="confirmAuth">确认授权</view>
+      <view class="modal-btn primary" bindtap="confirmAuth">确认授权</view>
     </view>
   </view>
 </view>

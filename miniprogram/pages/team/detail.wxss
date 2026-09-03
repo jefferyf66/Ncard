@@ -6,41 +6,36 @@
   background: linear-gradient(175deg, #EFF6FF 0%, #F8FAFC 40%, #FEFCF7 100%);
 }
 .loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 160rpx 0; }
-.loading-spinner {
-  width: 56rpx; height: 56rpx; border: 6rpx solid #E2E8F0; border-top-color: #3B82F6;
-  border-radius: 50%; animation: spin 0.8s linear infinite;
-}
-.loading-text { margin-top: 20rpx; font-size: 26rpx; color: #94A3B8; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { margin-top: 20rpx; font-size: 26rpx; color: #64748B; }
 
 .team-header {
   display: flex;
   align-items: center;
   background: #fff;
-  border-radius: 20rpx;
+  border-radius: var(--radius-lg);
   padding: 28rpx;
   box-shadow: 0 2rpx 12rpx rgba(29, 78, 216, 0.04);
   border: 2rpx solid #E2E8F0;
 }
 .team-logo {
-  width: 96rpx; height: 96rpx; border-radius: 18rpx;
+  width: 96rpx; height: 96rpx; border-radius: var(--radius-md);
   background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
   color: #fff; font-size: 44rpx; font-weight: 700;
   display: flex; align-items: center; justify-content: center; margin-right: 20rpx;
 }
 .team-head-info { flex: 1; min-width: 0; }
 .team-name { font-size: 36rpx; font-weight: 700; color: #0F172A; display: block; }
-.team-meta { font-size: 24rpx; color: #94A3B8; margin-top: 6rpx; display: block; }
-.role-tag { font-size: 22rpx; padding: 4rpx 14rpx; border-radius: 20rpx; flex-shrink: 0; }
+.team-meta { font-size: 24rpx; color: #64748B; margin-top: 6rpx; display: block; }
+.role-tag { font-size: 22rpx; padding: 4rpx 14rpx; border-radius: var(--radius-lg); flex-shrink: 0; }
 .role-tag.owner { background: #FEF3C7; color: #B45309; }
 .role-tag.member { background: #E0F2FE; color: #0369A1; }
 
-.card-block { margin-top: 20rpx; background: #fff; border-radius: 20rpx; padding: 24rpx 28rpx; border: 2rpx solid #E2E8F0; }
+.card-block { margin-top: 20rpx; background: #fff; border-radius: var(--radius-lg); padding: 24rpx 28rpx; border: 2rpx solid #E2E8F0; }
 .block-text { font-size: 28rpx; color: #475569; line-height: 1.6; }
 
 .block-action { display: flex; align-items: center; }
 .action-icon {
-  width: 64rpx; height: 64rpx; border-radius: 14rpx; background: #EFF6FF;
+  width: 64rpx; height: 64rpx; border-radius: var(--radius-md); background: #EFF6FF;
   display: flex; align-items: center; justify-content: center; margin-right: 20rpx;
 }
 .icon-invite { width: 32rpx; height: 32rpx; border: 4rpx solid #3B82F6; border-radius: 50%; position: relative; }
@@ -50,10 +45,10 @@
 }
 .action-text { flex: 1; }
 .action-title { font-size: 30rpx; font-weight: 600; color: #1F2937; display: block; }
-.action-sub { font-size: 22rpx; color: #94A3B8; margin-top: 4rpx; display: block; }
+.action-sub { font-size: 24rpx; color: #64748B; margin-top: 4rpx; display: block; }
 .action-arrow { color: #CBD5E1; font-size: 40rpx; }
 
-.section-card { margin-top: 20rpx; background: #fff; border-radius: 20rpx; padding: 24rpx 28rpx; border: 2rpx solid #E2E8F0; }
+.section-card { margin-top: 20rpx; background: #fff; border-radius: var(--radius-lg); padding: 24rpx 28rpx; border: 2rpx solid #E2E8F0; }
 .section-header { margin-bottom: 16rpx; }
 .section-title { font-size: 28rpx; font-weight: 600; color: #334155; }
 
@@ -66,43 +61,50 @@
 .member-info { flex: 1; min-width: 0; }
 .member-name-row { display: flex; align-items: center; gap: 12rpx; }
 .member-name { font-size: 28rpx; color: #1F2937; }
-.role-badge { font-size: 20rpx; padding: 2rpx 12rpx; border-radius: 20rpx; }
+.role-badge { font-size: 20rpx; padding: 2rpx 12rpx; border-radius: var(--radius-lg); }
 .role-owner { background: #FEF3C7; color: #B45309; }
 .role-member { background: #E0F2FE; color: #0369A1; }
 .member-actions { display: flex; gap: 24rpx; flex-shrink: 0; }
-.act-edit { font-size: 26rpx; color: #3B82F6; }
-.act-remove { font-size: 26rpx; color: #EF4444; }
-.empty-members { padding: 24rpx 0; text-align: center; font-size: 26rpx; color: #94A3B8; }
+.act-edit {
+  font-size: 26rpx; color: #3B82F6;
+  padding: 20rpx 8rpx; margin: -20rpx 0;
+}
+.act-remove {
+  font-size: 26rpx; color: #EF4444;
+  padding: 20rpx 0 20rpx 16rpx; margin: -20rpx 0;
+}
+.empty-members { padding: 24rpx 0; text-align: center; font-size: 26rpx; color: #64748B; }
 
 .bottom-actions { position: fixed; left: 24rpx; right: 24rpx; bottom: 28rpx; }
 .danger-btn {
   background: #fff; color: #EF4444; font-size: 30rpx; font-weight: 600; text-align: center;
-  padding: 24rpx 0; border-radius: 16rpx; border: 2rpx solid #FECACA;
+  min-height: 88rpx; line-height: 88rpx; padding: 0 24rpx;
+  border-radius: var(--radius-md); border: 2rpx solid #FECACA;
 }
 .owner-actions { margin: 28rpx 24rpx 0; }
-.owner-tip-text { font-size: 24rpx; color: #94A3B8; line-height: 1.6; }
+.owner-tip-text { font-size: 24rpx; color: #64748B; line-height: 1.6; }
 .owner-actions .danger-btn { margin-top: 16rpx; }
 
 /* 邀请弹窗 */
 .modal-overlay {
   position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.5);
-  display: flex; align-items: flex-end; z-index: 100;
+  display: flex; align-items: flex-end; z-index: 1000;
 }
 .modal-content {
-  width: 100%; background: #fff; border-radius: 28rpx 28rpx 0 0; padding: 40rpx 40rpx 60rpx;
+  width: 100%; background: #fff; border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 40rpx 40rpx calc(40rpx + env(safe-area-inset-bottom));
 }
 .modal-title { font-size: 34rpx; font-weight: 700; color: #0F172A; text-align: center; display: block; margin-bottom: 32rpx; }
 .code-box {
   display: flex; align-items: center; background: #F8FAFC; border: 2rpx solid #E2E8F0;
-  border-radius: 16rpx; padding: 24rpx; margin-bottom: 20rpx;
+  border-radius: var(--radius-md); padding: 24rpx; margin-bottom: 20rpx;
 }
 .code-label { font-size: 26rpx; color: #64748B; }
 .code-value { flex: 1; text-align: center; font-size: 44rpx; font-weight: 700; letter-spacing: 8rpx; color: #1F2937; }
-.copy-btn { font-size: 26rpx; color: #3B82F6; font-weight: 600; padding: 8rpx 20rpx; border: 2rpx solid #BFDBFE; border-radius: 12rpx; }
-.modal-tip { font-size: 24rpx; color: #94A3B8; line-height: 1.6; display: block; margin-bottom: 24rpx; }
+.copy-btn { font-size: 26rpx; color: #3B82F6; font-weight: 600; padding: 8rpx 20rpx; border: 2rpx solid #BFDBFE; border-radius: var(--radius-sm); }
+.modal-tip { font-size: 24rpx; color: #64748B; line-height: 1.6; display: block; margin-bottom: 24rpx; }
 .share-btn {
   background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: #fff;
-  font-size: 30rpx; font-weight: 600; border-radius: 16rpx; margin-bottom: 16rpx;
+  font-size: 30rpx; font-weight: 600; border-radius: var(--radius-md); margin-bottom: 16rpx;
 }
 .modal-close { text-align: center; font-size: 28rpx; color: #64748B; padding: 16rpx 0; }
 
@@ -116,7 +118,7 @@
 .member-card {
   background: #F8FAFC;
   border: 2rpx solid #E2E8F0;
-  border-radius: 16rpx;
+  border-radius: var(--radius-md);
   padding: 24rpx 20rpx;
   display: flex;
   flex-direction: column;
@@ -131,29 +133,29 @@
   margin-bottom: 14rpx;
 }
 .member-card-name { font-size: 28rpx; font-weight: 600; color: #1F2937; }
-.member-card-sub { font-size: 22rpx; color: #94A3B8; margin-top: 6rpx; line-height: 1.5; }
+.member-card-sub { font-size: 24rpx; color: #64748B; margin-top: 6rpx; line-height: 1.5; }
 
 /* 分享团队目录按钮 */
 .share-dir-card { margin-top: 20rpx; }
 .share-dir-btn {
   background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: #fff;
-  font-size: 30rpx; font-weight: 600; border-radius: 16rpx;
+  font-size: 30rpx; font-weight: 600; border-radius: var(--radius-md);
 }
 
 /* 设置区（owner）：目录公开开关 */
-.settings-card { margin-top: 20rpx; background: #fff; border-radius: 20rpx; padding: 8rpx 28rpx; border: 2rpx solid #E2E8F0; }
+.settings-card { margin-top: 20rpx; background: #fff; border-radius: var(--radius-lg); padding: 8rpx 28rpx; border: 2rpx solid #E2E8F0; }
 .settings-row {
   display: flex; align-items: center; justify-content: space-between;
   padding: 22rpx 0;
 }
 .settings-text { flex: 1; min-width: 0; padding-right: 20rpx; }
 .settings-title { font-size: 30rpx; font-weight: 600; color: #1F2937; display: block; }
-.settings-sub { font-size: 22rpx; color: #94A3B8; margin-top: 6rpx; display: block; line-height: 1.5; }
+.settings-sub { font-size: 24rpx; color: #64748B; margin-top: 6rpx; display: block; line-height: 1.5; }
 .settings-switch { flex-shrink: 0; }
 
 /* 白名单提示 */
 .whitelist-tip .action-icon {
-  width: 64rpx; height: 64rpx; border-radius: 14rpx; background: #FEF3C7;
+  width: 64rpx; height: 64rpx; border-radius: var(--radius-md); background: #FEF3C7;
   display: flex; align-items: center; justify-content: center; margin-right: 20rpx;
 }
 .icon-lock {
@@ -165,7 +167,9 @@
   border-radius: 10rpx 10rpx 0 0;
 }
 .join-cta {
-  margin-top: 16rpx; text-align: center; font-size: 28rpx; font-weight: 600; color: #3B82F6;
+  margin-top: 16rpx; min-height: 88rpx; display: flex; align-items: center; justify-content: center;
+  font-size: 28rpx; font-weight: 600; color: #3B82F6;
+  background: #EFF6FF; border-radius: var(--radius-sm);
 }
 
 /* 团队名片配置入口图标 */
@@ -179,7 +183,7 @@
 .share-actions { margin-top: 20rpx; padding-top: 20rpx; border-top: 2rpx solid #F1F5F9; }
 .share-card-btn {
   background: #EFF6FF; color: #2563EB; font-size: 28rpx; font-weight: 600; text-align: center;
-  padding: 22rpx 0; border-radius: 14rpx; border: 2rpx solid #BFDBFE;
+  padding: 22rpx 0; border-radius: var(--radius-md); border: 2rpx solid #BFDBFE;
 }
 
 /* 团队名片配置弹层 */
@@ -190,17 +194,17 @@
 .schema-main { flex: 1; min-width: 0; padding-right: 20rpx; }
 .schema-label { font-size: 28rpx; color: #1F2937; font-weight: 600; display: block; margin-bottom: 12rpx; }
 .schema-default {
-  background: #F8FAFC; border: 2rpx solid #E2E8F0; border-radius: 12rpx;
+  background: #F8FAFC; border: 2rpx solid #E2E8F0; border-radius: var(--radius-sm);
   padding: 14rpx 18rpx; font-size: 26rpx; color: #334155; width: 100%; box-sizing: border-box;
 }
 .schema-toggles { display: flex; gap: 12rpx; flex-shrink: 0; }
 .schema-toggle {
-  font-size: 24rpx; color: #94A3B8; padding: 10rpx 18rpx; border-radius: 20rpx;
+  font-size: 24rpx; color: #94A3B8; padding: 10rpx 18rpx; border-radius: var(--radius-lg);
   border: 2rpx solid #E2E8F0; background: #F8FAFC;
 }
 .schema-toggle.on { color: #2563EB; border-color: #BFDBFE; background: #EFF6FF; }
 .schema-toggle.on.req { color: #fff; background: #3B82F6; border-color: #3B82F6; }
 .save-btn {
   background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: #fff;
-  font-size: 30rpx; font-weight: 600; border-radius: 16rpx; margin-bottom: 12rpx;
+  font-size: 30rpx; font-weight: 600; border-radius: var(--radius-md); margin-bottom: 12rpx;
 }

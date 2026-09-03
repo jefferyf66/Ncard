@@ -44,7 +44,7 @@
           placeholder="请输入 6 位邀请码"
           value="{{code}}"
           bindinput="onCodeInput"
-          maxlength="8"
+          maxlength="6"
         />
       </view>
     </view>

@@ -4,9 +4,7 @@
 </view>
 
 <view wx:else class="page">
-  <view class="nav">
-    <view class="nav-back" bindtap="goBack">‹ 返回</view>
-    <view class="nav-title">管理后台</view>
+  <view class="role-row">
     <view class="role-badge">{{role}}</view>
   </view>
 

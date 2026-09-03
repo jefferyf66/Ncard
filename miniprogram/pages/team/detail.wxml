@@ -26,7 +26,7 @@
       <view class="member-grid">
         <view class="member-card" wx:for="{{pubMembers}}" wx:key="memberId">
           <image wx:if="{{item.avatarUrl}}" class="member-avatar-img" src="{{item.avatarUrl}}" mode="aspectFill"></image>
-          <view wx:else class="member-avatar-img member-avatar-default">{{item.name[0]}}</view>
+          <view wx:else class="member-avatar-img">{{item.name[0]}}</view>
           <view class="member-card-name">{{item.name}}</view>
           <view class="member-card-sub">{{item.position}}{{item.company ? ' · ' + item.company : ''}}{{item.department ? ' · ' + item.department : ''}}</view>
         </view>

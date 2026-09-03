@@ -2,6 +2,33 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.5.7] - 2026-09-03
+
+> UI 全面审计 + 全量修复（v1.5.6 基线，33 个 wxml/wxss 约 6400 行）：0 P0，8 P1 必修 + 14 P2 优化全部闭环，另补齐 QA 复验抓到的 10 处零样式类/空挂类。完整报告见 `artifacts/ui-audit-2026-09-02.md`，QA 脚本留存 `artifacts/qa_classes.py`。
+
+### Added
+- **app.wxss 设计令牌基础设施**：圆角 3 档（`--radius-sm/md/lg` = 8/16/24rpx）、slate 灰阶（`--ink-*`）、品牌色 `--brand-*` 变量；公共 `.loading-spinner`（64rpx/1s spin）+ `.btn-primary` 统一主按钮规格
+- **preview 授权弹窗样式补齐**（P1-1 渲染级 bug）：auth-modal 全套 7 类样式（遮罩/160rpx 虚线头像按钮/CSS 人形占位图标/88rpx 昵称输入框），确认按钮红色→蓝色语义修正
+- **preview 锁定占位区样式补齐**：locked-section 系列 5 类（虚线分隔/🔒 换 CSS 锁图标/品牌蓝渐变 CTA），此前整块零样式裸渲染
+- **零样式类补齐（QA 复验追加）**：join `form-input`（对齐 create 页规格）、profile `stat-item`、account `avatar-empty`、edit `avatar-wrapper-hover`、admin `u-main`/`t-main` 行容器、preview `.function-item.saved` 蓝色已保存态
+
+### Fixed
+- **失效邀请语义错误（P1-2）**：join 页蓝色信息条 → `.cardform-tip.warn` 红色警告（#FEF2F2/#FECACA/#DC2626）
+- **edit 导航栏不一致（P1-3）**：白底黑字 → 品牌蓝 #3B82F6 白字；list/visitors 白底同步归位（crop 黑底为沉浸式裁切豁免保留）
+- **index 顶部间距失效（P1-4）**：`padding-top: var(--status-bar-height)` 未定义变量 → 固定 padding，标题不再贴状态栏
+- **保存按钮防重视图未接（P1-7）**：save-btn 接入已有 `isSaving` 状态（文案「保存中...」+ disabled 态 pointer-events:none）
+- **二维码弹窗内联样式收编（P1-8）**：`.qr-image/.qr-tip/.qr-close` 收进 wxss
+
+### Changed
+- **一致性收敛**：主按钮统一 135° 蓝渐变 + 30rpx/600 + 88rpx 触控高度；三套灰阶（飞书系/Tailwind gray/slate）归一 slate；页面背景暖调渐变归族；头像形状语义化（个人名片 4rpx 锐角方 / 团队头像正圆+蓝描边）
+- **触控目标 ≥88rpx（P1-5/P1-6）**：desktop-link/agreement-link/view-all-btn/team-link/act-edit/act-remove/join-cta/t-del 等 15+ 处小热区用 padding+负 margin 补偿；list 页 📞✉️👔 emoji 全部换 CSS 线性图标（跨机型渲染对齐 preview）
+- **对比度（WCAG AA）**：说明性文本 22→24rpx、#94A3B8→#64748B（箭头/版本号等装饰性保留）；icon-alert 统一 #EF4444 红色系
+- **弹窗模式归位**：z-index 统一 1000；确认类居中 dialog、表单类底部 sheet + safe-area-inset-bottom；account/admin 自绘双标题栏删除（admin 保留 role 徽章右对齐）
+- **代码卫生**：index/edit/visitors/account 等页约 400+ 行死样式删除；`border: 1px` 全量 → 2rpx；本地 spinner/keyframes 删除改用全局
+- **输入收敛**：邀请码输入 maxlength 8→6（对齐后端 genInviteCode 实际 6 位）
+
+> 本次为**纯前端改动**（26 个 wxml/wxss/json 文件 + app.js 版本号），开发者工具编译即生效，**无需部署云函数**。
+
 ## [1.5.6] - 2026-09-02
 
 > 全面代码审计（v1.5.5 基线，八维：安全/并发/资源/错误处理/边界/性能/逻辑/可维护性）——0 P0，5 P1 + 17 P2 全部修复闭环，QA 两轮回归通过。完整报告见 `artifacts/code-audit-2026-09-02.md`。

@@ -1,26 +1,25 @@
-.page { padding: 24rpx 24rpx 60rpx; background: #F5F7FA; min-height: 100vh; box-sizing: border-box; }
-.nav { display: flex; align-items: center; height: 80rpx; margin-bottom: 16rpx; }
-.nav-back { color: #3B82F6; font-size: 28rpx; }
-.nav-title { flex: 1; text-align: center; font-size: 32rpx; font-weight: 700; color: #111827; margin-right: 80rpx; }
-.card { background: #fff; border-radius: 16rpx; padding: 24rpx; margin-bottom: 20rpx; }
-.label { font-size: 26rpx; color: #374151; font-weight: 600; margin-bottom: 12rpx; }
-.input { background: #F3F4F6; border-radius: 12rpx; padding: 20rpx; font-size: 28rpx; color: #111827; }
+.page { padding: 24rpx 24rpx 60rpx; background: linear-gradient(175deg, #FAFBFC 0%, #FEFCF9 30%, #F6F8FC 100%); min-height: 100vh; box-sizing: border-box; }
+.card { background: #fff; border-radius: var(--radius-md); padding: 24rpx; margin-bottom: 20rpx; }
+.label { font-size: 26rpx; color: #475569; font-weight: 600; margin-bottom: 12rpx; }
+.label-gap { margin-top: 16rpx; }
+.input { background: #F1F5F9; border-radius: var(--radius-sm); padding: 20rpx; font-size: 28rpx; color: #0F172A; }
 .avatar-btn { margin: 0; padding: 0; background: transparent; line-height: normal; width: 120rpx; }
 .avatar-btn::after { border: none; }
-.avatar { width: 120rpx; height: 120rpx; border-radius: 50%; background: #E5E7EB; display: flex; align-items: center; justify-content: center; color: #9CA3AF; font-size: 28rpx; }
-.hint { font-size: 22rpx; color: #9CA3AF; margin-top: 10rpx; }
-.btn-primary { background: #3B82F6; color: #fff; border-radius: 12rpx; font-size: 30rpx; margin: 8rpx 0 20rpx; }
-.row { display: flex; justify-content: space-between; align-items: center; font-size: 28rpx; color: #374151; }
-.arrow { color: #9CA3AF; font-size: 36rpx; }
+.avatar { width: 120rpx; height: 120rpx; border-radius: 50%; background: #E2E8F0; display: flex; align-items: center; justify-content: center; color: #94A3B8; font-size: 28rpx; }
+.avatar-empty { font-size: 32rpx; font-weight: 500; }
+.hint { font-size: 24rpx; color: #64748B; margin-top: 10rpx; }
+.btn-primary { background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: #fff; border-radius: var(--radius-md); font-size: 30rpx; font-weight: 600; margin: 8rpx 0 20rpx; min-height: 88rpx; line-height: 88rpx; }
+.row { display: flex; justify-content: space-between; align-items: center; font-size: 28rpx; color: #475569; min-height: 88rpx; }
+.arrow { color: #CBD5E1; font-size: 36rpx; }
 .danger-zone { margin-top: 30rpx; }
 .danger-title { color: #DC2626; font-size: 26rpx; font-weight: 700; margin-bottom: 12rpx; }
-.btn-danger { background: #FEF2F2; color: #DC2626; border-radius: 12rpx; font-size: 30rpx; border: 1rpx solid #FECACA; }
+.btn-danger { background: #FEF2F2; color: #DC2626; border-radius: var(--radius-sm); font-size: 30rpx; border: 1rpx solid #FECACA; }
 .danger-hint { font-size: 22rpx; color: #991B1B; margin-top: 12rpx; line-height: 32rpx; }
-.modal-mask { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 100; }
-.modal { width: 78%; background: #fff; border-radius: 20rpx; padding: 36rpx; }
-.modal-title { font-size: 32rpx; font-weight: 700; color: #111827; margin-bottom: 16rpx; }
-.modal-text { font-size: 26rpx; color: #4B5563; line-height: 36rpx; }
+.modal-mask { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal { width: 78%; background: #fff; border-radius: var(--radius-lg); padding: 36rpx; }
+.modal-title { font-size: 32rpx; font-weight: 700; color: #0F172A; margin-bottom: 16rpx; }
+.modal-text { font-size: 26rpx; color: #475569; line-height: 36rpx; }
 .danger { color: #DC2626; }
 .team-line { font-size: 24rpx; color: #991B1B; margin-top: 6rpx; }
 .modal-actions { display: flex; gap: 20rpx; margin-top: 28rpx; }
-.btn-ghost { flex: 1; background: #F3F4F6; color: #374151; border-radius: 12rpx; font-size: 28rpx; }
+.btn-ghost { flex: 1; background: #F1F5F9; color: #475569; border-radius: var(--radius-sm); font-size: 28rpx; }

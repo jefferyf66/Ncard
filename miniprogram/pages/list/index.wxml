@@ -30,11 +30,11 @@
         <text wx:if="{{item.isTeam && item.teams[0].org.department}}" class="team-dept">{{item.teams[0].org.department}}</text>
         <view class="contact-info">
           <view class="contact-item" wx:if="{{item.phone}}">
-            <text class="contact-icon">📞</text>
+            <view class="icon-phone"></view>
             <text class="contact-text">{{item.phone}}</text>
           </view>
           <view class="contact-item" wx:if="{{item.email}}">
-            <text class="contact-icon">✉️</text>
+            <view class="icon-mail"></view>
             <text class="contact-text">{{item.email}}</text>
           </view>
         </view>
@@ -48,7 +48,7 @@
 
   <view wx:if="{{shownCards.length === 0}}" class="empty-state">
     <view class="empty-icon">
-      <text class="icon-text">👔</text>
+      <view class="icon-card"></view>
     </view>
     <text class="empty-title">暂无名片</text>
     <text class="empty-desc">暂未保存他人名片，在预览页保存后即可在此查看</text>

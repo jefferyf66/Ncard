@@ -31,6 +31,63 @@ button:focus {
   outline: none;
 }
 
+/* ===== 设计令牌（v1.5.7 UI 审计收敛）===== */
+page {
+  /* 圆角三档：sm=输入框/小件 md=按钮/弹层内件 lg=卡片/弹窗 */
+  --radius-sm: 8rpx;
+  --radius-md: 16rpx;
+  --radius-lg: 24rpx;
+  /* 灰阶统一 slate 系 */
+  --ink-900: #0F172A;
+  --ink-700: #334155;
+  --ink-600: #475569;
+  --ink-500: #64748B;
+  --ink-400: #94A3B8;
+  --line: #E2E8F0;
+  --bg-soft: #F8FAFC;
+  /* 品牌 */
+  --brand: #3B82F6;
+  --brand-deep: #2563EB;
+  --danger: #EF4444;
+}
+
+/* ===== 统一主按钮：渐变 135° + 30rpx/600 ===== */
+.btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  padding: 0 40rpx;
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  border-radius: var(--radius-md);
+  color: #FFFFFF;
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 1;
+  transition: opacity 0.2s ease;
+}
+
+.btn-primary.disabled,
+.btn-primary[disabled] {
+  opacity: 0.6;
+}
+
+/* ===== 公共加载 spinner（64rpx / 1s）===== */
+.loading-spinner {
+  width: 64rpx;
+  height: 64rpx;
+  border: 5rpx solid rgba(59, 130, 246, 0.15);
+  border-top-color: #3B82F6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .container {
   min-height: 100vh;
   padding: 24rpx;

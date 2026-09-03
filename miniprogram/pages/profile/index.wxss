@@ -234,7 +234,7 @@
 
 .menu-subtext {
   font-size: 26rpx;
-  color: #94A3B8;
+  color: #64748B;
 }
 
 /* ============ ICONS ============ */
@@ -325,4 +325,12 @@
 .version-text {
   font-size: 24rpx;
   color: #94A3B8;
+}
+
+/* 统计项容器（零样式补齐：图标+数值纵向排布，可点） */
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
 }

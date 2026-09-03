@@ -335,7 +335,7 @@
         </view>
         <text class="join-tip">粘贴邀请码，将当前名片关联到团队；团队可托管你的组织字段</text>
         <view class="join-row">
-          <input class="join-input" placeholder="输入邀请码" value="{{inviteCode}}" bindinput="onInviteCodeInput" maxlength="8" />
+          <input class="join-input" placeholder="输入 6 位邀请码" value="{{inviteCode}}" bindinput="onInviteCodeInput" maxlength="6" />
           <view class="join-btn {{isJoining ? 'disabled' : ''}}" bindtap="joinTeam">{{isJoining ? '加入中...' : '加入'}}</view>
         </view>
       </view>
@@ -345,8 +345,8 @@
   <view class="visibility-tip" wx:if="{{showVisibilityTip}}">{{showVisibilityTip}}</view>
 
   <view class="bottom-bar">
-    <view class="save-btn" bindtap="saveCard">
-      <text class="btn-text">{{isEdit ? '保存修改' : '保存名片'}}</text>
+    <view class="save-btn {{isSaving ? 'disabled' : ''}}" bindtap="saveCard">
+      <text class="btn-text">{{isSaving ? '保存中...' : (isEdit ? '保存修改' : '保存名片')}}</text>
     </view>
   </view>
   </view>

@@ -1,34 +1,35 @@
-.page { padding: 24rpx 24rpx 60rpx; background: #F5F7FA; min-height: 100vh; box-sizing: border-box; }
-.nav { display: flex; align-items: center; height: 80rpx; margin-bottom: 16rpx; }
-.nav-back { color: #3B82F6; font-size: 28rpx; }
-.nav-title { flex: 1; text-align: center; font-size: 32rpx; font-weight: 700; color: #111827; margin-right: 80rpx; }
+.page { padding: 24rpx 24rpx 60rpx; background: linear-gradient(175deg, #FAFBFC 0%, #FEFCF9 30%, #F6F8FC 100%); min-height: 100vh; box-sizing: border-box; }
+.role-row { display: flex; justify-content: flex-end; margin-bottom: 16rpx; }
 .role-badge { background: #3B82F6; color: #fff; font-size: 22rpx; padding: 4rpx 16rpx; border-radius: 999rpx; }
 .stats { display: flex; gap: 16rpx; margin-bottom: 24rpx; }
-.stat { flex: 1; background: #fff; border-radius: 16rpx; padding: 24rpx 0; text-align: center; }
+.stat { flex: 1; background: #fff; border-radius: var(--radius-md); padding: 24rpx 0; text-align: center; }
 .stat-v { font-size: 40rpx; font-weight: 700; color: #0F172A; }
-.stat-l { font-size: 22rpx; color: #64748B; margin-top: 6rpx; }
+.stat-l { font-size: 24rpx; color: #64748B; margin-top: 6rpx; }
 .stat.danger .stat-v { color: #DC2626; }
 .section-title { font-size: 28rpx; font-weight: 700; color: #334155; margin: 16rpx 8rpx; }
-.card { background: #fff; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; }
-.user-row .u-name { font-size: 28rpx; color: #111827; font-weight: 600; }
-.u-role { font-size: 20rpx; color: #3B82F6; background: #EFF6FF; padding: 2rpx 10rpx; border-radius: 6rpx; margin-left: 8rpx; }
-.u-sub { font-size: 22rpx; color: #9CA3AF; margin-top: 8rpx; }
+.card { background: #fff; border-radius: var(--radius-md); padding: 24rpx; margin-bottom: 16rpx; }
+.user-row .u-name { font-size: 28rpx; color: #0F172A; font-weight: 600; }
+.u-role { font-size: 22rpx; color: #3B82F6; background: #EFF6FF; padding: 2rpx 10rpx; border-radius: 6rpx; margin-left: 8rpx; }
+.u-sub { font-size: 24rpx; color: #64748B; margin-top: 8rpx; }
 .team-row { display: flex; justify-content: space-between; align-items: center; }
-.t-name { font-size: 28rpx; color: #111827; font-weight: 600; }
-.t-sub { font-size: 22rpx; color: #9CA3AF; margin-top: 6rpx; }
-.t-del { color: #DC2626; font-size: 26rpx; padding: 8rpx 20rpx; background: #FEF2F2; border-radius: 10rpx; }
-.empty { text-align: center; color: #9CA3AF; font-size: 24rpx; padding: 30rpx; }
-.btn-transfer { background: #EFF6FF; color: #2563EB; border-radius: 12rpx; font-size: 30rpx; margin-top: 20rpx; border: 1rpx solid #BFDBFE; }
+.t-name { font-size: 28rpx; color: #0F172A; font-weight: 600; }
+.t-sub { font-size: 24rpx; color: #64748B; margin-top: 6rpx; }
+.t-del { color: #DC2626; font-size: 26rpx; padding: 20rpx 28rpx; margin: -14rpx 0; background: #FEF2F2; border-radius: var(--radius-sm); }
+.empty { text-align: center; color: #64748B; font-size: 24rpx; padding: 30rpx; }
+.btn-transfer { background: #EFF6FF; color: #2563EB; border-radius: var(--radius-sm); font-size: 30rpx; margin-top: 20rpx; border: 1rpx solid #BFDBFE; }
 .no-access { padding: 120rpx 40rpx; text-align: center; }
-.no-access-title { font-size: 34rpx; font-weight: 700; color: #111827; margin-bottom: 12rpx; }
-.no-access-text { font-size: 26rpx; color: #9CA3AF; }
-.modal-mask { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 100; }
-.modal { width: 78%; background: #fff; border-radius: 20rpx; padding: 36rpx; }
-.modal-title { font-size: 32rpx; font-weight: 700; color: #111827; margin-bottom: 16rpx; }
-.modal-text { font-size: 26rpx; color: #4B5563; line-height: 36rpx; }
+.no-access-title { font-size: 34rpx; font-weight: 700; color: #0F172A; margin-bottom: 12rpx; }
+.no-access-text { font-size: 26rpx; color: #64748B; }
+.modal-mask { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal { width: 78%; background: #fff; border-radius: var(--radius-lg); padding: 36rpx; }
+.modal-title { font-size: 32rpx; font-weight: 700; color: #0F172A; margin-bottom: 16rpx; }
+.modal-text { font-size: 26rpx; color: #475569; line-height: 36rpx; }
 .danger { color: #DC2626; }
-.modal-hint { font-size: 22rpx; color: #991B1B; margin-top: 14rpx; line-height: 32rpx; }
+.modal-hint { font-size: 24rpx; color: #991B1B; margin-top: 14rpx; line-height: 32rpx; }
 .modal-actions { display: flex; gap: 20rpx; margin-top: 28rpx; }
-.btn-ghost { flex: 1; background: #F3F4F6; color: #374151; border-radius: 12rpx; font-size: 28rpx; }
-.btn-primary { flex: 1; background: #3B82F6; color: #fff; border-radius: 12rpx; font-size: 28rpx; }
-.input { background: #F3F4F6; border-radius: 12rpx; padding: 18rpx; font-size: 26rpx; color: #111827; }
+.btn-ghost { flex: 1; background: #F1F5F9; color: #475569; border-radius: var(--radius-sm); font-size: 28rpx; }
+.btn-primary { flex: 1; background: #3B82F6; color: #fff; border-radius: var(--radius-sm); font-size: 28rpx; }
+.input { background: #F1F5F9; border-radius: var(--radius-sm); padding: 18rpx; font-size: 26rpx; color: #0F172A; }
+
+/* 行内主信息容器（零样式补齐） */
+.u-main, .t-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6rpx; }
