@@ -223,6 +223,9 @@ Page({
         app.setCache('cardsCache', cards, 600000)
         app.setCache('lastCardUpdate', Date.now())
 
+        // 预生成缺失的分享图（fire-and-forget）：保证分享时走预存卡片图而非头像降级
+        this._ensureShareImages(cards)
+
         if (callback) callback()
       })
       .catch(err => {
@@ -405,14 +408,99 @@ Page({
 
   /**
    * 解析分享图片 URL（cloud:// / https:// / 空）— 纯同步，不返回 Promise
-   * 微信基础库 2.8.1+ 原生支持 cloud:// 作为 imageUrl
-   * 用作 onShareAppMessage 的同步降级路径
+   * cloud:// 必须转 HTTPS：基础库虽声称支持 cloud:// 作 imageUrl，但实测接收方不可见
+   * （与 config/storage.js 的结论一致），用作 onShareAppMessage 的同步降级路径
    */
   _resolveAvatarUrl(avatar) {
     if (!avatar) return ''
-    if (avatar.indexOf('cloud://') === 0) return avatar
+    if (avatar.indexOf('cloud://') === 0) return storage.resolveCloudUrl(avatar)
     if (avatar.indexOf('https://') === 0) return avatar
     return ''
+  },
+
+  /**
+   * 生成分享图 → 上传云存储 → 回写卡片 shareImageUrl/shareImageFileID
+   * 供两处复用：onShareAppMessage 4b 后台补生成、_ensureShareImages 预生成队列
+   * 返回 Promise<boolean>（true=已回写），失败 resolve(false) 不抛错（fire-and-forget 语义）
+   */
+  _generateAndPersistShareImage(card, id) {
+    var self = this
+    return new Promise(function (resolve) {
+      try {
+        var shareCard = require('../../utils/shareCard')
+        shareCard.generate('shareCanvas', card, {
+          cardKey: id,
+          pageContext: self
+        }).then(function (res) {
+          var cloudPath = 'sharecards/card_' + id + '.jpg'
+          // F20 注记：分享图存在首页分享后台生成与本页保存(edit)两个写入入口，写同一路径
+          // sharecards/card_<cardId>.jpg，last-write-wins 为已知接受行为（架构审计确认）。
+          wx.cloud.uploadFile({
+            cloudPath: cloudPath,
+            filePath: res.tempFilePath,
+            success: function (uploadRes) {
+              var cloudFileID = uploadRes.fileID
+              // 存 HTTPS URL（跨设备可靠），而非 cloud://
+              var shareUrl = storage.resolveCloudUrl(cloudFileID)
+              console.log('[Share] 后台已生成分享图:', shareUrl)
+              wx.cloud.database().collection('cards').doc(id).update({
+                data: { shareImageUrl: shareUrl, shareImageFileID: cloudFileID }
+              }).then(function () {
+                console.log('[Share] shareImageUrl 已回写，下次分享直接用')
+                // 同步内存副本：本会话内后续分享立即可走 4a 预存图路径（该字段不参与渲染，免 setData）
+                var cards = self.data.cards || []
+                for (var k = 0; k < cards.length; k++) {
+                  if (cards[k]._id === id) {
+                    cards[k].shareImageUrl = shareUrl
+                    cards[k].shareImageFileID = cloudFileID
+                  }
+                }
+                resolve(true)
+              }).catch(function () { resolve(false) })
+            },
+            fail: function (err) {
+              console.warn('[Share] 后台上传失败:', err)
+              resolve(false)
+            }
+          })
+        }).catch(function (err) {
+          console.warn('[Share] 后台生成失败:', err && err.message)
+          resolve(false)
+        })
+      } catch (e) {
+        console.warn('[Share] require shareCard 失败:', e)
+        resolve(false)
+      }
+    })
+  },
+
+  /**
+   * 预生成缺失分享图的排队器（loadCards 成功后调用）
+   * 背景：分享图只依赖「用户上次保存/上次分享」时点写入的 shareImageUrl，一旦某次
+   * Canvas 生成超时/失败，卡片就持续处于「分享显示头像」状态。这里在数据加载后
+   * 主动补齐缺口，使用户分享时几乎总能命中 4a 预存图路径。
+   * 串行执行（shareCard.generate 内部有全局 canvas 锁，逐张排队避免争抢）；
+   * 每张卡有 in-flight 去重，单张失败不重试（下次 loadCards 再补），全部 fire-and-forget。
+   */
+  _ensureShareImages(cards) {
+    var self = this
+    if (!wx.cloud) return
+    if (!self._shareGenRunning) self._shareGenRunning = {}
+    var queue = (cards || []).filter(function (c) {
+      return c && c._id && c.name && !c.shareImageUrl && !self._shareGenRunning[c._id]
+    })
+    if (!queue.length) return
+    console.log('[Share] 预生成分享图，缺失数量:', queue.length)
+    var i = 0
+    var next = function () {
+      if (i >= queue.length) return
+      var card = queue[i++]
+      self._shareGenRunning[card._id] = true
+      self._generateAndPersistShareImage(card, card._id).then(function () {
+        next()
+      }, function () { next() })
+    }
+    next()
   },
 
   /**
@@ -500,42 +588,10 @@ Page({
     if (card && card.name && id) {
       var fallbackUrl = self._resolveAvatarUrl(card.avatar)
 
-      // 启动异步 Canvas 生成（fire-and-forget，不阻塞本次分享）
-      try {
-        var shareCard = require('../../utils/shareCard')
-        shareCard.generate('shareCanvas', card, {
-          cardKey: id,
-          pageContext: self
-        }).then(function (res) {
-          var cloudPath = 'sharecards/card_' + id + '.jpg'
-          // F20 注记：分享图存在首页分享后台生成与本页保存(edit)两个写入入口，写同一路径
-          // sharecards/card_<cardId>.jpg，last-write-wins 为已知接受行为（架构审计确认）。
-          wx.cloud.uploadFile({
-            cloudPath: cloudPath,
-            filePath: res.tempFilePath,
-          success: function (uploadRes) {
-            var cloudFileID = uploadRes.fileID
-            // 存 HTTPS URL（跨设备可靠），而非 cloud://
-            var shareUrl = storage.resolveCloudUrl(cloudFileID)
-            console.log('[Share] 后台已生成分享图:', shareUrl)
-            wx.cloud.database().collection('cards').doc(id).update({
-              data: { shareImageUrl: shareUrl, shareImageFileID: cloudFileID }
-              }).then(function () {
-                console.log('[Share] shareImageUrl 已回写，下次分享直接用')
-              }).catch(function () {})
-            },
-            fail: function (err) {
-              console.warn('[Share] 后台上传失败:', err)
-            }
-          })
-        }).catch(function (err) {
-          console.warn('[Share] 后台生成失败:', err && err.message)
-        })
-      } catch (e) {
-        console.warn('[Share] require shareCard 失败:', e)
-      }
+      // 启动后台生成（fire-and-forget，不阻塞本次分享；与 loadCards 预生成共用方法）
+      self._generateAndPersistShareImage(card, id)
 
-      // 立即同步返回头像 URL（本次分享用头像，下次分享用 cloud:// 分享图）
+      // 立即同步返回头像 URL（本次分享用头像，下次分享用预存分享图）
       console.log('[Share] 路径 4b — 同步返回, fallbackUrl:', fallbackUrl)
       return { title: title, path: path, imageUrl: fallbackUrl }
     }
@@ -556,9 +612,11 @@ Page({
     var id = active.id || this.data.shareCardId || ''
     var query = id ? 'id=' + id : ''
 
-    // 用预存分享图优先
+    // 用预存分享图优先（cloud:// 转 HTTPS，朋友圈不支持 cloud://）
     if (card.shareImageUrl) {
-      return { title: shareUtil.buildShareTitle(card), query: query, imageUrl: card.shareImageUrl }
+      var tlImage = card.shareImageUrl
+      if (tlImage.indexOf('cloud://') === 0) tlImage = storage.resolveCloudUrl(tlImage)
+      return { title: shareUtil.buildShareTitle(card), query: query, imageUrl: tlImage }
     }
     // 无分享图时：朋友圈不支持 cloud:// 实时生成，直接不传 imageUrl
     return { title: shareUtil.buildShareTitle(card), query: query, imageUrl: '' }
