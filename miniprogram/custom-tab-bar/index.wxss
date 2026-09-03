@@ -14,15 +14,16 @@
   z-index: 1000;
 }
 
-/* 白色底板只垫下半段（含 safe-area 区），上半段全透明让页面内容透出，
-   图标文字约有一半悬浮在白底之外；圆角上缘 + 上扬阴影强化悬浮感 */
+/* 白色底板从距顶 40rpx 处垫起（含 safe-area 区）：图标(14~58rpx)约一半悬浮在白底外，
+   文字完全落在白底上；透明区只有 40rpx；圆角上缘 + 上扬阴影强化悬浮感 */
 .tab-bar::before {
   content: '';
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 56rpx;
+  height: calc(constant(safe-area-inset-bottom) + 60rpx);
+  height: calc(env(safe-area-inset-bottom) + 60rpx);
   background: #FFFFFF;
   border-radius: 24rpx 24rpx 0 0;
   box-shadow: 0 -6rpx 24rpx rgba(15, 23, 42, 0.08);
