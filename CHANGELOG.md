@@ -2,6 +2,22 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.5.8] - 2026-09-03
+
+> 底部导航真机修复 + 全局背景纯白化。真机反馈 tab 图标异常的多轮排查闭环：根因为 `.tab-bar` 高度与 safe-area 盒模型关系不确定导致 flex 压缩图标（也解释了最初 CSS border 图标「塌成横线」的悬案）。
+
+### Fixed
+- **custom-tab-bar 图标渲染异常（真机级）**：CSS border/伪元素自绘图标弃用（44rpx 小尺寸真机渲染不可靠，`z-index:-1` 叠卡 hack 机型差异大）；改 Pillow 绘制 4 图标 × 2 色 = 8 张 96px PNG（384 超采样 + LANCZOS 抗锯齿），`<image>` 组件加载，模拟器/真机兼容性最稳；未选中 #64748B（归入 slate）/ 选中 #3B82F6
+- **根因修复：容器挤压**：`.tab-bar` 显式 `box-sizing: content-box`（高度不再被 safe-area 侵占）+ 图标 `flex-shrink: 0`，flex 不再压缩元素
+
+### Changed
+- **全局背景纯白化**：12 个页面 wxss 共 17 处暖调渐变（#FFF7ED/#FEFCF7/#FAFBFC 族）+ app.wxss `#F9FAFB` + 窗口 `backgroundColor` 全部统一 `#FFFFFF`（crop 黑底为沉浸式裁切豁免）；原「暖调渐变」设计方向作废
+- **tab-bar 悬浮效果**：白色底板以伪元素从距顶 40rpx 垫起（含 safe-area，`calc(env(safe-area-inset-bottom) + 60rpx)`），图标约一半悬浮在白底外，文字全落白底；白底上缘 24rpx 圆角 + 上扬阴影；子元素 `z-index:1` 防伪元素遮挡
+- 图标加载自诊断：`<image>` 挂 `binderror` 钩子，加载失败 Console 打 `[TAB ICON ERROR]` 红字
+- 新增图标资源 `assets/tabbar/`（8 张 PNG）与生成工具链 `artifacts/gen_tab_icons_png.py`
+
+> 本次为**纯前端改动**，开发者工具编译即生效，**无需部署云函数**。注：v1.5.6 的 5 个云函数部署事项仍待完成，与本版无关。
+
 ## [1.5.7] - 2026-09-03
 
 > UI 全面审计 + 全量修复（v1.5.6 基线，33 个 wxml/wxss 约 6400 行）：0 P0，8 P1 必修 + 14 P2 优化全部闭环，另补齐 QA 复验抓到的 10 处零样式类/空挂类。完整报告见 `artifacts/ui-audit-2026-09-02.md`，QA 脚本留存 `artifacts/qa_classes.py`。

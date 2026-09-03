@@ -161,6 +161,12 @@
 
 详见 [CHANGELOG.md](CHANGELOG.md)
 
+### v1.5.8 (2026-09-03)
+- 🎨 全局背景纯白化：12 页 17 处暖调渐变 + 窗口 backgroundColor 统一 #FFFFFF（crop 沉浸式豁免），「暖调渐变」设计方向作废
+- 📱 custom-tab-bar 真机修复：CSS border 自绘图标改 Pillow 绘制 PNG（8 张，4 图标×灰/蓝）+ `<image>` 组件加载；根因为容器高度与 safe-area 盒模型关系不确定导致 flex 压缩图标（box-sizing:content-box + flex-shrink:0 修复）
+- ✨ tab-bar 悬浮效果：白底距顶 40rpx 垫起（含 safe-area calc），图标约一半悬浮，圆角上缘 + 上扬阴影；图标挂 binderror 自诊断
+- 📱 纯前端改动，无需部署云函数
+
 ### v1.5.7 (2026-09-03)
 - 🎨 UI 全面审计 + 全量修复：0 P0，8 P1 必修 + 14 P2 优化全部闭环，另补 QA 复验 10 处零样式类（报告见 `artifacts/ui-audit-2026-09-02.md`）
 - 🔧 P1 渲染级修复：preview 授权弹窗 7 类样式补齐（确认按钮红色→蓝色语义修正）、锁定占位区零样式补齐（🔒 换 CSS 锁图标）、失效邀请蓝条→红色警告、index 顶部 padding 失效变量、保存按钮接防重态
