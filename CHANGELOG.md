@@ -2,6 +2,20 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.5.9] - 2026-09-04
+
+> 分享卡片「所见即所得」修复：Canvas 分享图对齐首页卡片视觉。根因为 `cardStyle.js`「单一数据源」漂移——旧版右对齐布局常量在 UI 改版（v1.5.7 左对齐 + 锐角头像）后未同步，Canvas 是其唯一消费者。
+
+### Fixed
+- **分享图 vs App 内卡片视觉不一致**：姓名/职位右对齐 → 左对齐于头像右侧起点（`padding + avatarSize + topGap`）；联系方式右对齐 → 左对齐于卡片内边距；文字块顶对齐 → 相对头像垂直居中（与首页 flex `align-items:center` 一致）；头像圆角 16rpx → 4rpx（锐角风格统一）
+- 分享图 Banner「点击保存我的名片」为分享场景特有引导，合理保留
+
+### Changed
+- `config/cardStyle.js`：`avatarRadius` 16→4，`nameTextAlign`/`contactTextAlign` right→left
+- `utils/shareCard.js`：`computeLayout` 新增 `textStartX`，姓名/职位 maxWidth 同步收窄（textStartX→右边界）；`nameY`/`positionY` 改为垂直居中推导；不触碰 `calcCardHeight` 高度公式，卡片尺寸/气泡适配完全不变
+
+> 纯前端改动，无需部署云函数。注意：旧分享图受 10 分钟内存缓存 + DB 已存 `shareImageUrl` 保护，**编辑页重新保存卡片**即可强制重绘并回写。
+
 ## [1.5.8] - 2026-09-03
 
 > 底部导航真机修复 + 全局背景纯白化。真机反馈 tab 图标异常的多轮排查闭环：根因为 `.tab-bar` 高度与 safe-area 盒模型关系不确定导致 flex 压缩图标（也解释了最初 CSS border 图标「塌成横线」的悬案）。

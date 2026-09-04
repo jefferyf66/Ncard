@@ -161,6 +161,11 @@
 
 详见 [CHANGELOG.md](CHANGELOG.md)
 
+### v1.5.9 (2026-09-04)
+- 🖼️ 分享卡片「所见即所得」修复：Canvas 分享图对齐首页卡片视觉——姓名/职位左对齐于头像右侧起点、联系方式左对齐、文字块相对头像垂直居中、头像圆角 16→4rpx
+- 🔧 根因：`cardStyle.js` 单一数据源漂移（旧版右对齐常量未随 v1.5.7 UI 改版同步，Canvas 是其唯一消费者）；高度公式未动，卡片尺寸/气泡适配不变
+- 📱 纯前端改动，无需部署云函数；验证需编辑页重新保存卡片（绕过 10min 缓存 + DB 旧图）
+
 ### v1.5.8 (2026-09-03)
 - 🎨 全局背景纯白化：12 页 17 处暖调渐变 + 窗口 backgroundColor 统一 #FFFFFF（crop 沉浸式豁免），「暖调渐变」设计方向作废
 - 📱 custom-tab-bar 真机修复：CSS border 自绘图标改 Pillow 绘制 PNG（8 张，4 图标×灰/蓝）+ `<image>` 组件加载；根因为容器高度与 safe-area 盒模型关系不确定导致 flex 压缩图标（box-sizing:content-box + flex-shrink:0 修复）
