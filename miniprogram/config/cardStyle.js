@@ -40,7 +40,7 @@ var CARD = Object.freeze({
 
   // === 头像 ===
   avatarSize: 140,            // rpx (正方形)
-  avatarRadius: 16,           // rpx
+  avatarRadius: 4,            // rpx（与 UI 卡片锐角风格一致，v1.5.8 由 16 调整）
   avatarBg: '#F1F5F9',
   avatarPlaceholderGradientStart: '#3B82F6',
   avatarPlaceholderGradientEnd: '#8B5CF6',
@@ -54,7 +54,7 @@ var CARD = Object.freeze({
   nameFontWeight: 'bold',
   nameColor: '#1E293B',
   nameFontFamily: "Georgia, 'Times New Roman', serif",
-  nameTextAlign: 'right',
+  nameTextAlign: 'left',      // 与首页 UI 一致：文字区左对齐于头像右侧起点
 
   // === 职位 ===
   positionFontSize: 26,       // rpx
@@ -75,7 +75,7 @@ var CARD = Object.freeze({
   // === 联系方式 ===
   contactFontSize: 26,        // rpx
   contactColor: '#475569',
-  contactTextAlign: 'right',
+  contactTextAlign: 'left',   // 与首页 UI 一致：联系方式左对齐于卡片内边距
   contactItemGap: 40,          // rpx (联系方式各行间距 = 字高 + 行距, ≈1.5倍行高)
   bodyGap: 20,                // rpx (公司名与联系方式区间距)
 

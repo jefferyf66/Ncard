@@ -101,16 +101,17 @@ function computeLayout(canvasW, canvasH) {
     avatarX: padding,
     avatarY: padding,
 
-    // 姓名（含最大宽度，防溢出截断）
+    // 文字区起点（头像右侧 + topGap，与首页 UI 左对齐一致）
+    textStartX: padding + rpxToCanvas(CARD.avatarSize, canvasW) + rpxToCanvas(CARD.topGap, canvasW),
+
+    // 姓名（含最大宽度，防溢出截断；相对头像垂直居中）
     nameFontSize: rpxToCanvas(CARD.nameFontSize, canvasW),
-    nameY: padding,
-    nameMaxWidth: canvasW - padding * 2 - rpxToCanvas(CARD.avatarSize, canvasW) - rpxToCanvas(CARD.avatarRadius, canvasW),
+    nameMaxWidth: canvasW - (padding + rpxToCanvas(CARD.avatarSize, canvasW) + rpxToCanvas(CARD.topGap, canvasW)) - padding,
 
     // 职位（含最大宽度，防溢出截断）
     positionFontSize: rpxToCanvas(CARD.positionFontSize, canvasW),
     positionGap: rpxToCanvas(CARD.positionGap, canvasW),
-    positionY: padding + rpxToCanvas(CARD.nameFontSize, canvasW) + rpxToCanvas(CARD.positionGap, canvasW),
-    positionMaxWidth: canvasW - padding * 2 - rpxToCanvas(CARD.avatarSize, canvasW) - rpxToCanvas(CARD.avatarRadius, canvasW),
+    positionMaxWidth: canvasW - (padding + rpxToCanvas(CARD.avatarSize, canvasW) + rpxToCanvas(CARD.topGap, canvasW)) - padding,
 
     // 顶部区域底部（头像底部 or 文字底部，取较大者 + topGap）
     topGap: rpxToCanvas(CARD.topGap, canvasW),
@@ -142,6 +143,15 @@ function computeLayout(canvasW, canvasH) {
     layout.avatarSize,                               // 头像高度
     layout.nameFontSize + layout.positionGap + layout.positionFontSize  // 文字区高度
   ) + layout.topGap
+
+  // 姓名/职位相对头像垂直居中（与首页 UI flex align-items:center 一致）
+  // 文字区高于头像时回落到 padding（与 calcCardHeight 的 max() 公式一致）
+  var textBlockH = layout.nameFontSize + layout.positionGap + layout.positionFontSize
+  var centerOffset = layout.avatarSize > textBlockH
+    ? Math.round((layout.avatarSize - textBlockH) / 2)
+    : 0
+  layout.nameY = padding + centerOffset
+  layout.positionY = layout.nameY + layout.nameFontSize + layout.positionGap
 
   // 分割线
   layout.cardTopBottom = cardTopBottom
@@ -572,19 +582,19 @@ function _drawLayout(ctx, card, avatarImg, layout) {
     layout.avatarX, layout.avatarY,
     layout.avatarSize, layout.avatarRadius)
 
-  // 姓名（右对齐，Georgia 字体，防溢出截断）
+  // 姓名（左对齐于头像右侧起点，Georgia 字体，防溢出截断，相对头像垂直居中）
   ctx.fillStyle = CARD.nameColor
   ctx.font = CARD.nameFontWeight + ' ' + layout.nameFontSize + 'px ' + CARD.nameFontFamily
-  ctx.textAlign = 'right'
+  ctx.textAlign = 'left'
   ctx.textBaseline = 'top'
   var nameText = _truncateText(ctx, card.name || '', layout.nameMaxWidth)
-  ctx.fillText(nameText, layout.rightEdge, layout.nameY)
+  ctx.fillText(nameText, layout.textStartX, layout.nameY)
 
   // 职位（防溢出截断）
   ctx.fillStyle = CARD.positionColor
   ctx.font = layout.positionFontSize + 'px PingFang SC, sans-serif'
   var posText = _truncateText(ctx, card.position || '', layout.positionMaxWidth)
-  ctx.fillText(posText, layout.rightEdge, layout.positionY)
+  ctx.fillText(posText, layout.textStartX, layout.positionY)
 
   // === 3. 分割线 ===
   ctx.fillStyle = CARD.dividerColor
@@ -713,14 +723,14 @@ function _drawContactInfo(ctx, card, layout) {
 
   ctx.fillStyle = CARD.contactColor
   ctx.font = layout.contactFontSize + 'px PingFang SC, sans-serif'
-  ctx.textAlign = 'right'
+  ctx.textAlign = 'left'
   ctx.textBaseline = 'top'
 
   var maxTextW = layout.contactMaxWidth
 
   for (var i = 0; i < items.length; i++) {
     var text = _truncateText(ctx, items[i], maxTextW)
-    ctx.fillText(text, layout.rightEdge, layout.contactY + i * layout.contactItemGap)
+    ctx.fillText(text, layout.padding, layout.contactY + i * layout.contactItemGap)
   }
 }
 
