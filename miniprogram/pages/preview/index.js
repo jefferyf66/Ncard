@@ -555,47 +555,78 @@ Page({
     })
   },
 
+  // 将头像转为本地临时文件（addPhoneContact 的 photoFilePath 只接受本地路径，
+  // 不支持 cloud:// / https 远程地址）。无头像或下载失败则降级为空（不阻断保存）。
+  _prepareAvatar(card) {
+    return new Promise(function (resolve) {
+      var avatar = card && card.avatar
+      if (!avatar) { resolve(''); return }
+
+      // 已是本地临时路径（wxfile:// 或 tmp 域名）直接复用
+      if (avatar.indexOf('wxfile://') === 0 ||
+          avatar.indexOf('tmp/') !== -1 ||
+          avatar.indexOf('temp/') !== -1) {
+        resolve(avatar)
+        return
+      }
+
+      // cloud:// 或 https 远程地址 → 下载成本地临时文件
+      var url = avatar
+      if (avatar.indexOf('cloud://') === 0) {
+        try { url = storage.resolveCloudUrl(avatar) } catch (e) { url = '' }
+      }
+      if (!url) { resolve(''); return }
+
+      wx.downloadFile({
+        url: url,
+        success: function (res) {
+          if (res && res.tempFilePath) resolve(res.tempFilePath)
+          else resolve('')
+        },
+        fail: function () { resolve('') }
+      })
+    })
+  },
+
   saveToContact() {
     const { card } = this.data
-    
-    if (!card.phone) {
-      app.showError('请先填写电话号码')
-      return
-    }
 
-    if (!card.name) {
-      app.showError('请先填写姓名')
+    // 至少需要一项可写字段（firstName 必填，缺姓名时用公司名兜底）
+    const firstName = card.name || card.company || ''
+    if (!firstName && !card.phone && !card.email) {
+      app.showError('名片信息不足，无法保存到通讯录')
       return
     }
 
     app.showLoading('保存中...')
 
-    wx.addPhoneContact({
-      photoFilePath: card.avatar || '',
-      nickName: card.name,
-      firstName: card.name,
-      lastName: '',
-      remark: card.position ? `${card.position}@${card.company || ''}` : card.company || '投贴儿',
-      mobilePhoneNumber: card.phone,
-      weChatNumber: '',
-      email: card.email || '',
-      addressState: '',
-      addressCity: '',
-      addressStreet: card.address || '',
-      organization: card.company || '',
-      title: card.position || '',
-      workPhone: '',
-      homePhone: '',
-      faxNumber: '',
-      url: '',
-      success: () => {
-        app.hideLoading()
-        app.showSuccess('保存成功')
-      },
-      fail: (err) => {
-        app.hideLoading()
-        this.handleContactSaveError(err)
-      }
+    this._prepareAvatar(card).then((photoPath) => {
+      wx.addPhoneContact({
+        photoFilePath: photoPath,
+        nickName: card.name || '',
+        firstName: firstName,
+        lastName: '',
+        remark: card.company
+          ? ((card.position ? card.position + ' · ' : '') + card.company)
+          : '投贴儿',
+        mobilePhoneNumber: card.phone || '',
+        weChatNumber: '',
+        email: card.email || '',
+        organization: card.company || '',
+        title: card.position || '',
+        workPhoneNumber: '',
+        homePhoneNumber: '',
+        url: card.website || '',
+        addressStreet: card.address || '',
+        success: () => {
+          app.hideLoading()
+          app.showSuccess('已保存到通讯录')
+        },
+        fail: (err) => {
+          app.hideLoading()
+          this.handleContactSaveError(err)
+        }
+      })
     })
   },
 

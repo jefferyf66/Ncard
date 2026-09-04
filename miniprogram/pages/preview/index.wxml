@@ -55,6 +55,11 @@
             <text class="contact-text">{{card.address}}</text>
             <view class="contact-icon icon-map"></view>
           </view>
+
+          <view class="save-contact-btn" wx:if="{{!isOwner && (card.name || card.phone || card.email || card.company)}}" bindtap="saveToContact" hover-class="save-contact-btn-active">
+            <view class="save-contact-icon"></view>
+            <text class="save-contact-text">保存到通讯录</text>
+          </view>
         </view>
 
         <!-- D2 锁定占位区：仅非主人且存在被锁字段时展示 -->
