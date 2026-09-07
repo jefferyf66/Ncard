@@ -2,7 +2,7 @@ var storage = require('./config/storage')
 
 // 应用版本号唯一真源（关于页等展示用）
 // ⚠️ 发版打 tag 时必须同步更新此值（见 tag-changelog-reconcile 发版约定）
-const APP_VERSION = '1.5.9'
+const APP_VERSION = '1.5.10'
 
 App({
   globalData: {

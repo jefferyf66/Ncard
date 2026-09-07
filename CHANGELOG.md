@@ -2,6 +2,20 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.5.10] - 2026-09-07
+
+> 访客一键保存名片到系统通讯录（iOS/Android 通用）。顺带修复既有 saveToContact 的两处缺陷：头像参数误传远程 URL 被忽略、校验过严。
+
+### Added
+- **访客「保存到通讯录」按钮**（preview 页联系信息区）：调用 `wx.addPhoneContact`，姓名/电话/邮箱/公司/职位/网址/头像一键导入系统通讯录；iOS 弹原生确认卡、Android 确认后直接写入，均需用户手动确认（隐私红线）；PC 端不支持由 `handleContactSaveError` 兜底
+- 字段映射：姓名→firstName（缺姓名用 company 兜底）、电话→mobilePhoneNumber、邮箱→email、公司→organization、职位→title/remark、网址→url、地址→addressStreet
+
+### Fixed
+- **头像保存失效**：`photoFilePath` 原为 card.avatar 远程 URL（cloud://|https）被忽略 → 改 `_prepareAvatar` 先 `wx.downloadFile` 转本地临时文件，失败降级为空不阻断
+- **校验过严**：原要求 name+phone 必填 → 放宽为首姓名/电话/邮箱其一即可（firstName 必填，缺姓名用 company 兜底）
+
+> 纯前端改动，无需部署云函数。
+
 ## [1.5.9] - 2026-09-04
 
 > 分享卡片「所见即所得」修复：Canvas 分享图对齐首页卡片视觉。根因为 `cardStyle.js`「单一数据源」漂移——旧版右对齐布局常量在 UI 改版（v1.5.7 左对齐 + 锐角头像）后未同步，Canvas 是其唯一消费者。
