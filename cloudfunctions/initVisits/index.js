@@ -108,7 +108,7 @@ exports.main = async (event, context) => {
 
     // 记录一次访问（含匿名访客身份识别）
     case 'recordVisit': {
-      const { cardId, source } = data || {}
+      const { cardId, source, note, shareId } = data || {}
       if (!cardId) {
         return { ok: false, message: '参数不完整' }
       }
@@ -213,7 +213,9 @@ exports.main = async (event, context) => {
               visitorCompany: visitorCompany || recent.data[0].visitorCompany || '',
               visitorPhone: visitorPhone || recent.data[0].visitorPhone || '',
               visitorLevel: Math.max(visitorLevel, recent.data[0].visitorLevel || 1),
-              cardName: cardName || recent.data[0].cardName || ''
+              cardName: cardName || recent.data[0].cardName || '',
+              // 留言：仅当本次携带非空留言时覆盖；否则保留已有留言（避免空值覆盖，方案 A）
+              note: (note && typeof note === 'string') ? note : (recent.data[0].note || '')
             }
           })
           return { ok: true, updated: true, visitorLevel: visitorLevel }
@@ -237,7 +239,9 @@ exports.main = async (event, context) => {
             visitCount: db.command.inc(1),
             visitorName: visitorName || dupCheck.data[0].visitorName || '',
             visitorAvatar: visitorAvatar || dupCheck.data[0].visitorAvatar || '',
-            visitorLevel: Math.max(visitorLevel, dupCheck.data[0].visitorLevel || 1)
+            visitorLevel: Math.max(visitorLevel, dupCheck.data[0].visitorLevel || 1),
+            // 留言：仅当本次携带非空留言时覆盖；否则保留已有留言（避免空值覆盖，方案 A）
+            note: (note && typeof note === 'string') ? note : (dupCheck.data[0].note || '')
           }
         })
         return { ok: true, updated: true, visitorLevel: visitorLevel }
@@ -259,7 +263,10 @@ exports.main = async (event, context) => {
           visitCount: 1,
           actions: [],
           cardName,
-          source: source || 'direct'
+          source: source || 'direct',
+          // 一次性分享留言：仅写入 visits（分享记录），绝不写入 cards 集合
+          note: note || '',
+          shareId: shareId || ''
         }
       })
 

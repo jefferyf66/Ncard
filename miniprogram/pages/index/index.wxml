@@ -90,7 +90,7 @@
           </view>
         </view>
         <view class="card-footer">
-          <button class="footer-btn send-card-btn" open-type="share" data-id="{{item._id}}" bindtap="onShareButtonTap">
+          <button class="footer-btn send-card-btn" bindtap="openShareNoteSheet" data-id="{{item._id}}">
             <text class="footer-btn-text">发名片</text>
           </button>
           <view class="footer-divider"></view>
@@ -117,6 +117,25 @@
     <text class="agreement-link" bindtap="openPrivacyPolicy">隐私政策</text>
     <text class="agreement-sep">|</text>
     <text class="agreement-link" bindtap="openServiceAgreement">用户服务协议</text>
+  </view>
+
+  <!-- 分享留言填写层（sheet）：仅 showShareNoteSheet 时显示；_shareCardId 由 openShareNoteSheet 暂存，供内层 open-type="share" 按钮取用 -->
+  <view class="share-note-mask" wx:if="{{showShareNoteSheet}}" bindtap="closeShareNoteSheet">
+    <view class="share-note-sheet" catchtap="stopPropagation">
+      <view class="share-note-title">给这次分享加句话（可选）</view>
+      <textarea class="share-note-input" maxlength="40" placeholder="一句话介绍业务或留言，最多40字" value="{{shareNote}}" bindinput="onShareNoteInput" />
+      <view class="share-note-count">{{shareNote.length}}/40</view>
+      <view class="share-note-recent" wx:if="{{recentNotes.length}}">
+        <text class="share-note-recent-label">最近用过</text>
+        <scroll-view class="share-note-recent-scroll" scroll-x enable-flex>
+          <view class="share-note-chip" wx:for="{{recentNotes}}" wx:key="*this" data-note="{{item}}" bindtap="onPickRecentNote">{{item}}</view>
+        </scroll-view>
+      </view>
+      <view class="share-note-actions">
+        <view class="share-note-cancel" bindtap="closeShareNoteSheet">取消</view>
+        <button class="share-note-confirm" open-type="share" data-id="{{_shareCardId}}" bindtap="onShareButtonTap">分享给好友</button>
+      </view>
+    </view>
   </view>
 </view>
 

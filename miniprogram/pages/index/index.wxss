@@ -467,3 +467,132 @@ page {
   color: #CBD5E1;
 }
 
+/* ============ 一次性分享留言填写层（sheet） ============ */
+.share-note-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.5);
+  z-index: 1200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.share-note-sheet {
+  width: 100%;
+  background: #FFFFFF;
+  border-radius: 24rpx 24rpx 0 0;
+  padding: 40rpx 40rpx calc(40rpx + env(safe-area-inset-bottom));
+  box-shadow: 0 -8rpx 32rpx rgba(15, 23, 42, 0.12);
+  animation: sheetSlideUp 0.3s ease-out;
+}
+@keyframes sheetSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.share-note-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #0F172A;
+  margin-bottom: 24rpx;
+}
+.share-note-input {
+  width: 100%;
+  height: 200rpx;
+  padding: 24rpx;
+  background: #F8FAFC;
+  border: 2rpx solid #E2E8F0;
+  border-radius: var(--radius-sm);
+  font-size: 28rpx;
+  color: #0F172A;
+  box-sizing: border-box;
+  line-height: 1.5;
+}
+.share-note-count {
+  text-align: right;
+  font-size: 24rpx;
+  color: #94A3B8;
+  margin-top: 12rpx;
+}
+.share-note-actions {
+  display: flex;
+  gap: 24rpx;
+  margin-top: 32rpx;
+}
+.share-note-cancel {
+  flex: 1;
+  min-height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #F1F5F9;
+  color: #475569;
+  border-radius: var(--radius-sm);
+  font-size: 30rpx;
+  font-weight: 500;
+}
+.share-note-cancel:active {
+  background: #E2E8F0;
+}
+.share-note-confirm {
+  flex: 1;
+  min-height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  color: #FFFFFF;
+  border-radius: var(--radius-sm);
+  font-size: 30rpx;
+  font-weight: 600;
+  box-shadow: 0 2rpx 8rpx rgba(59, 130, 246, 0.15);
+  line-height: 1.4;
+}
+.share-note-confirm::after {
+  border: none;
+}
+.share-note-confirm:active {
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+}
+
+/* ===== 最近用过的分享留言（快捷点取） ===== */
+.share-note-recent {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 20rpx;
+}
+.share-note-recent-label {
+  flex-shrink: 0;
+  font-size: 24rpx;
+  color: #64748B;
+}
+.share-note-recent-scroll {
+  flex: 1;
+  white-space: nowrap;
+  width: 100%;
+}
+.share-note-chip {
+  display: inline-block;
+  max-width: 320rpx;
+  padding: 12rpx 20rpx;
+  margin-right: 16rpx;
+  background: #EFF6FF;
+  color: #2563EB;
+  border: 1rpx solid #BFDBFE;
+  border-radius: var(--radius-sm);
+  font-size: 24rpx;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.share-note-chip:active {
+  background: #DBEAFE;
+}
+

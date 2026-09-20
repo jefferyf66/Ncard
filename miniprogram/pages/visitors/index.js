@@ -151,6 +151,7 @@ Page({
         visitCount: v.visitCount || 1,
         visitorLevel: v.visitorLevel || 1,
         actions: v.actions || [],
+        note: v.note || '',
         lastVisit: app.formatTime(v.visitTime),
         description: v.cardName ? ('查看了您的「' + v.cardName + '」') : (v.source === 'share' ? '通过分享查看了您' : '查看了您')
       }

@@ -2,6 +2,20 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.5.11] - 2026-09-20
+
+> 一次性分享留言：分享名片时可附一句业务介绍/留言，仅随本次分享链接传递、写入 visits（不进 cards、可不同次填不同内容）；并打磨底部填写层避免压住 tab-bar，新增「最近用过」一键点取。
+
+### Added
+- **一次性分享留言**：`onShareAppMessage` 的 path 经 `&sid=&note=` 携带留言；落地页 preview 顶部横幅展示（仅访客 + 有留言时）、写 `visits` 集合（30 分钟时间窗去重合并，空值保留已有留言），绝不写 `cards`、不加 `card.intro`
+- **分享填写层防重叠**：`.share-note-mask` z-index 1000→1200；打开 sheet 时隐藏自定义 tab-bar（`getTabBar().setData({hidden:true})`，关闭/分享后还原 `hidden:false`），按钮行不再与底部导航重叠
+- **「最近用过」快捷点取**：本机 `recentShareNotes`（去重 + 置顶 + 最多 3 条），每次分享落库、下次打开 sheet 在 textarea 下方以 chip 行展示，点 chip 回填 textarea（`scroll-view` 横向滚动）
+
+### Changed
+- 分享流程：发名片按钮改 `bindtap` 两步式（底部 sheet 填写 → 内层 `open-type="share"` 调起系统面板），规避原生转发面板无法拦截的问题
+
+> ⚠️ 上线需手动上传 `cloudfunctions/initVisits` 并勾选「云端安装依赖」——留言经 visits 落库依赖该云函数新增的 `note/shareId` 写入逻辑，未部署则留言不入库。
+
 ## [1.5.10] - 2026-09-07
 
 > 访客一键保存名片到系统通讯录（iOS/Android 通用）。顺带修复既有 saveToContact 的两处缺陷：头像参数误传远程 URL 被忽略、校验过严。

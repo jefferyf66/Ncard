@@ -1,4 +1,4 @@
-<view class="tab-bar">
+<view class="tab-bar" wx:if="{{!hidden}}">
   <view class="tab-item {{selected === 0 ? 'active' : ''}}" data-path="/pages/index/index" bindtap="switchTab">
     <image class="tab-icon" style="width: 24px; height: 24px; flex-shrink: 0;" src="{{selected === 0 ? '/assets/tabbar/card-active.png' : '/assets/tabbar/card.png'}}" mode="aspectFit" binderror="onIconError" data-name="card" />
     <view class="tab-text">名片</view>

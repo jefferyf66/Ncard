@@ -85,6 +85,7 @@
         </view>
         <text class="visitor-position" wx:if="{{item.position}}">{{item.position}}</text>
         <text class="visitor-company" wx:if="{{item.company}}">{{item.company}}</text>
+        <text class="visitor-note" wx:if="{{item.note}}">留言：{{item.note}}</text>
         <view class="visitor-tags">
           <text class="tag visit-count-tag" wx:if="{{item.visitCount > 1}}">来访{{item.visitCount}}次</text>
           <text class="tag" wx:for="{{item.actions}}" wx:key="index">{{item}}</text>

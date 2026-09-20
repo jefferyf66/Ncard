@@ -275,6 +275,15 @@
   color: #64748B;
 }
 
+.visitor-note {
+  font-size: 26rpx;
+  color: #1E293B;
+  background: #EFF6FF;
+  border-radius: var(--radius-sm);
+  padding: 6rpx 16rpx;
+  align-self: flex-start;
+}
+
 .visitor-tags {
   display: flex;
   gap: 10rpx;

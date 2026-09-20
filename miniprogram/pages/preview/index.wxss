@@ -1480,3 +1480,45 @@
 }
 
 .function-item.saved .func-text { color: #3B82F6; font-weight: 600; }
+
+/* ===== 一次性分享留言横幅（方案 A：仅写入 visits，接收方通过带 note 的分享链接进入时显示） ===== */
+.share-note-banner {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 28rpx;
+  padding: 18rpx 24rpx;
+  background: #EFF6FF;
+  border-left: 4rpx solid #3B82F6;
+  border-radius: var(--radius-sm);
+}
+.share-note-banner-icon {
+  width: 28rpx;
+  height: 28rpx;
+  border-radius: 50%;
+  background: #3B82F6;
+  flex-shrink: 0;
+  position: relative;
+}
+.share-note-banner-icon::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12rpx;
+  height: 12rpx;
+  border: 3rpx solid #FFFFFF;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.share-note-banner-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 26rpx;
+  color: #1E293B;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}

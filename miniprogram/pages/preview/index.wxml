@@ -15,6 +15,11 @@
   <view wx:else>
     <view class="card-preview" wx:if="{{card.name}}">
       <view class="card-content">
+        <!-- 一次性分享留言横幅：仅接收方通过带 note 的分享链接进入、且非名片主人时显示 -->
+        <view class="share-note-banner" wx:if="{{!isOwner && shareNote}}">
+          <view class="share-note-banner-icon"></view>
+          <text class="share-note-banner-text">对方留言：{{shareNote}}</text>
+        </view>
         <view class="card-top">
           <image 
             class="avatar" 

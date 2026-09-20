@@ -1,6 +1,7 @@
 Component({
   data: {
-    selected: 0
+    selected: 0,
+    hidden: false
   },
   methods: {
     onIconError(e) {

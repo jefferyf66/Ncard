@@ -31,6 +31,12 @@ Page({
     // 分享相关状态
     shareCardId: '',
     shareCardData: null,
+    // 一次性分享留言（方案 A：留言随分享链接带过去，仅写入 visits，绝不写入 cards）
+    shareNote: '',
+    recentNotes: [],
+    showShareNoteSheet: false,
+    pendingShareId: '',
+    _shareCardId: '',
     // 拖拽排序状态（首页名片顺序调整）
     dragStartIndex: -1,
     dragStartY: 0,
@@ -390,8 +396,87 @@ Page({
     const card = this.data.cards.find(c => c._id === id)
     if (!card) return
     console.log('[Share] onShareButtonTap, id:', id, 'hasShareImage:', !!card.shareImageUrl)
-    this._activeShare = { id: id, card: card }
-    this.setData({ shareCardId: id, shareCardData: card })
+    // 暂存本次分享的留言与一次性 sid（供 onShareAppMessage 写入分享 path）
+    this._activeShare = {
+      id: id,
+      card: card,
+      note: this.data.shareNote || '',
+      sid: this.data.pendingShareId || ''
+    }
+    // 留言非空则落库到「最近用过」，供下次快捷点取
+    if ((this.data.shareNote || '').trim()) this._saveRecentNote(this.data.shareNote)
+    // 触发分享即收起底部填写层（原生分享面板关掉后不再残留遮罩）
+    this.setData({ shareCardId: id, shareCardData: card, showShareNoteSheet: false })
+    // 还原自定义 tab-bar（与 openShareNoteSheet 中隐藏成对）
+    const tb = this.getTabBar && this.getTabBar()
+    if (tb) tb.setData({ hidden: false })
+  },
+
+  /**
+   * 打开「分享留言」底部填写层
+   * - 将当前选中的名片 id 暂存到 data._shareCardId，供底部内层 open-type="share" 按钮取用
+   * - 生成一次性 sid（写入分享 path，服务端写入 visits.shareId），每次分享可带不同内容
+   * - 每次打开清空上次输入的留言
+   */
+  openShareNoteSheet(e) {
+    const id = e.currentTarget.dataset.id
+    if (!id) return
+    const pendingShareId = id + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)
+    this.setData({
+      _shareCardId: id,
+      pendingShareId: pendingShareId,
+      shareNote: '',
+      recentNotes: this._loadRecentNotes(),
+      showShareNoteSheet: true
+    })
+    // 打开填写层时隐藏自定义 tab-bar，避免遮罩下残留底部栏（关闭/分享后还原）
+    const tb = this.getTabBar && this.getTabBar()
+    if (tb) tb.setData({ hidden: true })
+  },
+
+  /**
+   * 关闭「分享留言」底部填写层
+   */
+  closeShareNoteSheet() {
+    this.setData({ showShareNoteSheet: false })
+    // 还原自定义 tab-bar（与 openShareNoteSheet 中隐藏成对）
+    const tb = this.getTabBar && this.getTabBar()
+    if (tb) tb.setData({ hidden: false })
+  },
+
+  /**
+   * 记录底部填写层的留言输入（textarea maxlength 已限制 40 字）
+   */
+  onShareNoteInput(e) {
+    this.setData({ shareNote: (e.detail && e.detail.value) || '' })
+  },
+
+  /**
+   * 读取本地「最近用过」的分享留言（最多 3 条），供底部填写层快捷点取
+   */
+  _loadRecentNotes() {
+    const list = wx.getStorageSync('recentShareNotes') || []
+    return Array.isArray(list) ? list.slice(0, 3) : []
+  },
+
+  /**
+   * 将本次分享留言写入本地「最近用过」（去重 + 置顶 + 最多 3 条）
+   */
+  _saveRecentNote(note) {
+    const key = 'recentShareNotes'
+    const v = (note || '').trim()
+    if (!v) return
+    const list = wx.getStorageSync(key) || []
+    const next = [v, ...(Array.isArray(list) ? list : []).filter(x => x !== v)].slice(0, 3)
+    wx.setStorageSync(key, next)
+  },
+
+  /**
+   * 点击「最近用过」chip：将对应留言回填到 textarea
+   */
+  onPickRecentNote(e) {
+    const note = e.currentTarget.dataset.note
+    if (note) this.setData({ shareNote: note })
   },
 
   stopPropagation() {
@@ -552,6 +637,14 @@ Page({
     // 3. 构建分享参数
     // ================================================================
     path = id ? '/pages/preview/index?id=' + id + '&source=share' : '/pages/index/index'
+
+    // 一次性分享留言：仅当本次分享（onShareButtonTap 预设）携带 note 时，追加 sid + note 到分享 path
+    // sid/shareId 用于服务端去重与展示；note 经 encodeURIComponent 编码，接收端 decodeURIComponent 解码
+    // 注意：self._activeShare 在函数末尾（清理共享状态处）被整体置 null，note/sid 必须在此之前被 path 用掉
+    if (id && self._activeShare && self._activeShare.note) {
+      path += '&sid=' + encodeURIComponent(self._activeShare.sid || '') + '&note=' + encodeURIComponent(self._activeShare.note)
+    }
+
     title = shareUtil.buildShareTitle(card)
 
     console.log('[Share] onShareAppMessage',

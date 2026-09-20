@@ -34,15 +34,26 @@ Page({
     teamCardName: '',
     // 公众号二维码弹窗（长按识别关注）
     showOfficialQR: false,
-    officialQRUrl: ''
+    officialQRUrl: '',
+    // 一次性分享留言横幅（仅接收方通过带 note 的分享链接进入时显示）
+    shareNote: ''
   },
 
   onLoad(options) {
 
     const id = options?.id || ''
-    this._shareOptions = options  // 保存分享参数供 recordVisit 使用
+    this._shareOptions = options  // 保存分享参数（原始 query，含编码后的 note/sid）供 recordVisit 使用
     this._fromTeamId = options?.teamId || ''  // 从团队详情跳入时携带，用于自动展开「该团队下的托管名片」
     this.setData({ id, isLoading: !!id })
+
+    // 一次性分享留言：分享链接带 note 参数时，解码后用于顶部横幅展示（try/catch 防异常，失败置空）
+    if (options && options.note) {
+      try {
+        this.setData({ shareNote: decodeURIComponent(options.note) })
+      } catch (e) {
+        this.setData({ shareNote: '' })
+      }
+    }
 
     if (id) {
       this.loadCard(id)
@@ -74,7 +85,11 @@ Page({
           action: 'recordVisit',
           data: {
             cardId: cardId,
-            source: options && options.source || 'direct'
+            source: options && options.source || 'direct',
+            // 留言仅写入 visits（分享记录）：note/shareId 用原始 query（this._shareOptions）做 decodeURIComponent，
+            // 避免复用已 decode 的 shareNote 造成二次解码出错
+            note: (options && options.note) ? decodeURIComponent(options.note) : '',
+            shareId: (options && options.sid) ? decodeURIComponent(options.sid) : ''
           }
         },
         success: function (result) {
