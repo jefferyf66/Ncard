@@ -755,6 +755,8 @@ Page({
    */
   _checkAuthBanner() {
     var that = this
+    // 已授权访客不再提示匿名引导条
+    if (this.data.isAuthorized) return
     // 检查是否在冷却期内（当天拒绝过）
     try {
       var dismissedDate = wx.getStorageSync('auth_banner_dismissed_date')
@@ -911,7 +913,8 @@ Page({
             }),
             isAuthorized: true,
             lockedFields: [],
-            showAuthModal: false
+            showAuthModal: false,
+            showAuthBanner: false
           })
           wx.showToast({ title: '已解锁完整名片', icon: 'success' })
         } else {

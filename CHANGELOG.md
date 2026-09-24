@@ -2,6 +2,17 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.5.12] - 2026-09-24
+
+> 体验版回归修复：修正已授权访客的字段锁定区冲突，以及授权后底部引导条残留不消失。
+
+### Fixed
+- **授权访客锁定区冲突**：`initVisits.getCardView` 计算 `lockedFields` 时无条件纳入所有 `authorized` 字段，导致已授权访客主区已显示电话/邮箱/地址、锁定区仍列「登录后查看」互相矛盾；改为仅当 `!isAuthorized` 才纳入（问题1）
+- **授权后底部引导条不消失**：`preview.confirmAuth` 成功回调仅关授权弹窗、未关底部匿名引导 banner；补 `showAuthBanner:false`，并给 `_checkAuthBanner` 加已授权守卫，已授权访客回访不再误弹（问题3）
+- 备注：过往经历可见性（问题2）经核对为数据配置项、非代码 bug，本次未改，需手动在编辑页将该卡字段拨为 private 后重传验证
+
+> ⚠️ 上线需重新上传 `cloudfunctions/initVisits` 并勾「云端安装依赖」——问题1 为服务端改动，不重部署不生效；并重新上传小程序为体验版。
+
 ## [1.5.11] - 2026-09-20
 
 > 一次性分享留言：分享名片时可附一句业务介绍/留言，仅随本次分享链接传递、写入 visits（不进 cards、可不同次填不同内容）；并打磨底部填写层避免压住 tab-bar，新增「最近用过」一键点取。

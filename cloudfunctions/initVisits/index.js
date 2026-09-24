@@ -419,10 +419,10 @@ exports.main = async (event, context) => {
           .limit(1)
           .get()
         isAuthorized = !!(v.data && v.data.length > 0)
-        // 计算被锁字段（authorized 且当前不可见）
+        // 计算被锁字段（authorized 且当前访客尚未授权才锁）
         const visMap = fv || DEFAULT_FIELD_VISIBILITY
         for (const [k, vis] of Object.entries(visMap)) {
-          if (vis === 'authorized') lockedFields.push(k)
+          if (vis === 'authorized' && !isAuthorized) lockedFields.push(k)
         }
       }
 
