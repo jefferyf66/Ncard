@@ -55,6 +55,9 @@ Page({
       }
     }
 
+    // 首次进入标记：onLoad→onShow 会连续触发，借此去重，避免首个页面并发调用 loadCard 两次
+    this._firstShow = true
+
     if (id) {
       this.loadCard(id)
     }
@@ -107,6 +110,11 @@ Page({
   },
 
   onShow() {
+    // 首次进入由 onLoad 已发起加载，避免 onLoad→onShow 连续触发导致的重复并发加载（治本）
+    if (this._firstShow) {
+      this._firstShow = false
+      return
+    }
     // 从编辑页返回时，名片数据可能已变更，总是重新加载
     if (this.data.id) {
       this.setData({ isError: false, isLoading: true })
@@ -122,6 +130,12 @@ Page({
   },
 
   loadCard(id) {
+    // 防御：清理可能存在的旧定时器，避免并发/重复调用路径下旧 timer 句柄丢失造成泄漏误报
+    if (this._loadTimer) {
+      clearTimeout(this._loadTimer)
+      this._loadTimer = null
+    }
+
     if (!id || !wx.cloud) {
       this.setData({
         isLoading: false,
