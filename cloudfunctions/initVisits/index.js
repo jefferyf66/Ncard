@@ -519,18 +519,16 @@ exports.main = async (event, context) => {
       if (recent.data && recent.data.length > 0) {
         const lastVisit = new Date(recent.data[0].visitTime)
         const diffMin = (now - lastVisit) / 1000 / 60
-        if (diffMin < 30) {
-          visitId = recent.data[0]._id
-          await db.collection('visits').doc(visitId).update({
-            data: {
-              authorized: true,
-              visitorName: nick,
-              visitorAvatar: avatar,
-              visitorLevel: Math.max(recent.data[0].visitorLevel || 1, 2),
-              visitTime: now
-            }
-          })
-        }
+        visitId = recent.data[0]._id
+        await db.collection('visits').doc(visitId).update({
+          data: {
+            authorized: true,
+            visitorName: nick,
+            visitorAvatar: avatar,
+            visitorLevel: Math.max(recent.data[0].visitorLevel || 1, 2),
+            visitTime: now
+          }
+        })
       }
       if (!visitId) {
         const r = await db.collection('visits').add({

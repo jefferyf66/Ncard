@@ -47,9 +47,10 @@ async function ensureUser() {
         userDoc.lastLoginAt = now
         userDoc.loginCount = (userDoc.loginCount || 0) + 1
         userDoc.updatedAt = now
+        // 种子 root 晋升（命中 config.rootOpenids 且当前非 root 时）
+        // LOG-04 修复：晋升逻辑置于 status!=='deleted' 块内，已注销账号不再被脏写提权（仍可绕过注销）
+        userDoc.role = await resolveRole(OPENID, userDoc.role, userDoc._id)
       }
-      // 种子 root 晋升（命中 config.rootOpenids 且当前非 root 时）
-      userDoc.role = await resolveRole(OPENID, userDoc.role, userDoc._id)
       return buildResult(OPENID, APPID, UNIONID, userDoc)
     }
 

@@ -64,6 +64,12 @@ Page({
     app.getOpenId().then(function (myOpenId) {
       if (!myOpenId) return
       var db = wx.cloud.database()
+      // 【CON-01 幂等保障·前端侧】此处为「先 count 再 add」的先查后写语义（步骤非原子）：
+      // 高并发 / onShow 高频触发下，两次 count→add 之间仍能插重，可能写入同一 openid 的多条记录。
+      // 代码侧无法彻底防并发插重，最终保障须由数据层承担：
+      // ⚠️ 请手动在【云开发控制台】给 visitor_profiles 集合的 openid 字段建立【唯一索引】，
+      //    写入重复键时由数据库拒绝，作为防插重的最终手段（属手动运维项，代码不自动建索引）。
+      //    .catch 中已对 add 失败静默忽略（仅 warn），唯一索引冲突亦在此被安静吞掉，不影响主流程。
       db.collection('visitor_profiles').where({ openid: myOpenId }).count()
         .then(function (res) {
           if (res.total > 0) {

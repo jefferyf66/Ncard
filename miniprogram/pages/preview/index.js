@@ -67,6 +67,16 @@ Page({
   recordVisit(cardId, options) {
     if (!wx.cloud) return
 
+    // 前端会话守卫（KNOWN-01）：5 分钟内同一名片只上报一次访问，
+    // 防止 onShow 重载 / 切前台 / 从编辑页返回导致的 loadCard 反复触发无意识放大访客统计。
+    // 必须用 this 同步设置实例变量（同步逻辑，非异步），确保本次 return 前守卫状态已更新。
+    var nowTs = Date.now()
+    if (this._lastRecordCardId === cardId && (nowTs - (this._lastRecordAt || 0)) < 5 * 60 * 1000) {
+      return
+    }
+    this._lastRecordCardId = cardId
+    this._lastRecordAt = nowTs
+
     var cardData = this.data.card
     var that = this
 

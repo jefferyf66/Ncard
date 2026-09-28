@@ -143,12 +143,17 @@ async function confirmDeleteAccount(OPENID) {
   // ERR-02 修复：级联清理团队关系与访客隐私残留
   // 1) 删除该用户在 team_members 中的全部记录，并回退对应 teams.memberCount（避免团队人数虚高、团队列表显示已注销成员）
   const teamIdSet = new Set()
+  const cardTeamPairs = [] // { cardId, teamId } 配对，用于清理各名片上的 teamIds 关联（修复 LOG-02 残留）
   let skip = 0
   while (true) {
     const memPage = await db.collection('team_members')
       .where({ memberOpenId: OPENID }).limit(1000).skip(skip).get()
     const rows = memPage.data || []
-    rows.forEach(function (m) { if (m.teamId) teamIdSet.add(m.teamId) })
+    // 跨页收集全量配对：分页（>1000 成员）亦能完整收集
+    rows.forEach(function (m) {
+      if (m.teamId) teamIdSet.add(m.teamId)
+      if (m.cardId && m.teamId) cardTeamPairs.push({ cardId: m.cardId, teamId: m.teamId })
+    })
     if (rows.length < 1000) break
     skip += 1000
   }
@@ -162,6 +167,11 @@ async function confirmDeleteAccount(OPENID) {
     const removed = (rm.stats && rm.stats.removed) || 0
     if (removed === 0) break
   }
+  // 清理被注销用户作为团队成员托管名片上的 teamIds 关联（修复 LOG-02 残留，防止 teamId 残留）
+  // 个别名片缺失时用 .catch(() => {}) 兜底，避免阻断主流程
+  await Promise.all(cardTeamPairs.map(function (pair) {
+    return db.collection('cards').doc(pair.cardId).update({ data: { teamIds: _.pull(pair.teamId) } }).catch(function () {})
+  }))
   // 2) 删除该用户作为访客的 visits 隐私残留（visitorOpenId 指向本人，防止被枚举追踪）
   while (true) {
     const rv = await db.collection('visits').where({ visitorOpenId: OPENID }).limit(1000).remove()

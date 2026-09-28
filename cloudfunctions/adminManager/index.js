@@ -37,6 +37,8 @@ exports.main = async (event, context) => {
     const meRes = await db.collection('users').where({ _openid: OPENID }).limit(1).get()
     const me = (meRes.data && meRes.data[0]) || null
     myRole = (me && me.role) || 'user'
+    // LOG-04 双保险：已注销(deleted)调用者一律降为 user，即便 users.role 被脏写也无法过任何 needAdmin/needRoot 门槛
+    if (me && me.status === 'deleted') myRole = 'user'
   } catch (e) {}
 
   // 权限门槛
@@ -166,7 +168,15 @@ async function disbandTeam(OPENID, myRole, event) {
   if (!teamId) return { success: false, error: '缺少 teamId' }
   const team = await db.collection('teams').doc(teamId).get()
   if (!team.data) return { success: false, error: '团队不存在' }
-  await db.collection('teams').doc(teamId).remove()
+  // 取成员用于清理各名片上的 teamIds 关联（与 teamManager.disbandTeam 对齐，修复 LOG-01）
+  const memRes = await db.collection('team_members').where({ teamId }).get()
+  const cardIds = [...new Set((memRes.data || []).map(m => m.cardId).filter(Boolean))]
+  const tasks = []
+  cardIds.forEach(cid => {
+    tasks.push(db.collection('cards').doc(cid).update({ data: { teamIds: _.pull(teamId) } }).catch(() => {}))
+  })
+  tasks.push(db.collection('teams').doc(teamId).remove())
+  await Promise.all(tasks)
   // F17 修复：分页循环删除，突破 where().remove() 单次约 1000 条上限
   // （与 teamManager/deleteCard 同模式，云函数独立部署单元，各自内联）
   await removeAll('team_members', { teamId })

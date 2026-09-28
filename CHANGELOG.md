@@ -2,6 +2,19 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.5.14] - 2026-09-28
+
+> 逻辑问题专项审计修复批次（架构师八维审计 → 工程师最小变更 → QA 权限回归全 PASS）：修复 1 项 P1 权限提升 + 6 项 P2 逻辑/数据自洽 + 1 项已知访客计数放大。
+
+### Fixed
+- **P1 注销 root 提权（LOG-04）**：`getOpenId` 的 `resolveRole` 晋升逻辑移入 `status!=='deleted'` 块内，已注销账号不再被脏写 `role='root'`；`adminManager` root 守卫加双保险（deleted 调用者一律降为 user），封堵被封禁 root 复活提权
+- **团队解散残留（LOG-01/MNT-01）**：`adminManager.disbandTeam` 补齐成员名片 `cards.teamIds` 的 `_.pull`，与 `teamManager` 对齐，消除两处实现分叉
+- **注销残留（LOG-02）**：`accountManager.confirmDeleteAccount` 注销时清理托管名片的 `cards.teamIds` 关联
+- **授权访客列表重复（LOG-03）**：`initVisits.authorizeVisit` 移除 30 分钟窗口限制，授权时复用最近一条 visit 标 authorized，不再新增第二条记录
+- **访客档案非原子注册（CON-01）**：`index._registerVisitorProfile` 注明先查后写语义，并提示在云控制台给 `visitor_profiles.openid` 建唯一索引作为并发最终保障
+- **电话校验口径（BND-01）**：`edit.validate` 放宽手机正则，同时接受手机号与座机（团队 landline 回写不再失败）
+- **访客统计放大（KNOWN-01）**：`preview.recordVisit` 加 5 分钟同卡会话守卫，消除 onShow 重载/切前台无意识重复计数
+
 ## [1.5.13] - 2026-09-28
 
 > 体验版回归修复：修正名片详情页加载成功后约 10 秒误报「加载超时，请重试」的定时器泄漏问题。

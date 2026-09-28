@@ -161,6 +161,12 @@
 
 详见 [CHANGELOG.md](CHANGELOG.md)
 
+### v1.5.14 (2026-09-28)
+- 🔒 P1 修复注销 root 提权：`getOpenId` 晋升置于非 deleted 块内 + `adminManager` 守卫双保险，已注销账号不再复活提权
+- 🧹 修复团队解散/注销残留：`adminManager.disbandTeam` 与 `accountManager.confirmDeleteAccount` 清理成员名片 `cards.teamIds`；`initVisits.authorizeVisit` 授权去重不再重复记录
+- 🔢 前端：`index` 访客档案幂等注释 + `visitor_profiles.openid` 需建唯一索引；`edit` 电话正则放宽（支持座机）；`preview` 访客计数 5 分钟会话守卫
+- ☁️ 需重传云函数 `getOpenId`/`adminManager`/`accountManager`/`initVisits`（勾云端安装依赖）+ 重传小程序体验版；`visitor_profiles.openid` 需建唯一索引
+
 ### v1.5.13 (2026-09-28)
 - 🐞 修复预览页加载超时误报：`onLoad` 与 `onShow` 首次进入连续触发导致 `loadCard` 并发两次、`_loadTimer` 句柄被覆盖、首个 10 秒定时器泄漏，数据已渲染后照常触发「加载超时」错误态；改为 `onShow` 首次去重 + `loadCard` 开头防御性清理旧定时器（纯前端改动，无需重传云函数）
 

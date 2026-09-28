@@ -516,7 +516,7 @@ Page({
     if (!this.data.name.trim()) errors.name = '请输入姓名'
     if (!this.data.phone.trim()) {
       errors.phone = '请输入手机号码'
-    } else if (!/^1[3-9]\d{9}$/.test(this.data.phone)) {
+    } else if (!/^(1[3-9]\d{9}|0\d{2,3}-?\d{7,8})$/.test(this.data.phone)) {
       errors.phone = '请输入正确的手机号码'
     }
     if (!this.data.email.trim()) {
