@@ -161,6 +161,11 @@
 
 详见 [CHANGELOG.md](CHANGELOG.md)
 
+### v1.5.15 (2026-09-28)
+- 🖼️ 分享图空白根治（A+B+C）：无预存图且头像为空时，首次分享改为实时生成真图（≤5s Promise）并等待上传拿永久 HTTPS，接收方可靠展示；极端情况退回预生成兜底图，永不空白
+- 🎨 分享图底色统一浅灰（#F5F7FA）：`shareCard` 由透明底改显式铺浅灰，根治 JPEG 透明区被 Android 填黑/iOS 填白的跨端混杂（自 v1.0.9 起的历史缺陷）；新增 `cards.shareImageStyle` 版本标记，进首页自动重生成所有历史黑/白坏图（存量自愈）
+- 🔧 预生成队列 15s 超时熔断（单卡挂起不再阻断后续补图）；`edit` 生成超时 15s→20s 错开头像超时竞态（纯前端改动，无需重传云函数）
+
 ### v1.5.14 (2026-09-28)
 - 🔒 P1 修复注销 root 提权：`getOpenId` 晋升置于非 deleted 块内 + `adminManager` 守卫双保险，已注销账号不再复活提权
 - 🧹 修复团队解散/注销残留：`adminManager.disbandTeam` 与 `accountManager.confirmDeleteAccount` 清理成员名片 `cards.teamIds`；`initVisits.authorizeVisit` 授权去重不再重复记录

@@ -5,7 +5,7 @@
  * 内容区填充整个 Canvas 宽度（阴影自然溢出被裁切），不预留额外阴影留白
  *
  * 【复合布局 v4】
- * - 顶部横幅：「点击保存我的名片」浅蓝背景引导 (#D6EAF8)，锚定 y=0
+ * - 顶部横幅：「点击保存我的名片」浅灰背景引导 (#F5F7FA，与分享图底一致，无独立色块)，锚定 y=0
  * - 透明间隙：Banner 与名片卡片之间的自然呼吸间距（上半部透明留白）
  * - 底部名片：与首页 WXML 完全一致的样式（cardStyle 单一数据源）
  * - 底部透明：下半部留白，使整体符合 5:4 比例
@@ -340,7 +340,8 @@ function generate(canvasId, card, options) {
     // 缓存 key：含卡片数据版本，修改后 updateTime 变化 → 自动失效
     // 降级链：_updateTime → updateTime → updatetime → createTime → _id
     var dataVersion = card._updateTime || card.updateTime || card.updatetime || card.createTime || card._id || ''
-    var versionedKey = cardKey + '_' + layout.w + 'x' + layout.totalH + '_' + layout.contactCount + 'c_v' + dataVersion
+    // 样式版本纳入 key：底色方案升级(v1 透明底→v2 浅灰底)后旧缓存图自动失效，不再被复用
+    var versionedKey = cardKey + '_' + layout.w + 'x' + layout.totalH + '_' + layout.contactCount + 'c_v' + dataVersion + '_' + storage.SHARE_IMAGE_STYLE
 
     // 2. 检查缓存（key 含尺寸版本）
     if (ENABLE_SHARE_CACHE) {
@@ -388,8 +389,12 @@ function generate(canvasId, card, options) {
             canvas.height = layout.totalH * dpr
             ctx.scale(dpr, dpr)
 
-            // 透明背景 — Banner 从 y=0 触顶，卡片从 bannerH+gap 开始
-            ctx.clearRect(0, 0, canvasW, layout.totalH)
+            // 浅灰底铺满（方案B：JPEG 无 alpha 通道，透明区会被平台随机填黑/白；
+            // 显式铺 #F5F7FA 浅灰底，跨端统一，根治分享图黑白混杂）
+            // ⚠️ 编译生效标记：下次测试若 Console 无此行 → 说明 shareCard.js 未重新编译（热重载未刷新被 require 模块）
+            console.log('[shareCard] 已铺浅灰底 SHARE_IMAGE_STYLE=' + storage.SHARE_IMAGE_STYLE + ' 覆盖 ' + canvasW + 'x' + layout.totalH)
+            ctx.fillStyle = '#F5F7FA'
+            ctx.fillRect(0, 0, canvasW, layout.totalH)
 
             // 加载头像
             _loadAvatarToCanvas(card.avatar, canvas).then(function (avatarImg) {
@@ -528,6 +533,8 @@ function _getDpr() {
 
 function _exportAndResolve(canvas, versionedKey, now, layout, resolve, reject) {
   var exportW = layout.w
+  // ⚠️ 导出取整画布：x/y/width/height 用逻辑像素（与 canvas 绘制坐标系一致，真机已验证整图导出无裁切）。
+  // 切勿改为 canvas.width/height 物理像素——dpr≠1 时真机反而会截半图/引入透明黑边。
   wx.canvasToTempFilePath({
     canvas: canvas,
     x: 0, y: 0,
@@ -625,9 +632,9 @@ function _drawBanner(ctx, layout) {
   ctx.fillStyle = CARD.bannerBg
   ctx.fillRect(0, 0, layout.w, bh)
 
-  // 居中文字
+  // 居中文字（字体按 bannerTextSize 配置换算，放大加粗更突出）
   ctx.fillStyle = CARD.bannerTextColor
-  ctx.font = CARD.bannerTextWeight + ' ' + Math.round(bh * 0.3) + 'px PingFang SC, sans-serif'
+  ctx.font = CARD.bannerTextWeight + ' ' + Math.round(CARD.bannerTextSize * layout.w / 750) + 'px PingFang SC, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(CARD.bannerText, layout.w / 2, bh / 2)

@@ -2,6 +2,28 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.5.15] - 2026-09-28
+
+> 分享图空白根治（方案 A+B+C）+ 底色统一（方案 B 浅灰）同批：对方收到空白名片的根因是「无预存分享图且头像为空」时同步返回空串，微信退回默认占位；部分卡片分享图底色随机黑/白则源于透明底 JPEG 被平台随机填色。本次让首次分享即带真实生成图、极端情况永不再空白、所有分享图统一浅灰底(#F5F7FA)，并加固预生成队列 + 新增 shareImageStyle 版本标记触发存量坏图自愈。纯前端改动，无需重传云函数。
+
+### Fixed
+- **分享图空白（方案 A 实时真图）**：`index.onShareAppMessage` 在「无预存图且无头像」分支改为返回 Promise，等待 Canvas 实时生成 + 上传拿永久 HTTPS URL（≤5s）再分享，本次分享即带真图、接收方可靠展示；超时/失败降级
+- **永不空白（方案 B 兜底图）**：新增 `_getFallbackShareImage`/`_fallbackSync`，进首页即预生成一张默认名片图并缓存；所有「无有效图」分支（4b 无头像老基础库、4c 无名片、朋友圈无图）统一退回兜底图，消除微信默认 logo 占位
+- **预生成队列加固（方案 C 超时熔断）**：`_generateAndPersistShareImage` 加 15s 超时熔断（settled 守卫），单卡生成挂起不再阻断后续卡片补图，队列永不哑火
+- **编辑页生成超时竞态**：`edit._generateAndStoreShareImage` 的 `GEN_TIMEOUT` 由 15s 提至 20s，与 `shareCard.AVATAR_LOAD_TIMEOUT`(15s) 错开，避免等值同时触发导致编辑保存误判生成失败
+- **分享图底色统一（方案 B 浅灰）**：`shareCard` 绘制由透明底 `clearRect` 改为显式铺 `#F5F7FA` 浅灰底，根治 JPEG 透明区被 Android 填黑/iOS 填白的跨端混杂（历史缺陷，自 v1.0.9 起存在）；`config/storage.js` 新增 `SHARE_IMAGE_STYLE='v2'` 单一真源
+- **存量坏图自愈**：新增 `cards.shareImageStyle` 字段，`_markShareImage` 回写时标注当前底色版本；`_ensureShareImages` 过滤条件由「仅无图」扩为「无图或版本过期」，进首页自动重生成所有历史透明底黑/白图；`edit` 保存生成一并回写该字段，杜绝新图再次落旧样式
+- **旧图复用盲区（关键）**：`index.onShareAppMessage` 4a、`onShareTimeline`、`_ensureShareImageUrl` 此前仅判断 `shareImageUrl` 是否存在，导致「已带旧透明底坏图」的卡在分享瞬间被原样复用、**永不触发重生成**（自愈队列即使后台重画，分享这一帧仍走旧图）；新增 `_isShareImageFresh`（同时校验 `shareImageStyle` 版本），旧样式图分享时改走实时重生成（方案 A），朋友圈降级兜底图；`shareCard.versionedKey` 纳入样式版本，防止旧缓存图被复用
+- **热重载错配毒图（v2→v3）**：开发期曾出现 `shareCard.js`（旧透明底）与 `index.js`（新 `_markShareImage` 写 `shareImageStyle:'v2'`）版本错配——云存储里实际是黑底旧图、DB 却标记「已是 v2 新样式」，致使 `_isShareImageFresh` 判新鲜、`_ensureShareImages` 跳过，黑底被永久锁死、任何清缓存都不生效；将 `SHARE_IMAGE_STYLE` 由 `v2` 抬至 `v3`，所有被污染的卡强制重生成一次（浅灰底）并回写 v3，彻底清除毒图。部署后须**全量清缓存 + 重新编译**（非热重载）保证两文件同时为新版本
+- **加载超时自愈未真正触发（根因 bug，v1.5.15 收尾）**：`_ensureShareImages` 已接入超时/失败回退分支，但调用时传入 `this.data.cards` —— `tryLoadCache()` 内部是**异步 setData**，`this.data.cards` 那一刻仍是超时前的旧值（首次打开即初始空数组 `[]`），导致 `_ensureShareImages([])` 队列为空直接 return，缓存里的过期(v2)毒图**实际从未被自愈**，用户看不到「缺失数量」日志。新增 `_getCacheCards()` 从同步可读的本地缓存 `cardsCache` 取值再传给 `_ensureShareImages`，超时/失败回退下缓存卡也能确定性重生成浅灰底（分享路径本身已能在分享瞬间实时重绘浅灰底，此改动仅让进首页即自愈、降低对「必须重新分享」的依赖）
+- **编译生效标记日志**：`shareCard` 绘制浅灰底处新增 `[shareCard] 已铺浅灰底 SHARE_IMAGE_STYLE=...` 标记；用户验证时若无此行即说明 `shareCard.js` 未重新编译（热重载未刷新被 require 模块），与代码本身无关。导出 `canvasToTempFilePath` 加注释：保持逻辑像素取整画布，切勿改物理像素（dpr≠1 反会裁切/引入黑边）
+- **微信缩略图 URL 缓存击穿（致命盲区，本轮收口）**：即便云存储文件已重生成浅灰底，微信仍按 `imageUrl` 在服务端缓存了历史透明底黑/白缩略图，导致「代码已灰、接收方仍黑」——这正是前几轮「改了还黑」的真相。新增 `_cacheBustShareUrl()` 在分享取图时给 URL 挂 `?imgv=<样式版本>`，样式升级即视为新 URL，微信必重新抓取当前灰底图；云存储 CDN 忽略 query 直接回当前文件内容，不影响取图。`onShareAppMessage` 4a、`_ensureShareImageUrl`(实时重生成)、`onShareTimeline` 三处统一接入；DB 仍存干净 URL（缓存击穿只作用于分享那一刻，避免重复拼参）。**已发送聊天的旧消息缩略图属微信服务端缓存、代码改不了，必须重新分享到新对话才会消失**
+
+- **分享图顶部引导横幅配色与字号优化**：`cardStyle.bannerBg` 由浅蓝 `#D6EAF8` 改为与分享图底一致的浅灰 `#F5F7FA`（横幅不再有独立色块，视觉更统一）；`bannerTextWeight` 由 `500` 加粗至 `700`、`bannerTextSize` 由 `24` 提至 `34`(rpx) 并真正接入绘制（此前 `bannerTextSize` 字段定义了却未被使用，字体按 banner 高度 `bh*0.3` 推算），引导文案「点击保存我的名片」更醒目。`_drawBanner` 字号改为 `bannerTextSize * canvasW / 750` 按画布宽度换算，更可控。`SHARE_IMAGE_STYLE` 由 `v3` 抬至 `v4`（banner 属外观变更，须抬版本让所有历史分享图重绘新横幅）；`_cacheBustShareUrl` 的 `imgv` 同步为 v4，微信缩略图缓存一并击穿。纯前端改动，无需重传云函数
+- **引导横幅字号再微调（v5）**：`bannerTextSize` 由 `34` 再放大至 `38`(rpx)，「点击保存我的名片」更突出；`SHARE_IMAGE_STYLE` 由 `v4` 抬至 `v5`（外观微调须抬版本重绘）；`_cacheBustShareUrl` 的 `imgv` 同步为 v5。纯前端改动，无需重传云函数
+
+> 已知残留（非阻塞）：5 分钟 onShow 节流盲区已由方案 A 实时生成覆盖首分享；坏图自愈已通过 shareImageStyle 版本标记在进首页时自动重生成解决（仅覆盖已加载到本页的卡，翻页/重载会逐步自愈）。
+
 ## [1.5.14] - 2026-09-28
 
 > 逻辑问题专项审计修复批次（架构师八维审计 → 工程师最小变更 → QA 权限回归全 PASS）：修复 1 项 P1 权限提升 + 6 项 P2 逻辑/数据自洽 + 1 项已知访客计数放大。

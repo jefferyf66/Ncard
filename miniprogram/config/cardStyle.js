@@ -95,11 +95,11 @@ var CARD = Object.freeze({
 
   // === 分享卡顶部横幅 ===
   bannerHeight: 80,           // rpx (约 76px @702px宽)
-  bannerBg: '#D6EAF8',
+  bannerBg: '#F5F7FA',        // 与分享图浅灰底(#F5F7FA)一致，横幅不再有独立底色块
   bannerText: '点击保存我的名片',
-  bannerTextSize: 24,         // rpx
+  bannerTextSize: 38,         // rpx（字体再次放大，更突出引导，需配合 SHARE_IMAGE_STYLE 抬版本重绘）
   bannerTextColor: '#2563EB',
-  bannerTextWeight: '500'
+  bannerTextWeight: '700'     // 加粗更突出
 })
 
 // =========================================================================

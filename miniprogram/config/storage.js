@@ -25,7 +25,18 @@ function resolveCloudUrl(cloudId) {
   return STORAGE_BASE + '/' + path
 }
 
+// 分享图底色样式版本（单一真源）
+// v1 = 透明底（JPEG 无 alpha 通道，透明区被平台随机填黑/白，历史缺陷，v1.5.14 及更早）
+// v2 = 浅灰底 #F5F7FA（跨端统一，根治分享图黑白混杂，v1.5.15 起）
+// v3 = 同 v2 视觉；仅因 v1.5.15 开发期热重载错配，曾把"旧透明底图"误标为 v2，
+//      导致 _isShareImageFresh 判新鲜、自愈队列跳过、黑底永久锁死 → 抬版本强制所有卡重生成一次
+// v4 = 顶部引导横幅底色由浅蓝(#D6EAF8)改为与分享图一致的浅灰(#F5F7FA)，字体放大加粗更突出；
+//      属 banner 外观变更，须抬版本让所有历史分享图重绘
+// v5 = banner 引导字体由 34 再放大至 38（rpx），更突出；外观微调须抬版本重绘
+var SHARE_IMAGE_STYLE = 'v5'
+
 module.exports = {
   STORAGE_BASE: STORAGE_BASE,
-  resolveCloudUrl: resolveCloudUrl
+  resolveCloudUrl: resolveCloudUrl,
+  SHARE_IMAGE_STYLE: SHARE_IMAGE_STYLE
 }

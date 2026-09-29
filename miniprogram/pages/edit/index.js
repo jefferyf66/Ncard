@@ -613,7 +613,7 @@ Page({
     var that = this
     var cardId = cardData._id
     var shareCard = require('../../utils/shareCard')
-    var GEN_TIMEOUT = 15000  // 15 秒总超时（Canvas + 上传 + DB）
+    var GEN_TIMEOUT = 20000  // 20 秒总超时（Canvas + 上传 + DB）；须 > shareCard.AVATAR_LOAD_TIMEOUT(15s) 错开，避免等值竞态导致编辑页误判生成失败
 
     return new Promise(function (resolve, reject) {
       var settled = false
@@ -645,7 +645,7 @@ Page({
               var cloudFileID = uploadRes.fileID
               var shareUrl = storage.resolveCloudUrl(cloudFileID)
               wx.cloud.database().collection('cards').doc(cardId).update({
-                data: { shareImageUrl: shareUrl, shareImageFileID: cloudFileID }
+                data: { shareImageUrl: shareUrl, shareImageFileID: cloudFileID, shareImageStyle: storage.SHARE_IMAGE_STYLE }
               }).then(function () {
                 if (settled) return
                 settled = true

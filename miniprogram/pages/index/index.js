@@ -124,6 +124,9 @@ Page({
 
     // 实时拉取「我的团队」数量（5 分钟缓存，见 loadTeamCount）
     this.loadTeamCount()
+
+    // 预生成兜底分享图（方案 B）：进首页即生成并缓存，确保后续分享同步可用，永不空白
+    this._getFallbackShareImage()
     
     var needsRefresh = app.getCache('cardsNeedRefresh')
     if (needsRefresh) {
@@ -206,6 +209,9 @@ Page({
     this._loadTimer = setTimeout(() => {
       console.warn('[Index] 加载超时，尝试使用缓存')
       this.tryLoadCache()
+      // 超时回退也触发存量分享图自愈：setData 异步未生效，不能依赖 this.data.cards，
+      // 须从同步可读的缓存源取 cards，否则首次打开拿到空数组 → 队列空 → 毒卡永不重生成
+      this._ensureShareImages(this._getCacheCards())
       if (callback) callback()
     }, 10000)
 
@@ -244,6 +250,8 @@ Page({
         clearTimeout(this._loadTimer)
         console.error('[Index] 加载失败:', err)
         this.tryLoadCache()
+        // 失败回退也触发存量分享图自愈（与超时回退一致，同样用同步缓存源）
+        this._ensureShareImages(this._getCacheCards())
         this.setData({
           isError: true,
           errorMsg: '网络错误，请检查网络后重试'
@@ -510,51 +518,210 @@ Page({
   },
 
   /**
+   * 给分享图 URL 追加样式版本 cache-buster，强制微信重新拉取「当前灰底」图。
+   * 根因：微信分享缩略图按 imageUrl 在服务端做缓存——历史透明底黑/白图被缓存后，
+   * 即便云存储文件已重生成灰底，微信仍按旧 URL 命中缓存、继续显示黑图。
+   * 在 URL 上挂 ?imgv=<样式版本>，样式升级即视为新 URL，微信必重新抓取当前灰底图。
+   * 云存储 CDN 忽略 query 直接回当前文件内容，故不会影响实际取图。
+   */
+  _cacheBustShareUrl(url) {
+    if (!url) return url
+    if (url.indexOf('https://') !== 0 && url.indexOf('http://') !== 0) {
+      url = storage.resolveCloudUrl(url)
+    }
+    if (url.indexOf('https://') !== 0) return url
+    var sep = url.indexOf('?') >= 0 ? '&' : '?'
+    return url + sep + 'imgv=' + storage.SHARE_IMAGE_STYLE
+  },
+
+  /**
+   * 基础库 ≥ 2.12.0 才支持 onShareAppMessage 返回 Promise（用于「实时生成真图」路径）。
+   * 低于此版本必须同步 return，否则分享会失败。
+   */
+  _canUseSharePromise() {
+    try {
+      var sdk = (wx.getSystemInfoSync ? wx.getSystemInfoSync().SDKVersion : '0') || '0'
+      return this._cmpVersion(sdk, '2.12.0') >= 0
+    } catch (e) {
+      return false
+    }
+  },
+
+  // 语义化版本比较：a > b 返回 1，a < b 返回 -1，相等 0
+  _cmpVersion(a, b) {
+    var pa = ('' + a).split('.'), pb = ('' + b).split('.')
+    var len = Math.max(pa.length, pb.length)
+    for (var i = 0; i < len; i++) {
+      var na = parseInt(pa[i] || '0', 10) || 0
+      var nb = parseInt(pb[i] || '0', 10) || 0
+      if (na > nb) return 1
+      if (na < nb) return -1
+    }
+    return 0
+  },
+
+  /**
+   * 判断卡片预存分享图是否为「当前样式版本」的有效图
+   * 仅 shareImageUrl 存在不足以复用——历史透明底黑/白图(样式版本过期)必须重新生成，
+   * 否则 4a/朋友圈/实时生成都会把旧坏图原样发出去。
+   */
+  _isShareImageFresh(card) {
+    return !!(card && card.shareImageUrl && card.shareImageStyle === storage.SHARE_IMAGE_STYLE)
+  },
+
+  /**
+   * 回写分享图到内存副本 + 云端 cards（供生成/上传成功后复用，避免重复逻辑）
+   */
+  _markShareImage(id, httpsUrl, cloudFileID) {
+    var cards = this.data.cards || []
+    for (var k = 0; k < cards.length; k++) {
+      if (cards[k]._id === id) {
+        cards[k].shareImageUrl = httpsUrl
+        cards[k].shareImageFileID = cloudFileID
+        cards[k].shareImageStyle = storage.SHARE_IMAGE_STYLE
+      }
+    }
+    wx.cloud.database().collection('cards').doc(id).update({
+      data: { shareImageUrl: httpsUrl, shareImageFileID: cloudFileID, shareImageStyle: storage.SHARE_IMAGE_STYLE }
+    }).then(function () {
+      console.log('[Share] shareImageUrl 已回写，下次分享直接用')
+    }).catch(function () {
+      console.warn('[Share] shareImageUrl 回写失败（不影响本次分享）')
+    })
+  },
+
+  /**
+   * 方案 A — 实时生成真实分享图并等待上传完成（≤5s），返回 Promise<url>
+   * 用于「无预存图」场景：本次分享即带真图（接收方可靠展示），而非头像/空白。
+   * 超时或失败 resolve('')，由调用方降级到兜底图（方案 B）。
+   */
+  _ensureShareImageUrl(card, id) {
+    var self = this
+    var WAIT = 5000
+    return new Promise(function (resolve) {
+      if (self._isShareImageFresh(card)) {
+        var u = card.shareImageUrl
+        if (u.indexOf('cloud://') === 0) u = storage.resolveCloudUrl(u)
+        resolve(u)
+        return
+      }
+      var shareCard = require('../../utils/shareCard')
+      var settled = false
+      var timer = setTimeout(function () {
+        if (settled) return
+        settled = true
+        console.warn('[Share] 实时生成等待超时(5s)，降级兜底图')
+        resolve('')
+      }, WAIT)
+      shareCard.generate('shareCanvas', card, { cardKey: id, pageContext: self })
+        .then(function (res) {
+          if (settled) return
+          wx.cloud.uploadFile({
+            cloudPath: 'sharecards/card_' + id + '.jpg',
+            filePath: res.tempFilePath,
+            success: function (up) {
+              if (settled) return
+              settled = true
+              clearTimeout(timer)
+              var cleanUrl = storage.resolveCloudUrl(up.fileID)
+              self._markShareImage(id, cleanUrl, up.fileID)
+              resolve(self._cacheBustShareUrl(cleanUrl))
+            },
+            fail: function () {
+              if (settled) return
+              settled = true
+              clearTimeout(timer)
+              resolve(res.tempFilePath)
+            }
+          })
+        })
+        .catch(function () {
+          if (settled) return
+          settled = true
+          clearTimeout(timer)
+          resolve('')
+        })
+    })
+  },
+
+  /**
+   * 方案 B — 兜底分享图（永不空白）
+   * 无预存图 / 无头像 / 生成失败等所有「无有效图」场景，退回一张预生成的默认名片图。
+   * 在 onShow 预生成并缓存到 _fallbackShareUrl，故同步路径也能取到。
+   */
+  _getFallbackShareImage() {
+    var self = this
+    if (self._fallbackShareUrl) return Promise.resolve(self._fallbackShareUrl)
+    var shareCard = require('../../utils/shareCard')
+    var defaultCard = {
+      _id: '__fallback__', name: '投贴儿名片', position: '', company: '',
+      phone: '', email: '', address: '', avatar: null
+    }
+    return shareCard.generate('shareCanvas', defaultCard, { cardKey: '__fallback__', pageContext: self })
+      .then(function (res) {
+        self._fallbackShareUrl = res.tempFilePath
+        console.log('[Share] 兜底分享图已预生成')
+        return res.tempFilePath
+      })
+      .catch(function () {
+        console.warn('[Share] 兜底分享图生成失败')
+        return ''
+      })
+  },
+
+  // 同步取兜底图（已预生成则用之，否则空串）
+  _fallbackSync() {
+    return this._fallbackShareUrl || ''
+  },
+
+  /**
    * 生成分享图 → 上传云存储 → 回写卡片 shareImageUrl/shareImageFileID
    * 供两处复用：onShareAppMessage 4b 后台补生成、_ensureShareImages 预生成队列
    * 返回 Promise<boolean>（true=已回写），失败 resolve(false) 不抛错（fire-and-forget 语义）
+   * 含 15s 超时熔断（C1）：确保单卡永不挂起，预生成队列不会断链。
    */
   _generateAndPersistShareImage(card, id) {
     var self = this
     return new Promise(function (resolve) {
       try {
         var shareCard = require('../../utils/shareCard')
+        var settled = false
+        var timer = setTimeout(function () {
+          if (settled) return
+          settled = true
+          console.warn('[Share] 预生成超时(15s)，跳过该卡')
+          resolve(false)
+        }, 15000)
         shareCard.generate('shareCanvas', card, {
           cardKey: id,
           pageContext: self
         }).then(function (res) {
-          var cloudPath = 'sharecards/card_' + id + '.jpg'
-          // F20 注记：分享图存在首页分享后台生成与本页保存(edit)两个写入入口，写同一路径
-          // sharecards/card_<cardId>.jpg，last-write-wins 为已知接受行为（架构审计确认）。
+          if (settled) return
           wx.cloud.uploadFile({
-            cloudPath: cloudPath,
+            cloudPath: 'sharecards/card_' + id + '.jpg',
             filePath: res.tempFilePath,
             success: function (uploadRes) {
+              if (settled) return
+              settled = true
+              clearTimeout(timer)
               var cloudFileID = uploadRes.fileID
-              // 存 HTTPS URL（跨设备可靠），而非 cloud://
               var shareUrl = storage.resolveCloudUrl(cloudFileID)
               console.log('[Share] 后台已生成分享图:', shareUrl)
-              wx.cloud.database().collection('cards').doc(id).update({
-                data: { shareImageUrl: shareUrl, shareImageFileID: cloudFileID }
-              }).then(function () {
-                console.log('[Share] shareImageUrl 已回写，下次分享直接用')
-                // 同步内存副本：本会话内后续分享立即可走 4a 预存图路径（该字段不参与渲染，免 setData）
-                var cards = self.data.cards || []
-                for (var k = 0; k < cards.length; k++) {
-                  if (cards[k]._id === id) {
-                    cards[k].shareImageUrl = shareUrl
-                    cards[k].shareImageFileID = cloudFileID
-                  }
-                }
-                resolve(true)
-              }).catch(function () { resolve(false) })
+              self._markShareImage(id, shareUrl, cloudFileID)
+              resolve(true)
             },
             fail: function (err) {
+              if (settled) return
+              settled = true
+              clearTimeout(timer)
               console.warn('[Share] 后台上传失败:', err)
               resolve(false)
             }
           })
         }).catch(function (err) {
+          if (settled) return
+          settled = true
+          clearTimeout(timer)
           console.warn('[Share] 后台生成失败:', err && err.message)
           resolve(false)
         })
@@ -563,6 +730,19 @@ Page({
         resolve(false)
       }
     })
+  },
+
+  /**
+   * 同步获取可用于分享图自愈的 cards 源
+   * 超时/失败回退中 setData 异步未生效，this.data.cards 不可靠；
+   * 优先取同步可读的本地缓存 cardsCache，回退到已渲染的 data.cards
+   */
+  _getCacheCards() {
+    try {
+      var cc = app.getCache && app.getCache('cardsCache')
+      if (cc && cc.length) return cc
+    } catch (e) { /* ignore */ }
+    return (this.data && this.data.cards) || []
   },
 
   /**
@@ -578,7 +758,9 @@ Page({
     if (!wx.cloud) return
     if (!self._shareGenRunning) self._shareGenRunning = {}
     var queue = (cards || []).filter(function (c) {
-      return c && c._id && c.name && !c.shareImageUrl && !self._shareGenRunning[c._id]
+      // 存量自愈：无预存图「或」底色样式版本过期(历史透明底黑/白图) → 重生成
+      var stale = !c.shareImageUrl || c.shareImageStyle !== storage.SHARE_IMAGE_STYLE
+      return c && c._id && c.name && stale && !self._shareGenRunning[c._id]
     })
     if (!queue.length) return
     console.log('[Share] 预生成分享图，缺失数量:', queue.length)
@@ -672,32 +854,48 @@ Page({
     // 4. 分享图获取（同步优先，异步兜底）
     // ================================================================
 
-    // 4a. 已有预存分享图 → 同步返回 ✅
-    if (card.shareImageUrl) {
-      var imageUrl = card.shareImageUrl
-      // cloud:// → HTTPS 转换
-      if (imageUrl.indexOf('cloud://') === 0) {
-        imageUrl = storage.resolveCloudUrl(imageUrl) + '?ts=' + Date.now()
-      }
+    // 4a. 已有「当前样式版本」预存分享图 → 同步返回 ✅
+    // 注意：仅 shareImageUrl 存在不足以复用——历史透明底图(样式过期)必须重新生成
+    if (self._isShareImageFresh(card)) {
+      var imageUrl = self._cacheBustShareUrl(card.shareImageUrl)
       console.log('[Share] 4a 返回, finalUrl:', imageUrl)
       return { title: title, path: path, imageUrl: imageUrl }
     }
 
-    // 4b. 无预存但有有效名片 → 同步返回头像，后台异步 Canvas 生成
+    // 4b. 无「当前版本」预存图（无图 或 样式过期）但有有效名片
     if (card && card.name && id) {
+      // 样式过期的旧图：本次分享即实时重生成新图，避免把黑/白底旧图发出去
+      var staleImage = !!card.shareImageUrl && !self._isShareImageFresh(card)
+      if (staleImage && self._canUseSharePromise()) {
+        console.log('[Share] 路径 4b — 样式过期，实时重生成(Promise)')
+        return self._ensureShareImageUrl(card, id).then(function (url) {
+          return { title: title, path: path, imageUrl: url || self._fallbackSync() }
+        })
+      }
       var fallbackUrl = self._resolveAvatarUrl(card.avatar)
 
-      // 启动后台生成（fire-and-forget，不阻塞本次分享；与 loadCards 预生成共用方法）
-      self._generateAndPersistShareImage(card, id)
+      if (fallbackUrl) {
+        // 有头像：同步返回头像（微信可显示），后台补生成预存图（下次分享走 4a）
+        self._generateAndPersistShareImage(card, id)
+        console.log('[Share] 路径 4b — 同步返回头像, fallbackUrl:', fallbackUrl)
+        return { title: title, path: path, imageUrl: fallbackUrl }
+      }
 
-      // 立即同步返回头像 URL（本次分享用头像，下次分享用预存分享图）
-      console.log('[Share] 路径 4b — 同步返回, fallbackUrl:', fallbackUrl)
-      return { title: title, path: path, imageUrl: fallbackUrl }
+      // 无头像（同步返回会空白）：方案 A 实时生成真图；超时/失败走方案 B 兜底
+      if (self._canUseSharePromise()) {
+        console.log('[Share] 路径 4b — 无头像，走实时生成(Promise)')
+        return self._ensureShareImageUrl(card, id).then(function (url) {
+          return { title: title, path: path, imageUrl: url || self._fallbackSync() }
+        })
+      }
+      // 不支持 Promise 的老基础库：同步返回兜底图（onShow 已预生成）
+      console.log('[Share] 路径 4b — 无头像，老基础库走兜底图')
+      return { title: title, path: path, imageUrl: self._fallbackSync() }
     }
 
-    // 4c. 无有效名片数据 → 同步返回
-    console.log('[Share] 路径 4c — 无有效名片, title:', title)
-    return { title: title, path: path, imageUrl: self._resolveAvatarUrl(card && card.avatar) }
+    // 4c. 无有效名片数据 → 兜底图（永不空白）
+    console.log('[Share] 路径 4c — 无有效名片, 走兜底图')
+    return { title: title, path: path, imageUrl: self._fallbackSync() }
 
     } catch (e) {
       console.error('[Share] onShareAppMessage 异常:', e)
@@ -711,14 +909,14 @@ Page({
     var id = active.id || this.data.shareCardId || ''
     var query = id ? 'id=' + id : ''
 
-    // 用预存分享图优先（cloud:// 转 HTTPS，朋友圈不支持 cloud://）
-    if (card.shareImageUrl) {
-      var tlImage = card.shareImageUrl
-      if (tlImage.indexOf('cloud://') === 0) tlImage = storage.resolveCloudUrl(tlImage)
+    // 用「当前样式版本」预存分享图优先（cloud:// 转 HTTPS，朋友圈不支持 cloud://）
+    // 样式过期的旧图不返回，改走兜底图（onShareTimeline 不支持异步等待）
+    if (this._isShareImageFresh(card)) {
+      var tlImage = this._cacheBustShareUrl(card.shareImageUrl)
       return { title: shareUtil.buildShareTitle(card), query: query, imageUrl: tlImage }
     }
-    // 无分享图时：朋友圈不支持 cloud:// 实时生成，直接不传 imageUrl
-    return { title: shareUtil.buildShareTitle(card), query: query, imageUrl: '' }
+    // 无有效分享图时：退回兜底图（onShow 已预生成，同步可用），避免朋友圈空白
+    return { title: shareUtil.buildShareTitle(card), query: query, imageUrl: this._fallbackSync() }
   },
 
   goToPreview(e) {
