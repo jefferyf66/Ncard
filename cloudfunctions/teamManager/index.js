@@ -51,6 +51,8 @@ exports.main = async (event, context) => {
       case 'createCardInvite': return await createCardInvite(event, OPENID)
       // 保存团队名片字段配置（owner）：决定空名片表单字段 + 公开目录外的团队名片展示字段
       case 'saveTeamCardSchema': return await saveTeamCardSchema(event, OPENID)
+      // G7（本期必做）：owner 回填团队默认值到存量成员空字段
+      case 'applyCardSchemaDefaultsToMembers': return await applyCardSchemaDefaultsToMembers(event, OPENID)
       default: return { success: false, error: 'UNKNOWN_ACTION' }
     }
   } catch (e) {
@@ -253,21 +255,31 @@ async function joinByInvite(event, OPENID) {
   if (!card) return { success: false, error: 'NO_CARD', hint: '请先创建个人名片' }
 
   // 计算最终托管字段；空名片邀请需合并 owner 预填 + 成员填写 + 必填校验
+  // 团队统一默认值基线：仅非空 defaultValue 写入（空留空 → 个人 card 透出）
+  const schema = (teamRes.data && teamRes.data.cardSchema) || defaultCardSchema()
+  const ALL_KEYS = schema.map(f => f.key)
+  const baseline = {}
+  schema.forEach(f => { const d = (f.defaultValue || '').trim(); if (d) baseline[f.key] = d })
+
   let finalMF = emptyFields()
   if (inv.kind === 'card') {
-    const schema = (teamRes.data && teamRes.data.cardSchema) || defaultCardSchema()
     const userMF = sanitizeManagedFields(event.managedFields || {})
     const prefill = inv.prefill || {}
     const requiredKeys = schema.filter(f => f.required).map(f => f.key)
-    schema.forEach(f => {
-      const schemaDefault = (f.defaultValue || '').trim()
-      const def = (prefill[f.key] || schemaDefault || '').trim()
-      const usr = (userMF[f.key] || '').trim()
-      // 成员填了用成员的；未填回退 owner 预填；再回退字段默认值（owner 在配置里设的「预填内容」）
-      finalMF[f.key] = usr || def
+    ALL_KEYS.forEach(k => {
+      const def = baseline[k] || ''
+      const pf = (prefill[k] || '').trim()
+      const usr = (userMF[k] || '').trim()
+      // 优先级：成员填写 > 邀请预填(prefill) > 团队默认值(baseline)；成员改后优先
+      finalMF[k] = usr || pf || def
     })
     const missing = requiredKeys.filter(k => !(finalMF[k] || '').trim())
     if (missing.length) return { success: false, error: 'MISSING_REQUIRED', fields: missing }
+  } else {
+    // 普通邀请(kind='invite')：成员用已有名片加入 → 团队默认值强制覆盖个人值（G3 已确认）
+    // owner 设了非空 defaultValue 的字段，成员加入即以团队值为准，覆盖个人 card 同名字段；
+    // baseline 仅含非空默认值，故 owner 未设的字段仍留空、个人 card 值透出
+    ALL_KEYS.forEach(k => { if (baseline[k]) finalMF[k] = baseline[k] })
   }
 
   const now = Date.now()
@@ -316,6 +328,44 @@ async function joinByInvite(event, OPENID) {
   }
 
   return { success: true, data: { teamId: inv.teamId } }
+}
+
+// G7（本期必做）：owner 将团队当前 cardSchema.defaultValue 回填到存量成员空字段（不覆盖已填值）
+async function applyCardSchemaDefaultsToMembers(event, OPENID) {
+  const { teamId } = event
+  if (!teamId) return { success: false, error: 'TEAM_NOT_FOUND' }
+  const teamRes = await db.collection('teams').doc(teamId).get()
+  const team = teamRes.data
+  if (!team) return { success: false, error: 'TEAM_NOT_FOUND' }
+  if (team.ownerOpenId !== OPENID) return { success: false, error: 'FORBIDDEN' }
+  const schema = team.cardSchema || defaultCardSchema()
+  const baseline = {}
+  schema.forEach(f => { const d = (f.defaultValue || '').trim(); if (d) baseline[f.key] = d })
+  if (!Object.keys(baseline).length) return { success: true, applied: 0, skipped: 0 }
+
+  // 分批取 active 成员（limit 100 循环，_id 游标分页），填充空字段、不覆盖已填值
+  let applied = 0, skipped = 0, lastId = null
+  while (true) {
+    let q = db.collection('team_members').where({ teamId, status: 'active' })
+    if (lastId) q = q.where('_id').gt(lastId)
+    const r = await q.orderBy('_id', 'asc').limit(100).get()
+    const list = r.data || []
+    if (!list.length) break
+    for (const m of list) {
+      const mf = m.managedFields || emptyFields()
+      let changed = false
+      Object.keys(baseline).forEach(k => { if (!mf[k]) { mf[k] = baseline[k]; changed = true } })
+      if (changed) {
+        await db.collection('team_members').doc(m._id).update({ data: { managedFields: sanitizeManagedFields(mf) } })
+        applied++
+      } else {
+        skipped++
+      }
+    }
+    if (list.length < 100) break
+    lastId = list[list.length - 1]._id
+  }
+  return { success: true, applied, skipped }
 }
 
 // ============ 成员列表（成员/owner）============
@@ -605,7 +655,7 @@ async function getTeamPublicDirectory(event) {
   const schema = team.cardSchema || defaultCardSchema()
   const visMap = {}
   schema.forEach(f => { visMap[f.key] = f.visible })
-  const PUBLIC_SAFE = { position: true, company: true, department: true }
+  const PUBLIC_SAFE = { position: true, company: true, department: true, intro: true }
   const directory = members.map(m => {
     const card = (m.cardId && cardsMap[m.cardId]) || null
     const mf = m.managedFields || {}
@@ -615,6 +665,8 @@ async function getTeamPublicDirectory(event) {
       position: (visMap.position && PUBLIC_SAFE.position) ? ((mf.position) || (card && card.position) || '') : '',
       company: (visMap.company && PUBLIC_SAFE.company) ? ((mf.company) || (card && card.company) || '') : '',
       department: (visMap.department && PUBLIC_SAFE.department) ? ((mf.department) || (card && card.department) || '') : '',
+      // intro 可随 visible 进公开目录（G 已确认）；仅取团队托管 mf.intro，不从个人 card.businessIntro 透出，保持与个人数据隔离
+      intro: (visMap.intro && PUBLIC_SAFE.intro) ? ((mf.intro) || '') : '',
       avatarUrl: (m.avatarPublic === true && card && card.avatarUrl) ? card.avatarUrl : ''
     }
     return out
@@ -862,7 +914,7 @@ function genToken() {
   }
 }
 
-// 空托管字段（七个组织字段，统一 phone/email/address/website 命名，消除 companyPhone/workEmail 分裂）
+// 空托管字段（组织字段 + 公众号拆 Name/Qrcode + 业务简介；扁平 string 结构，便于复用全部既有读写路径）
 function emptyFields() {
   return {
     company: '',
@@ -871,19 +923,26 @@ function emptyFields() {
     phone: '',
     address: '',
     website: '',
-    email: ''
+    email: '',
+    wechatOfficialName: '',
+    wechatOfficialQrcode: '',
+    intro: ''
   }
 }
 
-// 仅放行七个组织字段，其余忽略；统一 trim 为字符串
+// 仅放行组织字段 + 公众号(拆 Name/Qrcode) + 业务简介，其余忽略；统一 trim 为字符串
 function sanitizeManagedFields(raw) {
   const out = emptyFields()
   if (!raw || typeof raw !== 'object') return out
-  const keys = ['company', 'department', 'position', 'phone', 'address', 'website', 'email']
+  const keys = ['company', 'department', 'position', 'phone', 'address', 'website', 'email', 'wechatOfficialName', 'wechatOfficialQrcode', 'intro']
   keys.forEach(k => {
     const v = raw[k]
     out[k] = (typeof v === 'string') ? v.trim() : (v == null ? '' : String(v).trim())
   })
+  // G5：公众号二维码必须是 cloud:// fileID，否则清空（防任意字符串注入）
+  if (out.wechatOfficialQrcode && out.wechatOfficialQrcode.indexOf('cloud://') !== 0) {
+    out.wechatOfficialQrcode = ''
+  }
   return out
 }
 
@@ -897,12 +956,15 @@ function defaultCardSchema() {
     { key: 'phone', label: '电话', visible: true, required: false, defaultValue: '' },
     { key: 'email', label: '邮箱', visible: false, required: false, defaultValue: '' },
     { key: 'address', label: '地址', visible: false, required: false, defaultValue: '' },
-    { key: 'website', label: '网址', visible: false, required: false, defaultValue: '' }
+    { key: 'website', label: '网址', visible: false, required: false, defaultValue: '' },
+    { key: 'wechatOfficialName', label: '公众号名称', visible: false, required: false, defaultValue: '' },
+    { key: 'wechatOfficialQrcode', label: '公众号二维码', visible: false, required: false, defaultValue: '' },
+    { key: 'intro', label: '业务简介', visible: false, required: false, defaultValue: '' }
   ]
 }
 
 // 校验并规整 owner 提交过来的 cardSchema：仅保留合法 key，字段结构归一
-const CARD_SCHEMA_KEYS = ['company', 'department', 'position', 'phone', 'address', 'website', 'email']
+const CARD_SCHEMA_KEYS = ['company', 'department', 'position', 'phone', 'address', 'website', 'email', 'wechatOfficialName', 'wechatOfficialQrcode', 'intro']
 function sanitizeCardSchema(raw) {
   const base = defaultCardSchema()
   const baseMap = {}
@@ -916,7 +978,10 @@ function sanitizeCardSchema(raw) {
       label: src.label || f.label,
       visible: src.visible === true,
       required: src.required === true,
-      defaultValue: (typeof src.defaultValue === 'string') ? src.defaultValue.trim().slice(0, 200) : ''
+      defaultValue: (() => {
+        const max = f.key === 'intro' ? 500 : (f.key === 'wechatOfficialQrcode' ? 300 : 200)
+        return (typeof src.defaultValue === 'string') ? src.defaultValue.trim().slice(0, max) : ''
+      })()
     }
   })
   // 防御：若 raw 含未知 key，忽略（不写入）
@@ -929,7 +994,10 @@ function sanitizePrefill(raw) {
   if (!raw || typeof raw !== 'object') return out
   CARD_SCHEMA_KEYS.forEach(k => {
     const v = raw[k]
-    if (typeof v === 'string' && v.trim()) out[k] = v.trim().slice(0, 200)
+    if (typeof v === 'string' && v.trim()) {
+      const max = k === 'intro' ? 500 : 200
+      out[k] = v.trim().slice(0, max)
+    }
   })
   return out
 }

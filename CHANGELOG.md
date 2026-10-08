@@ -2,6 +2,21 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.5.16] - 2026-10-08
+
+> 团队可预制字段扩展（增量设计见 `artifacts/team-fields-prefill-extension-design.md`）：团队除头像/姓名外，可预制公司/部门/职位/电话/邮箱/地址/网址 + 新增「公众号名称」「公众号二维码」「业务简介」共 9 个逻辑字段；预制值随成员加入自动继承（普通邀请强制覆盖个人值、空名片流成员可改），owner 可一键回填存量成员；业务简介可进公开目录、公众号默认不进。
+
+### Added
+- **团队名片配置新增 3 字段**：`teams.cardSchema` 扩展 `wechatOfficialName`(公众号名称)、`wechatOfficialQrcode`(团队公共二维码 cloud:// fileID)、`intro`(业务简介)，共 10 key（公众号拆 name/qrcode 维持扁平 string 存储，避免嵌套大侵入）
+- **普通邀请强制继承团队默认值（G3）**：`joinByInvite` 前置算 baseline，普通邀请(kind='invite')成员加入即以团队非空 `defaultValue` 为准覆盖个人 card 同名组织字段（空值留空、个人值透出）；空名片(kind='card')流保留成员可改、成员改后优先于 baseline
+- **存量成员回填 action（G7）**：新增 `applyCardSchemaDefaultsToMembers`，owner 改默认值后可一键回填团队 active 成员空字段（不覆盖已填值）
+- **团队公共二维码只读继承（G1）**：owner 在团队名片配置上传一张公共二维码，成员加入即以只读方式继承，不可替换
+- **业务简介进公开目录**：`intro` 可随 `cardSchema.visible` 进入公开成员目录（仅取团队托管值，与个人 `businessIntro` 隔离）；`wechatOfficial*` 默认不进目录（安全边界）
+- **前端合并层与编辑锁定**：`mergeCardWithTeam` 合并 `intro→businessIntro`、公众号→`card.wechatOfficial`；编辑页团队托管 `businessIntro`/`wechatOfficial` 时对应项置灰并提示「由团队管理」；预览团队名片视图展示业务简介 + 公众号二维码
+- **配置/加入表单扩展**：团队名片配置弹层按 key 条件渲染（二维码上传/预览、业务简介 textarea）；空名片填空表单对公众号二维码只读预览、业务简介多行文本
+
+> ⚠️ 上线需重新上传 `cloudfunctions/teamManager` 并勾「云端安装依赖」（后端 D1–D11 改动，不重部署不生效）；并重新编译上传小程序体验版。前端纯编译上传即可。
+
 ## [1.5.15] - 2026-09-28
 
 > 分享图空白根治（方案 A+B+C）+ 底色统一（方案 B 浅灰）同批：对方收到空白名片的根因是「无预存分享图且头像为空」时同步返回空串，微信退回默认占位；部分卡片分享图底色随机黑/白则源于透明底 JPEG 被平台随机填色。本次让首次分享即带真实生成图、极端情况永不再空白、所有分享图统一浅灰底(#F5F7FA)，并加固预生成队列 + 新增 shareImageStyle 版本标记触发存量坏图自愈。纯前端改动，无需重传云函数。

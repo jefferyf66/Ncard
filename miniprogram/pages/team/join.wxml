@@ -16,14 +16,37 @@
       <view class="form-card">
         <view class="form-group" wx:for="{{cardSchema}}" wx:key="key" wx:if="{{item.visible}}">
           <text class="form-label">{{item.label}}<text class="req-star" wx:if="{{item.required}}"> *</text></text>
-          <input
-            class="form-input"
-            placeholder="{{item.defaultValue ? '预填：' + item.defaultValue : '请输入' + item.label}}"
-            value="{{form[item.key]}}"
-            data-key="{{item.key}}"
-            bindinput="onFieldInput"
-            maxlength="100"
-          />
+          <!-- 公众号二维码：只读预览（团队统一二维码，成员不可修改） -->
+          <block wx:if="{{item.key === 'wechatOfficialQrcode'}}">
+            <view class="form-qr" wx:if="{{form[item.key]}}">
+              <image class="form-qr-img" src="{{form[item.key]}}" mode="aspectFit" />
+            </view>
+            <view class="form-qr-hint" wx:if="{{form[item.key]}}">由团队统一管理，不可修改</view>
+            <view class="form-qr-hint" wx:else>由团队统一管理（暂未配置二维码）</view>
+          </block>
+          <!-- 业务简介：多行文本 -->
+          <block wx:elif="{{item.key === 'intro'}}">
+            <textarea
+              class="form-textarea"
+              placeholder="{{item.defaultValue ? '预填：' + item.defaultValue : '请输入' + item.label}}"
+              value="{{form[item.key]}}"
+              data-key="{{item.key}}"
+              bindinput="onFieldInput"
+              maxlength="500"
+              auto-height
+            ></textarea>
+          </block>
+          <!-- 其余：单行文本 -->
+          <block wx:else>
+            <input
+              class="form-input"
+              placeholder="{{item.defaultValue ? '预填：' + item.defaultValue : '请输入' + item.label}}"
+              value="{{form[item.key]}}"
+              data-key="{{item.key}}"
+              bindinput="onFieldInput"
+              maxlength="200"
+            />
+          </block>
         </view>
       </view>
     </view>

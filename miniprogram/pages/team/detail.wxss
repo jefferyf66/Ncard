@@ -204,6 +204,19 @@
 }
 .schema-toggle.on { color: #2563EB; border-color: #BFDBFE; background: #EFF6FF; }
 .schema-toggle.on.req { color: #fff; background: #3B82F6; border-color: #3B82F6; }
+/* 团队名片配置：业务简介多行文本 */
+.schema-default-textarea {
+  width: 100%; box-sizing: border-box; min-height: 140rpx;
+  background: #F8FAFC; border: 2rpx solid #E2E8F0; border-radius: var(--radius-sm);
+  padding: 14rpx 18rpx; font-size: 26rpx; color: #334155; line-height: 1.5;
+}
+/* 团队名片配置：公众号二维码上传/预览 */
+.schema-qr { margin-top: 6rpx; }
+.schema-qr-img { width: 180rpx; height: 180rpx; border-radius: var(--radius-sm); border: 2rpx solid #E2E8F0; background: #F8FAFC; }
+.schema-qr-ph {
+  width: 180rpx; height: 80rpx; display: flex; align-items: center; justify-content: center;
+  border: 2rpx dashed #CBD5E1; border-radius: var(--radius-sm); color: #94A3B8; font-size: 24rpx; background: #F8FAFC;
+}
 .save-btn {
   background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: #fff;
   font-size: 30rpx; font-weight: 600; border-radius: var(--radius-md); margin-bottom: 12rpx;

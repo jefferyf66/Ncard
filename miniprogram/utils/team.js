@@ -106,10 +106,19 @@ function mergeCardWithTeam(card, managedFields) {
     const base = (typeof merged.companyWebsite === 'object' && merged.companyWebsite) || {}
     merged.companyWebsite = Object.assign({}, base, { url: mf.website })
   }
+  // 新增：团队业务简介覆盖个人 businessIntro（非空才覆盖）
+  if (mf.intro) merged.businessIntro = mf.intro
+  // 新增：团队公众号（扁平拆 name/qrcode）覆盖 card.wechatOfficial（非空才覆盖）
+  if (mf.wechatOfficialName) {
+    const base = (typeof merged.wechatOfficial === 'object' && merged.wechatOfficial) || {}
+    merged.wechatOfficial = Object.assign({}, base, { name: mf.wechatOfficialName })
+    if (mf.wechatOfficialQrcode) merged.wechatOfficial.qrcode = mf.wechatOfficialQrcode
+  }
 
   merged.teamManaged = !!(
     mf.company || mf.department || mf.position ||
-    mf.phone || mf.address || mf.email || mf.website
+    mf.phone || mf.address || mf.email || mf.website ||
+    mf.intro || mf.wechatOfficialName
   )
   return merged
 }

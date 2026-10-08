@@ -427,6 +427,11 @@ Page({
 
   // 上传公众号二维码：存为 cloud:// fileID（微信原生渲染 + 长按识别关注）
   onChooseOfficialQR() {
+    // 团队托管公众号时禁止个人修改（整组由团队统一管理）
+    if (this.data.managedFieldMap && this.data.managedFieldMap.wechatOfficial) {
+      app.showError('公众号由团队「' + this.data.managedFieldMap.wechatOfficial + '」统一管理，无法在此修改')
+      return
+    }
     wx.chooseImage({
       count: 1,
       sizeType: ['original', 'compressed'],
@@ -728,6 +733,10 @@ Page({
         if (mf.company) map.company = t.name
         if (mf.position) map.position = t.name
         if (mf.website) map.companyWebsite = t.name
+        // 新增：团队托管业务简介（锁定个人「业务介绍」编辑）
+        if (mf.intro) map.businessIntro = t.name
+        // 新增：团队托管公众号（锁定个人「公众号信息」整组编辑，名称+二维码）
+        if (mf.wechatOfficialName) map.wechatOfficial = t.name
       })
       this.setData({
         managedFieldMap: map,

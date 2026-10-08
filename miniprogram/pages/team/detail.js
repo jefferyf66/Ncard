@@ -247,6 +247,46 @@ Page({
     this.setData({ cardConfigDraft: draft })
   },
 
+  // 团队名片配置：上传公众号二维码（wechatOfficialQrcode），写回 defaultValue=cloud:// fileID
+  onSchemaQRUpload(e) {
+    const idx = e.currentTarget.dataset.index
+    const draft = this.data.cardConfigDraft
+    if (!draft[idx]) return
+    wx.chooseImage({
+      count: 1,
+      sizeType: ['original', 'compressed'],
+      sourceType: ['album', 'camera'],
+      success: (res) => {
+        const temp = (res.tempFilePaths && res.tempFilePaths[0]) || ''
+        if (!temp) return
+        app.showLoading('上传中')
+        // 团队公共二维码：以 teamId 区分，Date.now() 命名（重传产生的旧文件由存储治理对账收口）
+        const cloudPath = 'qrcodes/team_' + this.data.teamId + '_' + Date.now() + '.jpg'
+        wx.cloud.uploadFile({
+          cloudPath,
+          filePath: temp,
+          success: (up) => {
+            app.hideLoading()
+            const d2 = this.data.cardConfigDraft.slice()
+            d2[idx] = Object.assign({}, d2[idx], { defaultValue: up.fileID })
+            this.setData({ cardConfigDraft: d2 })
+            app.showSuccess('二维码已上传')
+          },
+          fail: () => {
+            app.hideLoading()
+            app.showError('二维码上传失败，请重试')
+          }
+        })
+      },
+      fail: (err) => {
+        const errMsg = (err && err.errMsg) || ''
+        if (errMsg.indexOf('cancel') > -1) return
+        if (app.showPrivacyError && app.showPrivacyError(err)) return
+        app.showError('选择图片失败')
+      }
+    })
+  },
+
   saveCardSchema() {
     const schema = this.data.cardConfigDraft
     app.showLoading('保存配置...')

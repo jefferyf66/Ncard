@@ -180,7 +180,21 @@
         <view class="schema-row" wx:for="{{cardConfigDraft}}" wx:key="key">
           <view class="schema-main">
             <text class="schema-label">{{item.label}}</text>
-            <input class="schema-default" placeholder="预填内容（可选）" value="{{item.defaultValue}}" data-index="{{index}}" bindinput="onSchemaDefaultInput" maxlength="100" />
+            <!-- 公众号二维码：上传 fileID，非文本输入 -->
+            <block wx:if="{{item.key === 'wechatOfficialQrcode'}}">
+              <view class="schema-qr" bindtap="onSchemaQRUpload" data-index="{{index}}">
+                <image wx:if="{{item.defaultValue}}" class="schema-qr-img" src="{{item.defaultValue}}" mode="aspectFit" />
+                <view wx:else class="schema-qr-ph">点击上传二维码</view>
+              </view>
+            </block>
+            <!-- 业务简介：多行文本 -->
+            <block wx:elif="{{item.key === 'intro'}}">
+              <textarea class="schema-default-textarea" placeholder="预填业务简介（可选）" value="{{item.defaultValue}}" data-index="{{index}}" bindinput="onSchemaDefaultInput" maxlength="500" auto-height></textarea>
+            </block>
+            <!-- 其余：单行文本 -->
+            <block wx:else>
+              <input class="schema-default" placeholder="预填内容（可选）" value="{{item.defaultValue}}" data-index="{{index}}" bindinput="onSchemaDefaultInput" maxlength="200" />
+            </block>
           </view>
           <view class="schema-toggles">
             <view class="schema-toggle {{item.visible ? 'on' : ''}}" data-index="{{index}}" bindtap="toggleSchemaVisible">显示</view>
