@@ -338,7 +338,7 @@ async function applyCardSchemaDefaultsToMembers(event, OPENID) {
   const team = teamRes.data
   if (!team) return { success: false, error: 'TEAM_NOT_FOUND' }
   if (team.ownerOpenId !== OPENID) return { success: false, error: 'FORBIDDEN' }
-  const schema = team.cardSchema || defaultCardSchema()
+  const schema = normalizeCardSchema(team.cardSchema)
   const baseline = {}
   schema.forEach(f => { const d = (f.defaultValue || '').trim(); if (d) baseline[f.key] = d })
   if (!Object.keys(baseline).length) return { success: true, applied: 0, skipped: 0 }
@@ -572,7 +572,7 @@ async function getTeam(event, OPENID) {
   // BUG-03 修复：非成员读（join 页预填所需，逻辑正确）时收窄字段，避免外泄 _openid/ownerOpenId 等敏感信息
   const isMember = mem.data.length > 0
   // 团队名片字段 schema（仅字段定义，不含敏感数据，成员/非成员均可下发）
-  const cardSchema = team.cardSchema || defaultCardSchema()
+  const cardSchema = normalizeCardSchema(team.cardSchema)
   const safeTeam = isMember
     ? Object.assign({}, team, {
         // 成员可见「是否公开目录」开关
@@ -612,7 +612,7 @@ async function getInviteMeta(event) {
   const teamRes = await db.collection('teams').doc(inv.teamId).get()
   const team = teamRes && teamRes.data
   if (!team) return { success: false, error: 'TEAM_NOT_FOUND' }
-  const schema = team.cardSchema || defaultCardSchema()
+  const schema = normalizeCardSchema(team.cardSchema)
   return {
     success: true,
     data: {
@@ -652,7 +652,7 @@ async function getTeamPublicDirectory(event) {
   }
 
   // 按 cardSchema.visible 过滤展示字段；phone/email/address/website 即便 visible 也绝不进公开目录（安全边界）
-  const schema = team.cardSchema || defaultCardSchema()
+  const schema = normalizeCardSchema(team.cardSchema)
   const visMap = {}
   schema.forEach(f => { visMap[f.key] = f.visible })
   const PUBLIC_SAFE = { position: true, company: true, department: true, intro: true }
@@ -791,8 +791,8 @@ async function getCardTeams(event) {
           memberCount: team.memberCount
         },
         // 仅返回「可见」的托管字段：即便成员填了 phone/email 等，owner 在 cardSchema 中设为不可见则不对外暴露
-        managedFields: filterManagedByVisible(m.managedFields || emptyFields(), team.cardSchema || defaultCardSchema()),
-        cardSchema: team.cardSchema || defaultCardSchema()
+        managedFields: filterManagedByVisible(m.managedFields || emptyFields(), normalizeCardSchema(team.cardSchema)),
+        cardSchema: normalizeCardSchema(team.cardSchema)
       }
     })
     .filter(r => r)
@@ -835,7 +835,7 @@ async function getCardsTeams(event, OPENID) {
     const isPublic = team.allowDirectoryShare === true
     if (!isMember && !isPublic) continue // 私密团队且非成员：不暴露任何团队信息
 
-    const schema = team.cardSchema || defaultCardSchema()
+    const schema = normalizeCardSchema(team.cardSchema)
     const visMap = {}
     schema.forEach(f => { visMap[f.key] = f.visible === true })
     const mf = m.managedFields || emptyFields()
@@ -986,6 +986,28 @@ function sanitizeCardSchema(raw) {
   })
   // 防御：若 raw 含未知 key，忽略（不写入）
   return out.filter(f => CARD_SCHEMA_KEYS.indexOf(f.key) >= 0)
+}
+
+// 读侧归一化：存量团队存的是旧 schema（可能缺 key，如早期仅 7 个组织字段），
+// 以 defaultCardSchema() 为底座，用存量值覆盖各字段，补齐缺失 key
+// （wechatOfficialName/wechatOfficialQrcode/intro 等），确保所有团队（含旧团队）读到的 schema 统一为 10 字段。
+// 仅做结构归一，不截断/改写存量 defaultValue（写侧由 sanitizeCardSchema 负责校验）。
+function normalizeCardSchema(raw) {
+  const base = defaultCardSchema()
+  if (!Array.isArray(raw)) return base
+  const rawMap = {}
+  raw.forEach(f => { if (f && f.key) rawMap[f.key] = f })
+  return base.map(f => {
+    const src = rawMap[f.key]
+    if (!src) return f
+    return {
+      key: f.key,
+      label: src.label || f.label,
+      visible: src.visible === true,
+      required: src.required === true,
+      defaultValue: (typeof src.defaultValue === 'string') ? src.defaultValue : f.defaultValue
+    }
+  })
 }
 
 // 规整预填值：仅保留合法 key，统一 trim 截断

@@ -2,6 +2,16 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.5.17] - 2026-10-08
+
+> 修复存量团队在 team/detail 配置页看不到「公众号名称/公众号二维码/业务简介」入口的问题（旧团队 schema 未补齐新增 3 key）。
+
+### Fixed
+- **存量团队 cardSchema 读侧归一化**：新增 `normalizeCardSchema(raw)`（以 `defaultCardSchema()` 为底座、用存量值覆盖各字段，补齐缺失 key），替换后端 `getTeam` 等 7 处读侧 `team.cardSchema || defaultCardSchema()` 兜底。旧团队建队时只存了 7 个组织字段，原 `||` 兜底仅对「无 schema」团队生效，致使新增 3 key 永不补齐；现所有团队（含旧团队）读到的 schema 统一为 10 字段，配置入口正常出现
+- **前端无需改动**：v1.5.16 已含该 3 字段 UI，本次仅后端读侧未下发，属纯后端修复
+
+> ⚠️ 上线需重新上传 `cloudfunctions/teamManager` 并勾「云端安装依赖」（读侧归一化改动，不重部署不生效）；并重新编译上传小程序体验版。前端纯编译上传即可。
+
 ## [1.5.16] - 2026-10-08
 
 > 团队可预制字段扩展（增量设计见 `artifacts/team-fields-prefill-extension-design.md`）：团队除头像/姓名外，可预制公司/部门/职位/电话/邮箱/地址/网址 + 新增「公众号名称」「公众号二维码」「业务简介」共 9 个逻辑字段；预制值随成员加入自动继承（普通邀请强制覆盖个人值、空名片流成员可改），owner 可一键回填存量成员；业务简介可进公开目录、公众号默认不进。
