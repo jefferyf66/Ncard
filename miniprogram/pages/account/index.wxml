@@ -26,13 +26,13 @@
   <view class="danger-zone">
     <view class="danger-title">危险操作</view>
     <button class="btn-danger" bindtap="requestDelete">注销账号</button>
-    <view class="hint danger-hint">注销为软删除：保留名片内容，清除收藏与登录态；若您拥有团队需先转让或解散。</view>
+    <view class="hint danger-hint">注销将清空您的个人名片身份信息并删除头像/分享卡等云存储文件，解除团队关系，清除收藏与登录态；若您拥有团队需先转让或解散。</view>
   </view>
 
   <view wx:if="{{showDeleteModal}}" class="modal-mask" bindtap="closeDeleteModal">
     <view class="modal" catchtap="stopProp">
       <view class="modal-title">确认注销账号？</view>
-      <view wx:if="{{deleteCheck.canDelete}}" class="modal-text">注销后账号将不可恢复，收藏数据被清除。</view>
+      <view wx:if="{{deleteCheck.canDelete}}" class="modal-text">注销后账号将不可恢复：您的名片身份信息将被清空，头像/分享卡等云存储文件将被删除。</view>
       <view wx:else class="modal-text danger">您仍拥有以下团队，请先在团队中转让或解散后再注销：
         <view wx:for="{{deleteCheck.ownedTeams}}" wx:key="_id" class="team-line">· {{item.name}}</view>
       </view>

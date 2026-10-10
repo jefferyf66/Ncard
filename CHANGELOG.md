@@ -2,6 +2,21 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.5.19] - 2026-10-10
+
+> 账户注销升级为「匿名化」（清空名片 PII + 删除云存储文件 + 匿名化 users + 删除访客档案），隐私条款自洽；并修复注销后重登录的「悬空态」缺陷——命中 deleted 壳不再保留死壳，而是重置为 active 干净身份并清理匿名化名片壳，兑现「重新使用=新账号登记」。
+
+### Changed
+- **账户注销改为匿名化（非软删除）**：`accountManager.confirmDeleteAccount` 在原有团队拒绝校验 + users 置 deleted + 清收藏 + 级联退团队 + 删 visits + 写审计之外，新增第 4 步——收集本人名片 avatar/shareImageFileID/attachments + users.avatarUrl，去重后做引用安全检查（排除注销者本人记录，仅删他人未引用的独占文件），`cloud.deleteFile` 批量删（每批 ≤50）；匿名化名片（`ANON_CARD` 清空全部 PII 字段 + `anonymized:true`）；匿名化 users（清空 nickname/realName/avatarUrl + `anonymized:true` + 保留 `status='deleted'`）；删除本人 `visitor_profiles`
+- **隐私条款澄清**：`agreement` 在「注销账户」段补一句，明确注销将清空个人名片可识别信息（姓名/电话/邮箱/地址/头像等）、删除头像与分享卡等云存储文件、解除团队组织字段托管，且不可逆
+- **前端注销文案修正**：`account` 页底部提示与弹窗由「软删除保留名片内容」改为「清空身份信息并删除云存储文件，解除团队关系，清除收藏与登录态，不可逆」；成功提示补「如需重新使用，将以新账号登记」
+
+### Fixed
+- **注销后重登录悬空态（方案 A）**：`getOpenId.ensureUser` 命中 `status==='deleted'` 壳时不再保留死壳，而是 `update` 为 `status:'active'`、清空 nickname/realName/avatarUrl、移除 anonymized/deletedAt 标记、刷新 registeredAt/lastLoginAt/loginCount/updatedAt，并 `db.collection('cards').where({_openid:OPENID, anonymized:true}).remove()` 清理注销遗留的空匿名化名片壳（避免首页显示空白卡）；重置后走 `resolveRole` 并 `buildResult` 返回，用户以干净新身份重新登记
+- **引用安全检查误判本人文件**：账户注销文件清理原将「注销者本人名片/资料引用自己的头像」也算 referenced 导致本人头像删不掉，修正为按查询索引排除本人记录后比对，仅删他人未引用独占文件
+
+> ⚠️ 上线需重新上传 `cloudfunctions/getOpenId` 与 `cloudfunctions/accountManager` 并均勾「云端安装依赖」（两者均有改动，不重部署不生效）；重新编译上传小程序体验版。前端纯编译上传即可。
+
 ## [1.5.18] - 2026-10-10
 
 > 团队分享卡（Canvas 品牌蓝海报，三卡统一）+ 新用户空名片断头路修复（方案 A：空名片流新增姓名必填/头像可选，新用户一步建卡）。

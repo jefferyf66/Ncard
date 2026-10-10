@@ -34,23 +34,53 @@ async function ensureUser() {
     const exist = await userColl.where({ _openid: OPENID }).get()
     if (exist.data.length > 0) {
       const userDoc = exist.data[0]
-      // 已注销账号：不重新激活、不更新登录时间，客户端据此视为未登录
-      if (userDoc.status !== 'deleted') {
-        const now = Date.now()
+      const now = Date.now()
+      if (userDoc.status === 'deleted') {
+        // 注销后重新登录 = 以干净身份「重新登记」：PII 已随注销匿名化清空，此处仅把死壳重置为 active 新身份
+        // 兑现隐私条款「如需重新使用，将以新账号登记」承诺；并清掉注销遗留的空匿名化名片壳（避免首页显示空白卡）
         await userColl.doc(userDoc._id).update({
           data: {
+            status: 'active',
+            nickname: '',
+            realName: '',
+            avatarUrl: '',
+            anonymized: db.command.remove(),
+            deletedAt: db.command.remove(),
+            registeredAt: now,
             lastLoginAt: now,
-            loginCount: db.command.inc(1),
+            loginCount: 1,
             updatedAt: now
           }
         })
+        // 清理注销遗留的空匿名化名片壳（均为无内容死数据，删之即干净重开；_openid 限定仅清本人）
+        await db.collection('cards').where({ _openid: OPENID, anonymized: true }).remove().catch(function () {})
+        userDoc.status = 'active'
+        userDoc.nickname = ''
+        userDoc.realName = ''
+        userDoc.avatarUrl = ''
+        userDoc.anonymized = false
+        userDoc.deletedAt = null
+        userDoc.registeredAt = now
         userDoc.lastLoginAt = now
-        userDoc.loginCount = (userDoc.loginCount || 0) + 1
+        userDoc.loginCount = 1
         userDoc.updatedAt = now
-        // 种子 root 晋升（命中 config.rootOpenids 且当前非 root 时）
-        // LOG-04 修复：晋升逻辑置于 status!=='deleted' 块内，已注销账号不再被脏写提权（仍可绕过注销）
         userDoc.role = await resolveRole(OPENID, userDoc.role, userDoc._id)
+        return buildResult(OPENID, APPID, UNIONID, userDoc)
       }
+      // 既有 active 用户：正常更新登录时间等
+      await userColl.doc(userDoc._id).update({
+        data: {
+          lastLoginAt: now,
+          loginCount: db.command.inc(1),
+          updatedAt: now
+        }
+      })
+      userDoc.lastLoginAt = now
+      userDoc.loginCount = (userDoc.loginCount || 0) + 1
+      userDoc.updatedAt = now
+      // 种子 root 晋升（命中 config.rootOpenids 且当前非 root 时）
+      // LOG-04 修复：晋升逻辑置于 status!=='deleted' 块内，已注销账号不再被脏写提权（仍可绕过注销）
+      userDoc.role = await resolveRole(OPENID, userDoc.role, userDoc._id)
       return buildResult(OPENID, APPID, UNIONID, userDoc)
     }
 

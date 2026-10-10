@@ -185,6 +185,67 @@ async function confirmDeleteAccount(OPENID) {
     if (removed === 0) break
   }
 
+  // 4) 匿名化本人名片与资料（保留记录壳、清空可识别字段 + 删除对应云存储文件）
+  //    落地隐私政策第 4 条承诺：注销账户后相关个人信息将被及时删除或匿名化
+  const myCards = (await db.collection('cards').where({ _openid: OPENID }).limit(1000).get()).data || []
+  const fileIDs = []
+  myCards.forEach(c => {
+    if (c.avatar && c.avatar.indexOf('cloud://') === 0) fileIDs.push(c.avatar)
+    if (c.shareImageFileID && c.shareImageFileID.indexOf('cloud://') === 0) fileIDs.push(c.shareImageFileID)
+    else if (c.shareImageUrl && c.shareImageUrl.indexOf('cloud://') === 0) fileIDs.push(c.shareImageUrl)
+    ;(c.attachments || []).forEach(a => {
+      const u = (a && (a.url || a.fileID || a.cloudPath)) || ''
+      if (u.indexOf('cloud://') === 0) fileIDs.push(u)
+    })
+  })
+  const myProfileRes = await db.collection('users').where({ _openid: OPENID }).limit(1).get()
+  const myAvatar = (myProfileRes.data && myProfileRes.data[0] && myProfileRes.data[0].avatarUrl) || ''
+  if (myAvatar.indexOf('cloud://') === 0) fileIDs.push(myAvatar)
+  // 去重后引用安全检查：文件仍被其他用户记录引用则跳过，只删本人独占文件（避免误删共享资源）
+  const safeToDelete = []
+  for (const f of Array.from(new Set(fileIDs))) {
+    const used = await Promise.all([
+      db.collection('cards').where({ avatar: f }).limit(1).get(),
+      db.collection('cards').where({ shareImageFileID: f }).limit(1).get(),
+      db.collection('users').where({ avatarUrl: f }).limit(2).get(),
+      db.collection('visitor_profiles').where({ avatarUrl: f }).limit(1).get()
+    ])
+    const referencedByOther = used.some(function (r, i) {
+      return (r.data || []).filter(function (u) {
+        if (i === 2 || i === 3) return u.openid !== OPENID
+        return u._openid !== OPENID
+      }).length > 0
+    })
+    if (!referencedByOther) safeToDelete.push(f)
+  }
+  if (safeToDelete.length) {
+    for (let i = 0; i < safeToDelete.length; i += 50) {
+      try { await cloud.deleteFile({ fileList: safeToDelete.slice(i, i + 50) }) } catch (e) { /* 清理失败不阻断注销主流程 */ }
+    }
+  }
+  // 匿名化名片：清空全部可识别字段，保留记录壳并打 anonymized 标记（_openid 不可改，归属壳保留、内容已无可识别信息）
+  const ANON_CARD = {
+    name: '', phone: '', email: '', address: '', website: '', avatar: '',
+    company: '', position: '', personalIntro: '', businessIntro: '',
+    experiences: [], attachments: [],
+    wechatOfficial: { name: '', qrcode: '' },
+    companyWebsite: {},
+    shareImageUrl: '', shareImageFileID: '',
+    fieldVisibility: {}, anonymized: true, updatedAt: now
+  }
+  await Promise.all(myCards.map(function (c) {
+    return db.collection('cards').doc(c._id).update({ data: ANON_CARD }).catch(function () {})
+  }))
+  // 匿名化用户资料：清空昵称/真名/头像，保留 status='deleted' 壳（ensureUser 据此视为未登录、不可复活）
+  await db.collection('users').where({ _openid: OPENID }).limit(1)
+    .update({ data: { nickname: '', realName: '', avatarUrl: '', anonymized: true, updatedAt: now } })
+    .catch(function () {})
+  // 删除本人访客档案（本人浏览他人名片的身份/足迹，注销即清除）
+  while (true) {
+    const rp = await db.collection('visitor_profiles').where({ openid: OPENID }).limit(1000).remove()
+    if (!rp.stats || (rp.stats.removed || 0) === 0) break
+  }
+
   await writeAudit(OPENID, 'self_delete', { openid: OPENID })
   return { success: true }
 }

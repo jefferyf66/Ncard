@@ -185,7 +185,7 @@ Page({
           } catch (e) {}
           wx.showModal({
             title: '账号已注销',
-            content: '您的账号已注销，关联收藏已清除。如需重新使用，将以新账号登记。',
+            content: '您的账号已注销，个人名片身份信息已清除，相关云存储文件已删除。如需重新使用，将以新账号登记。',
             showCancel: false,
             confirmText: '知道了',
             success: () => { wx.navigateBack() }

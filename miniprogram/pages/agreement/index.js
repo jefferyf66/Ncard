@@ -77,6 +77,7 @@ Page({
 
 <p style="font-weight:600;margin:32rpx 0 16rpx 0;color:#0F172A;">四、信息的存储</p>
 <p style="margin-bottom:12rpx;">您的信息存储在腾讯微信云开发数据库中，存储期限为您使用本小程序期间。当您删除名片数据或注销账户后，相关个人信息将被及时删除或匿名化处理。</p>
+<p style="margin-bottom:12rpx;">注销账户时，我们将清空您个人名片中的可识别信息（姓名、电话、电子邮箱、通讯地址、头像等），删除头像与分享卡片等云存储文件，并解除您在各团队中的组织字段托管关系；前述操作不可逆。</p>
 
 <p style="font-weight:600;margin:32rpx 0 16rpx 0;color:#0F172A;">五、信息的共享与披露</p>
 <p style="margin-bottom:12rpx;">我们不会将您的个人信息出售或出租给任何第三方。仅在以下情况下可能共享：</p>
