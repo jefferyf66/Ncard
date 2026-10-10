@@ -13,6 +13,24 @@
   <block wx:elif="{{isCardInvite}}">
     <view class="cardform-card">
       <view class="cardform-tip">负责人已预填部分信息（提示「预填」），补全必填项（带 *）后提交即可加入。</view>
+      <!-- 个人信息（姓名必填 + 头像可选，始终显示，与团队字段配置无关） -->
+      <view class="form-card identity-card">
+        <view class="form-group">
+          <text class="form-label">姓名<text class="req-star"> *</text></text>
+          <input class="form-input" placeholder="请输入姓名" value="{{memberName}}" bindinput="onNameInput" maxlength="20" />
+        </view>
+        <view class="form-group">
+          <text class="form-label">头像</text>
+          <view class="form-avatar-row">
+            <view class="form-avatar" bindtap="onAvatarChoose">
+              <image wx:if="{{avatarUrl}}" class="form-avatar-img" src="{{avatarUrl}}" mode="aspectFill" />
+              <view wx:else class="form-avatar-ph">+ 上传</view>
+            </view>
+            <text class="form-avatar-hint">选填，展示在团队目录</text>
+          </view>
+        </view>
+      </view>
+
       <view class="form-card">
         <view class="form-group" wx:for="{{cardSchema}}" wx:key="key" wx:if="{{item.visible}}">
           <text class="form-label">{{item.label}}<text class="req-star" wx:if="{{item.required}}"> *</text></text>

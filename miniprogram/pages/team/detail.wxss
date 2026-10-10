@@ -5,6 +5,16 @@
   padding-bottom: 180rpx;
   background: #FFFFFF;
 }
+
+/* 分享卡片离屏绘制画布（与首页 shareCanvas 同机制） */
+.share-canvas-hidden {
+  position: fixed;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
 .loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 160rpx 0; }
 .loading-text { margin-top: 20rpx; font-size: 26rpx; color: #64748B; }
 

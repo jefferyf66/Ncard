@@ -2,6 +2,21 @@
 
 本文件格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.5.18] - 2026-10-10
+
+> 团队分享卡（Canvas 品牌蓝海报，三卡统一）+ 新用户空名片断头路修复（方案 A：空名片流新增姓名必填/头像可选，新用户一步建卡）。
+
+### Added
+- **团队分享卡（方案 A）**：新增 `config/teamStyle.js`（TEAM_CARD 令牌、TEAM_SHARE_STYLE='v1'）+ `utils/teamShareCard.js`（三布局 `generate`：directory 左蓝条+成员堆叠 / invite 顶部蓝横幅+白底蓝字 CTA / card 左蓝条+预填徽标）；`team/detail` 进页预生成三张 5:4 海报并上传 `sharecards/team_<shortId>_<kind>_v1.jpg`，`onShareAppMessage` 三处补 `imageUrl`（directory/invite/card），根治默认截页面带菜单/灰块；公众号码不进分享卡，配色统一品牌蓝（`#3B82F6`/`#2563EB`）
+- **新用户空名片身份区块**：`team/join` 表单顶部新增「个人信息」区块（姓名必填 + 头像可选），与团队 `cardSchema` 无关，老用户经 `_loadMyCard` 预填
+
+### Fixed
+- **新用户空名片断头路（方案 A）**：`joinByInvite` 重构——`kind='card'` 时 `cardName` 必填，无个人名片则后端自动最小建卡（`_openid` 显式归属本人、映射组织字段），有卡则按提交同步姓名/头像（仅身份字段）；普通邀请(kind='invite')保持 `NO_CARD` 校验不变
+- **新建卡冗余 teamIds 漏写**：最小建卡 data 补 `teamIds:[inv.teamId]`，`cardWasCreated` 跳过后续 `_.push` 防重复，与注释/既有路径一致
+- **孤儿卡回滚**：邀请码条件更新未命中（并发竞态）时，新用户最小建卡走整卡 `remove`，既有卡仍 `_.pull(teamId)`，杜绝注册失败残留孤儿卡
+
+> ⚠️ 上线需重新上传 `cloudfunctions/teamManager` 并勾「云端安装依赖」（`joinByInvite` 改动，不重部署不生效）；团队分享卡 + join 页为纯前端，重新编译上传小程序体验版即可。
+
 ## [1.5.17] - 2026-10-08
 
 > 修复存量团队在 team/detail 配置页看不到「公众号名称/公众号二维码/业务简介」入口的问题（旧团队 schema 未补齐新增 3 key）。

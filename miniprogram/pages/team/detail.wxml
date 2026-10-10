@@ -1,4 +1,7 @@
 <view class="container">
+  <!-- 团队分享卡离屏绘制画布（尺寸由 teamStyle 统一配置） -->
+  <canvas type="2d" id="teamShareCanvas" class="share-canvas-hidden" style="width: {{teamCanvasWidth}}px; height: {{teamCanvasHeight}}px;"></canvas>
+
   <view class="loading-state" wx:if="{{isLoading}}">
     <view class="loading-spinner"></view>
     <text class="loading-text">加载中...</text>

@@ -1,5 +1,7 @@
 const app = getApp()
 const team = require('../../utils/team')
+const storage = require('../../config/storage')
+const TS = require('../../config/teamStyle')
 
 Page({
   data: {
@@ -29,7 +31,11 @@ Page({
     showCardConfig: false,
     cardConfigDraft: [],
     cardShareToken: '',
-    showCardInviteModal: false
+    showCardInviteModal: false,
+    // 团队分享卡（目录/邀请/填写）预生成 URL 缓存
+    teamShareUrls: { directory: '', invite: '', card: '' },
+    teamCanvasWidth: TS.TEAM_CARD.canvasWidth,
+    teamCanvasHeight: TS.TEAM_CARD.canvasHeight
   },
 
   onLoad(options) {
@@ -67,6 +73,9 @@ Page({
           cardConfigSchema: (t && t.cardSchema) || [],
           isLoading: false
         })
+
+        // 进页预生成三种分享卡（目录/邀请/填写），分享时即可命中、不再截页面
+        this._ensureTeamShareImages(t)
 
         if (this.data.isPublicParam) {
           // 分享/公众号链接直达：一律走公开目录视图（内部判定 public / whitelist）
@@ -181,13 +190,15 @@ Page({
 
   // 分享：整组目录 / 邀请成员（依据按钮 data-share 区分）
   onShareAppMessage(res) {
+    const urls = this.data.teamShareUrls || {}
     // 整组分享：团队名片目录
     if (res && res.target && res.target.dataset && res.target.dataset.share === 'directory') {
       const name = (this.data.pubTeam && this.data.pubTeam.name) ||
         (this.data.team && this.data.team.name) || '团队'
       return {
         title: name + ' · 团队名片目录',
-        path: 'pages/team/detail?id=' + this.data.shortId + '&public=1'
+        path: 'pages/team/detail?id=' + this.data.shortId + '&public=1',
+        imageUrl: this._cacheBust(urls.directory)
       }
     }
     // 空名片邀请（owner 转发给成员填写）：token 指向 join 页空名片表单
@@ -196,7 +207,8 @@ Page({
       const name = (t && t.name) || '团队'
       return {
         title: name + ' · 邀请你填写团队名片',
-        path: 'pages/team/join?teamId=' + this.data.teamId + '&token=' + this.data.cardShareToken
+        path: 'pages/team/join?teamId=' + this.data.teamId + '&token=' + this.data.cardShareToken,
+        imageUrl: this._cacheBust(urls.card)
       }
     }
     // 默认：邀请成员（join 路径 / token）
@@ -207,7 +219,96 @@ Page({
       (this.data.inviteToken
         ? '/pages/team/join?teamId=' + this.data.teamId + '&token=' + this.data.inviteToken
         : '/pages/team/list')
-    return { title, path }
+    return { title, path, imageUrl: this._cacheBust(urls.invite) }
+  },
+
+  // 缓存击穿：分享图 URL 挂样式版本，外观升级即视为新 URL，微信必重新抓取
+  _cacheBust(url) {
+    if (!url) return ''
+    return url + (url.indexOf('?') >= 0 ? '&' : '?') + 'imgv=' + TS.TEAM_SHARE_STYLE
+  },
+
+  // 进页预生成三张分享卡（目录/邀请/填写）；本地缓存命中直接取值，否则生成+上传+缓存
+  _ensureTeamShareImages(teamObj) {
+    const self = this
+    const shortId = (teamObj && teamObj.shortId) || this.data.shortId
+    if (!shortId) return
+    const t = teamObj || this.data.team || {}
+    const kinds = ['directory', 'invite', 'card']
+    kinds.forEach((kind) => {
+      const cacheKey = 'teamShare_' + shortId + '_' + kind + '_' + TS.TEAM_SHARE_STYLE
+      let cached = ''
+      try { cached = wx.getStorageSync(cacheKey) || '' } catch (e) { /* ignore */ }
+      if (cached) {
+        const u = Object.assign({}, self.data.teamShareUrls)
+        u[kind] = cached
+        self.setData({ teamShareUrls: u })
+        return
+      }
+      self._generateTeamShareImage(t, kind).then((url) => {
+        if (!url) return
+        try { wx.setStorageSync(cacheKey, url) } catch (e) { /* ignore */ }
+        const u = Object.assign({}, self.data.teamShareUrls)
+        u[kind] = url
+        self.setData({ teamShareUrls: u })
+      })
+    })
+  },
+
+  // 生成单张分享卡 → 上传云存储 → 回 HTTPS URL；失败/超时返回 ''
+  _generateTeamShareImage(teamObj, kind) {
+    const self = this
+    return new Promise((resolve) => {
+      const t = teamObj || {}
+      const payload = {
+        name: t.name || '团队',
+        shortId: t.shortId || self.data.shortId,
+        memberCount: t.memberCount || 1,
+        logoUrl: t.logoUrl || '',
+        prefillKeys: ['公司', '部门', '职位']
+      }
+      let shareCard
+      try { shareCard = require('../../utils/teamShareCard') } catch (e) {
+        console.warn('[TeamShare] require teamShareCard 失败:', e)
+        resolve('')
+        return
+      }
+      const settled = { done: false }
+      const timer = setTimeout(() => {
+        if (settled.done) return
+        settled.done = true
+        console.warn('[TeamShare] 生成超时(15s)，降级')
+        resolve('')
+      }, 15000)
+      shareCard.generate('teamShareCanvas', payload, kind, { pageContext: self }).then((res) => {
+        if (settled.done) return
+        wx.cloud.uploadFile({
+          cloudPath: 'sharecards/team_' + payload.shortId + '_' + kind + '_' + TS.TEAM_SHARE_STYLE + '.jpg',
+          filePath: res.tempFilePath,
+          success: (up) => {
+            if (settled.done) return
+            settled.done = true
+            clearTimeout(timer)
+            const url = storage.resolveCloudUrl(up.fileID)
+            console.log('[TeamShare] 已生成并上传:', kind, url)
+            resolve(url)
+          },
+          fail: (err) => {
+            if (settled.done) return
+            settled.done = true
+            clearTimeout(timer)
+            console.warn('[TeamShare] 上传失败:', err)
+            resolve('')
+          }
+        })
+      }).catch((err) => {
+        if (settled.done) return
+        settled.done = true
+        clearTimeout(timer)
+        console.warn('[TeamShare] 生成失败:', err && err.message)
+        resolve('')
+      })
+    })
   },
 
   // ============ 团队名片字段配置 + 空名片邀请（owner）============

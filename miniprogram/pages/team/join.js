@@ -1,5 +1,6 @@
 const app = getApp()
 const team = require('../../utils/team')
+const storage = require('../../config/storage')
 
 Page({
   data: {
@@ -14,7 +15,13 @@ Page({
     form: {},            // 成员填写值
     requiredMissing: [], // 校验未过的字段 key
     inviteInvalid: false, // 邀请已失效/已使用
-    isJoining: false
+    isJoining: false,
+    // 个人名片身份字段（姓名必填 + 头像可选，始终显示，与团队字段配置无关）
+    hasCard: false,
+    memberName: '',
+    avatarUrl: '',        // 展示用（已有名片=cloud://，新选=本地临时路径）
+    newAvatarPath: '',    // 新选头像的本地临时路径（提交时上传）
+    isAvatarUploading: false
   },
 
   onLoad(options) {
@@ -22,10 +29,30 @@ Page({
     const token = (options && options.token) || ''
     this.setData({ teamId, token })
     app.ensureUser().then(() => {
+      this._loadMyCard()
       if (token) {
         this._loadInviteMeta(token)
       }
     })
+  },
+
+  // 预拉取本人个人名片：用于预填姓名/头像（团队卡片的身份来源）
+  _loadMyCard() {
+    try {
+      const db = wx.cloud.database()
+      db.collection('cards').orderBy('createTime', 'desc').limit(1).get().then((res) => {
+        const c = (res && res.data && res.data[0]) || null
+        if (c) {
+          this.setData({
+            hasCard: true,
+            memberName: c.name || '',
+            avatarUrl: c.avatar || ''
+          })
+        } else {
+          this.setData({ hasCard: false })
+        }
+      }).catch(() => { /* 忽略：不影响团队表单填写 */ })
+    } catch (e) { /* 忽略 */ }
   },
 
   // 凭 token 拉取邀请元信息：区分普通邀请 / 空名片邀请，并初始化填空表单
@@ -71,12 +98,37 @@ Page({
     this.setData({ ['form.' + key]: e.detail.value, requiredMissing: [] })
   },
 
+  onNameInput(e) {
+    this.setData({ memberName: e.detail.value })
+  },
+
+  // 选择头像（可选）：上传前仅本地预览，提交时再上传云存储
+  onAvatarChoose() {
+    if (this.data.isAvatarUploading) return
+    wx.chooseImage({
+      count: 1,
+      sizeType: ['compressed'],
+      sourceType: ['album', 'camera'],
+      success: (res) => {
+        const temp = (res.tempFilePaths && res.tempFilePaths[0]) || ''
+        if (!temp) return
+        this.setData({ avatarUrl: temp, newAvatarPath: temp })
+      }
+    })
+  },
+
   join() {
     if (this.data.isJoining) return
     const { isCardInvite, token, code } = this.data
 
-    // 空名片邀请：前端先做必填校验，再提交成员填写的 managedFields
+    // 空名片邀请：前端先做必填校验，再提交成员填写的 managedFields + 身份字段
     if (isCardInvite) {
+      const name = (this.data.memberName || '').trim()
+      if (!name) {
+        this.setData({ requiredMissing: ['name'] })
+        app.showError('请填写姓名')
+        return
+      }
       const missing = (this.data.cardSchema || [])
         .filter(f => f.required && f.visible && !(this.data.form[f.key] || '').trim())
       if (missing.length) {
@@ -86,11 +138,35 @@ Page({
       }
       this.setData({ isJoining: true })
       app.showLoading('提交中...')
-      team.callTeamManager('joinByInvite', { token, managedFields: this.data.form }).then((res) => {
-        app.hideLoading()
-        this.setData({ isJoining: false })
-        this._handleJoinResult(res)
-      })
+      const self = this
+      const doJoin = (cardAvatar) => {
+        team.callTeamManager('joinByInvite', {
+          token,
+          managedFields: self.data.form,
+          cardName: name,
+          cardAvatar
+        }).then((res) => {
+          app.hideLoading()
+          self.setData({ isJoining: false })
+          self._handleJoinResult(res)
+        })
+      }
+      // 新选头像：先上传云存储再提交；否则（已有名片未改）传 '' 由后端保留
+      if (self.data.newAvatarPath) {
+        const cloudPath = 'avatars/teamjoin_' + Date.now() + '.jpg'
+        wx.cloud.uploadFile({
+          cloudPath,
+          filePath: self.data.newAvatarPath,
+          success: (up) => doJoin(up.fileID),
+          fail: () => {
+            app.hideLoading()
+            self.setData({ isJoining: false })
+            app.showError('头像上传失败，请重试')
+          }
+        })
+      } else {
+        doJoin('')
+      }
       return
     }
 

@@ -249,11 +249,6 @@ async function joinByInvite(event, OPENID) {
   const exist = await db.collection('team_members').where({ teamId: inv.teamId, memberOpenId: OPENID }).get()
   if (exist.data.length) return { success: false, error: 'ALREADY_MEMBER' }
 
-  // D8：加入需先有个人名片（云函数按 _openid 自动定位，防伪造）
-  const cardRes = await db.collection('cards').where({ _openid: OPENID }).orderBy('createdAt', 'desc').limit(1).get()
-  const card = cardRes.data && cardRes.data[0]
-  if (!card) return { success: false, error: 'NO_CARD', hint: '请先创建个人名片' }
-
   // 计算最终托管字段；空名片邀请需合并 owner 预填 + 成员填写 + 必填校验
   // 团队统一默认值基线：仅非空 defaultValue 写入（空留空 → 个人 card 透出）
   const schema = (teamRes.data && teamRes.data.cardSchema) || defaultCardSchema()
@@ -282,7 +277,55 @@ async function joinByInvite(event, OPENID) {
     ALL_KEYS.forEach(k => { if (baseline[k]) finalMF[k] = baseline[k] })
   }
 
+  // 个人名片（姓名+头像）：团队卡片 = 个人名片 + 团队托管覆盖层
+  // 空名片邀请(kind='card')：姓名必填；用户无个人名片则按填写自动创建最小名片（一步到位，消除断头路），
+  //   已有名片则按提交同步姓名/头像（仅身份字段，低风险）；普通邀请仍须先有个人名片（D8）
   const now = Date.now()
+  const cardRes = await db.collection('cards').where({ _openid: OPENID }).orderBy('createTime', 'desc').limit(1).get()
+  const existingCard = cardRes.data && cardRes.data[0]
+  let card = existingCard
+  let cardWasCreated = false
+
+  if (inv.kind === 'card') {
+    const cardName = (event.cardName || '').trim()
+    if (!cardName) return { success: false, error: 'MISSING_REQUIRED', fields: ['name'] }
+    if (!card) {
+      // 新用户：用表单字段最小建卡（姓名必填 + 头像可选 + 映射组织字段），_openid 显式归属本人
+      const addCard = await db.collection('cards').add({
+        data: {
+          _openid: OPENID,
+          teamIds: [inv.teamId], // 建卡时即写入团队归属（冗余字段，与既有 push 路径对齐，避免新用户卡缺 teamIds）
+          name: cardName,
+          avatar: (event.cardAvatar && event.cardAvatar.indexOf('cloud://') === 0) ? event.cardAvatar : '',
+          company: (finalMF.company || '').trim(),
+          position: (finalMF.position || '').trim(),
+          phone: (finalMF.phone || '').trim(),
+          email: (finalMF.email || '').trim(),
+          address: (finalMF.address || '').trim(),
+          website: (finalMF.website || '').trim(),
+          createTime: new Date(),
+          updateTime: new Date()
+        }
+      })
+      card = Object.assign({ _id: addCard._id }, {
+        name: cardName,
+        avatar: (event.cardAvatar && event.cardAvatar.indexOf('cloud://') === 0) ? event.cardAvatar : ''
+      })
+      cardWasCreated = true
+    } else {
+      // 已有名片：按提交同步姓名/头像（仅身份字段，避免误改组织字段）
+      const patch = {}
+      if (cardName && cardName !== (card.name || '')) patch.name = cardName
+      if (event.cardAvatar && event.cardAvatar.indexOf('cloud://') === 0 && event.cardAvatar !== (card.avatar || '')) patch.avatar = event.cardAvatar
+      if (Object.keys(patch).length) {
+        await db.collection('cards').doc(card._id).update({ data: patch }).catch(() => {})
+      }
+    }
+  } else {
+    // 普通邀请：保持原行为，必须已有个人名片
+    if (!card) return { success: false, error: 'NO_CARD', hint: '请先创建个人名片' }
+  }
+
   const addRes = await db.collection('team_members').add({
     data: {
       _openid: OPENID,
@@ -299,8 +342,10 @@ async function joinByInvite(event, OPENID) {
     }
   })
 
-  // 维护卡片 teamIds（冗余）+ 团队 memberCount
-  await db.collection('cards').doc(card._id).update({ data: { teamIds: _.push(inv.teamId) } })
+  // 维护卡片 teamIds（冗余）+ 团队 memberCount（新用户最小建卡已写入 teamIds，跳过 push 防重复）
+  if (!cardWasCreated) {
+    await db.collection('cards').doc(card._id).update({ data: { teamIds: _.push(inv.teamId) } })
+  }
   await db.collection('teams').doc(inv.teamId).update({ data: { memberCount: _.inc(1) } })
 
   // CON-01 修复：singleUse 邀请码 usedCount 自增改为条件更新，杜绝并发竞态被两人同时使用
@@ -316,13 +361,18 @@ async function joinByInvite(event, OPENID) {
     const up = await db.collection('team_invites')
       .where(usedUpCond)
       .update({ data: { usedCount: _.inc(1) } })
-    if (!up.stats || up.stats.updated === 0) {
-      // 条件更新未命中：邀请码已被占用或名额已满，回滚本次加入避免残留
-      await db.collection('team_members').doc(addRes._id).remove().catch(() => {})
-      await db.collection('cards').doc(card._id).update({ data: { teamIds: _.pull(inv.teamId) } }).catch(() => {})
-      await db.collection('teams').doc(inv.teamId).update({ data: { memberCount: _.inc(-1) } }).catch(() => {})
-      return { success: false, error: 'INVITE_USED_UP', message: '邀请码名额已满或已被使用' }
-    }
+      if (!up.stats || up.stats.updated === 0) {
+        // 条件更新未命中：邀请码已被占用或名额已满，回滚本次加入避免残留
+        await db.collection('team_members').doc(addRes._id).remove().catch(() => {})
+        if (cardWasCreated) {
+          // 新用户最小建卡：整卡回滚（无 team_members 关联，留卡即成孤儿）
+          await db.collection('cards').doc(card._id).remove().catch(() => {})
+        } else {
+          await db.collection('cards').doc(card._id).update({ data: { teamIds: _.pull(inv.teamId) } }).catch(() => {})
+        }
+        await db.collection('teams').doc(inv.teamId).update({ data: { memberCount: _.inc(-1) } }).catch(() => {})
+        return { success: false, error: 'INVITE_USED_UP', message: '邀请码名额已满或已被使用' }
+      }
   } else {
     await db.collection('team_invites').doc(inv._id).update({ data: { usedCount: _.inc(1) } })
   }

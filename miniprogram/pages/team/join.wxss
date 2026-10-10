@@ -41,6 +41,18 @@
 }
 .req-star { color: #EF4444; font-weight: 700; }
 
+/* 个人信息区块（姓名必填 + 头像可选，与团队字段配置无关） */
+.identity-card { margin-bottom: 24rpx; border-color: #BFDBFE; }
+.form-avatar-row { display: flex; align-items: center; margin-top: 14rpx; }
+.form-avatar {
+  width: 110rpx; height: 110rpx; border-radius: 8rpx; background: #F1F5F9;
+  border: 2rpx dashed #CBD5E1; display: flex; align-items: center; justify-content: center;
+  overflow: hidden; flex-shrink: 0;
+}
+.form-avatar-img { width: 110rpx; height: 110rpx; }
+.form-avatar-ph { font-size: 24rpx; color: #94A3B8; }
+.form-avatar-hint { margin-left: 18rpx; font-size: 24rpx; color: #94A3B8; }
+
 /* cardSchema 表单输入框（零样式补齐，对齐 create 页规格） */
 .form-input {
   height: 80rpx;
